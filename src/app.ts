@@ -4,6 +4,7 @@ import swaggerJSDoc from "swagger-jsdoc";
 
 export const app = express();
 
+//Use this as reference for api comments
 /**
  * @openapi
  * /users:
