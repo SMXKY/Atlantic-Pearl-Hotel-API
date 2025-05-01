@@ -6,7 +6,7 @@ import { Query } from "./Query.util";
 import { Request, Response } from "express";
 
 //try and catch blocks are handled within controllers
-export class Crud {
+export class CRUD {
   public model: any;
 
   public async create(body: object, res: Response) {
