@@ -36,7 +36,7 @@ const deleteUser = catchAsync(
   }
 );
 
-export const userControllers: object = {
+export const userControllers = {
   createUser,
   readOneUser,
   readAllUsers,

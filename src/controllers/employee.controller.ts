@@ -36,7 +36,7 @@ const deleteEmployee = catchAsync(
   }
 );
 
-export const employeeControllers: object = {
+export const employeeControllers = {
   createEmployee,
   readOneEmployee,
   readAllEmployees,

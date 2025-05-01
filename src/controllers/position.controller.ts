@@ -36,7 +36,7 @@ const deletePosition = catchAsync(
   }
 );
 
-export const positionControllers: object = {
+export const positionControllers = {
   createPosition,
   readOnePosition,
   readAllPositions,

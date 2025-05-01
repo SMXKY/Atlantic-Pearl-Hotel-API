@@ -36,7 +36,7 @@ const deleteRole = catchAsync(
   }
 );
 
-export const RoleControllers: object = {
+export const roleControllers = {
   createRole,
   readOneRole,
   readAllRoles,

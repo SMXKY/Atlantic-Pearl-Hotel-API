@@ -36,7 +36,7 @@ const deletePermission = catchAsync(
   }
 );
 
-export const permissionControllers: object = {
+export const permissionControllers = {
   createPermission,
   readOnePermission,
   readAllPermissions,

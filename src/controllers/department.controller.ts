@@ -36,7 +36,7 @@ const deleteDepartment = catchAsync(
   }
 );
 
-export const departmentControllers: object = {
+export const departmentControllers = {
   createDepartment,
   readOneDepartment,
   readAllDepartments,

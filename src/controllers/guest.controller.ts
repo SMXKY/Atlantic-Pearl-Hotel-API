@@ -36,7 +36,7 @@ const deleteGuest = catchAsync(
   }
 );
 
-export const guestControllers: object = {
+export const guestControllers = {
   createGuest,
   readOneGuest,
   readAllGuests,

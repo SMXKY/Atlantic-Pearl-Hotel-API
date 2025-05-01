@@ -36,7 +36,7 @@ const deletePermissionOveride = catchAsync(
   }
 );
 
-export const permissionOverideControllers: object = {
+export const permissionOverideControllers = {
   createPermissionOveride,
   readOnePermissionOveride,
   readAllPermissionOverides,
