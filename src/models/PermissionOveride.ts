@@ -56,7 +56,7 @@ const permissionOverideSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-export const permissionOverideModel = mongoose.model(
+export const PermissionOverideModel = mongoose.model(
   "permissionoverides",
   permissionOverideSchema
 );

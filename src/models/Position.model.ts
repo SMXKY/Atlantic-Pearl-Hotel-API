@@ -18,4 +18,4 @@ const positionSchema = new mongoose.Schema(
   }
 );
 
-export const positionModel = mongoose.model("positions", positionSchema);
+export const PositionModel = mongoose.model("positions", positionSchema);

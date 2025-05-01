@@ -9,6 +9,10 @@ import { Request, Response } from "express";
 export class CRUD {
   public model: any;
 
+  constructor(model: any) {
+    this.model = model;
+  }
+
   public async create(body: object, res: Response) {
     const data = await this.model.create(body);
 

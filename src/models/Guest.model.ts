@@ -61,3 +61,5 @@ const guestSchema = new mongoose.Schema(
     timestamps: true,
   }
 );
+
+export const GuestModel = mongoose.model("guests", guestSchema);
