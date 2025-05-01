@@ -28,18 +28,20 @@ const userSchema = new mongoose.Schema(
         },
         message: "Invalid Email format",
       },
+      unique: true,
     },
     phoneNumber: {
       type: String,
       required: [true, "Phone number is required."],
-      max: 12,
-      min: 8,
+      max: [12, "Phone number cannot be more than 12 characters"],
+      min: [8, "Phone number cannot be less that 8 characters"],
       validate: {
         validator: function (phoneNumber: string) {
           return isValidNumber(phoneNumber, "CM");
         },
         message: "Invalid phone number format",
       },
+      unique: true,
     },
     password: {
       type: String,
@@ -76,8 +78,8 @@ const userSchema = new mongoose.Schema(
     emergencyContact: {
       type: String,
       required: [true, "Emergency contact phone number is required."],
-      max: 12,
-      min: 8,
+      max: [12, "Phone number cannot be more than 12 characters"],
+      min: [8, "Phone number cannot be less that 8 characters"],
       validate: {
         validator: function (phoneNumber: string) {
           return isValidNumber(phoneNumber, "CM");

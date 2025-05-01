@@ -1,15 +1,16 @@
 import * as mongoose from "mongoose";
 
-const roleSchema = new mongoose.Schema(
+const positionSchema = new mongoose.Schema(
   {
     name: {
       type: String,
-      required: [true, "Role name is required"],
       trim: true,
+      required: [true, "position name required"],
       unique: true,
     },
     description: {
       type: String,
+      trim: true,
     },
   },
   {
@@ -17,4 +18,4 @@ const roleSchema = new mongoose.Schema(
   }
 );
 
-export const RoleModel = mongoose.model("roles", roleSchema);
+export const positionModel = mongoose.model("positions", positionSchema);
