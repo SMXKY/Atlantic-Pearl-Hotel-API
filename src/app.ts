@@ -1,6 +1,7 @@
-import express, { Request, Response } from "express";
+import express, { NextFunction, Request, Response } from "express";
 import swaggerUi from "swagger-ui-express";
 import swaggerJSDoc from "swagger-jsdoc";
+import { StatusCodes } from "http-status-codes";
 
 import { departmentRouter } from "./routes/department.route";
 import { employeeRouter } from "./routes/employee.route";
@@ -11,6 +12,8 @@ import { positionRouter } from "./routes/position.route";
 import { roleRouter } from "./routes/role.route";
 import { rolePermissionRouter } from "./routes/rolePermission.route";
 import { userRouter } from "./routes/user.route";
+import { AppError } from "./util/AppError.util";
+import { globalErrorController } from "./controllers/error.controller";
 
 export const app = express();
 
@@ -59,3 +62,15 @@ const swaggerSpec = swaggerJSDoc({
 });
 
 app.use("/docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec));
+
+app.use((req: Request, res: Response, next: NextFunction) => {
+  console.log(`Invalid route accessed: ${req.originalUrl}`);
+  next(
+    new AppError(
+      `${req.originalUrl} does not exist for ${req.method} requests`,
+      StatusCodes.NOT_FOUND
+    )
+  );
+});
+
+app.use(globalErrorController);
