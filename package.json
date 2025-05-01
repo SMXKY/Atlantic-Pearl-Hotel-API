@@ -4,6 +4,7 @@
     "currency-codes": "^2.2.0",
     "dotenv": "^16.4.7",
     "express": "^5.1.0",
+    "http-status-codes": "^2.3.0",
     "libphonenumber-js": "^1.12.7",
     "mongoose": "^8.14.0",
     "swagger-jsdoc": "^6.2.8",
