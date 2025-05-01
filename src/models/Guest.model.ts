@@ -1,6 +1,5 @@
 import * as mongoose from "mongoose";
 import * as currencyCodes from "currency-codes";
-import validator from "validator";
 
 const guestSchema = new mongoose.Schema(
   {
