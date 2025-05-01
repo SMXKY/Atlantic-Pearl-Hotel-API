@@ -13,7 +13,7 @@ export class CRUD {
     this.model = model;
   }
 
-  public async create(body: object, res: Response) {
+  public async create(body: any, res: Response) {
     const data = await this.model.create(body);
 
     appResponder(StatusCodes.OK, data, res);
@@ -59,7 +59,7 @@ export class CRUD {
       });
     }
 
-    const data = await query.query;
+    const data = await query.mongooseQuery;
 
     appResponder(StatusCodes.OK, data, res);
   }

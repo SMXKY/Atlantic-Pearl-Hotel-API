@@ -35,6 +35,8 @@ app.get("/", (req: Request, res: Response) => {
   res.send("Hello from the Atlantic Pearl Hotel and Resort API...");
 });
 
+app.use(express.json());
+
 app.use("/api/v1/departments", departmentRouter);
 app.use("/api/v1/employees", employeeRouter);
 app.use("/api/v1/guests", guestRouter);
