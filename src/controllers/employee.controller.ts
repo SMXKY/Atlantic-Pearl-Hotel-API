@@ -14,13 +14,13 @@ const createEmployee = catchAsync(
 
 const readOneEmployee = catchAsync(
   async (req: Request, res: Response, next: NextFunction) => {
-    await CRUDEmployee.readOne(req.params.id, res, []);
+    await CRUDEmployee.readOne(req.params.id, res, ["user"]);
   }
 );
 
 const readAllEmployees = catchAsync(
   async (req: Request, res: Response, next: NextFunction) => {
-    await CRUDEmployee.readAll(res, req, 1, 100, []);
+    await CRUDEmployee.readAll(res, req, 1, 100, ["user"]);
   }
 );
 

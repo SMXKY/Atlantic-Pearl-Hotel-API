@@ -33,8 +33,8 @@ const createEmployeeAccount = catchAsync(
     sendEmail(
       user.email,
       "Your Account Password - Atlantic Pearl Hotel and Resort",
-      "Dear employee, please find your account password below.",
-      `<b>Your account password: ${employeePassword}</b>`
+      "Dear employee, please find your account password below.\n Your account password: ${employeePassword}",
+      `<b>Keep you password Confidential</b>`
     );
 
     appResponder(
