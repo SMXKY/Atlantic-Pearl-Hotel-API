@@ -2,7 +2,7 @@ import * as mongoose from "mongoose";
 
 const employeeSchema = new mongoose.Schema(
   {
-    userId: {
+    user: {
       type: mongoose.Types.ObjectId,
       ref: "users",
       required: [true, "User Id is required"],
@@ -11,7 +11,7 @@ const employeeSchema = new mongoose.Schema(
       type: String,
       trim: true,
     },
-    residentialAddres: {
+    residentialAddress: {
       type: String,
       trim: true,
     },
@@ -40,6 +40,7 @@ const employeeSchema = new mongoose.Schema(
           }
           return true;
         },
+
         message: "Salary cannot be negative",
       },
     },

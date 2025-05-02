@@ -1,6 +1,7 @@
 import * as mongoose from "mongoose";
 import * as validator from "validator";
 import { isValidNumber } from "libphonenumber-js";
+import bcrypt from "bcrypt";
 
 interface IUser extends mongoose.Document {
   password: string;
@@ -53,10 +54,11 @@ const userSchema = new mongoose.Schema(
       type: String,
       validate: {
         validator: function (this: IUser) {
-          return this.password === this.passwordConfirm;
+          return this.isNew || this.password === this.passwordConfirm;
         },
         message: "The two passwords you entered must be identical",
       },
+      select: false,
     },
     dateOfBirth: {
       type: Date,
@@ -90,9 +92,12 @@ const userSchema = new mongoose.Schema(
       type: Boolean,
       select: false,
     },
-    deactivatedUntile: {
+    deactivatedUntil: {
       type: Date,
       select: false,
+    },
+    passwordChangedAt: {
+      type: Date,
     },
     profilePictureUrl: {
       type: String,
@@ -113,5 +118,19 @@ const userSchema = new mongoose.Schema(
     timestamps: true,
   }
 );
+
+userSchema.pre("save", async function (next) {
+  if (!this.isModified("password")) return next();
+
+  this.password = await bcrypt.hash(this.password, 12);
+  this.passwordConfirm = undefined;
+
+  // If user is not new, update passwordChangedAt
+  if (!this.isNew) {
+    this.passwordChangedAt = new Date(Date.now() - 2000);
+  }
+
+  next();
+});
 
 export const UserModel = mongoose.model("users", userSchema);

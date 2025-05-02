@@ -14,6 +14,7 @@ import { rolePermissionRouter } from "./routes/rolePermission.route";
 import { userRouter } from "./routes/user.route";
 import { AppError } from "./util/AppError.util";
 import { globalErrorController } from "./controllers/error.controller";
+import { authRouter } from "./routes/auth.route";
 
 export const app = express();
 
@@ -49,6 +50,7 @@ app.use("/api/v1/positions", positionRouter);
 app.use("/api/v1/roles", roleRouter);
 app.use("/api/v1/rolePermissions", rolePermissionRouter);
 app.use("/api/v1/users", userRouter);
+app.use("/api/v1/auth", authRouter);
 
 const swaggerSpec = swaggerJSDoc({
   definition: {
