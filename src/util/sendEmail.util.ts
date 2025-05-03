@@ -19,14 +19,23 @@ export const sendEmail = async (
     });
 
     const mailOptions = {
-      from: `"Atlantic Pearl Hotel and Resort" <${process.env.EMAIL_AUTH_USER}>`,
+      from: process.env.EMAIL_AUTH_USER,
       to,
       subject,
       text,
       html,
     };
 
-    await transporter.sendMail(mailOptions);
+    await transporter.sendMail(mailOptions, (error, info) => {
+      if (error) {
+        return console.log("Error:", error);
+      }
+      console.log("Email sent successfully!");
+      console.log("Message ID:", info.messageId);
+      console.log("Full info:", info);
+    });
+
+    console.log(`Email sent to ${to} successfully.`);
   } else {
     const transporter = nodemailer.createTransport({
       host: "sandbox.smtp.mailtrap.io",

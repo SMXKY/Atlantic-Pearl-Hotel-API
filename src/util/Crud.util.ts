@@ -47,19 +47,20 @@ export class CRUD {
     defaultLimit: number,
     populate: string[]
   ) {
-    let query: any = new Query(req.query, this.model.find())
+    let query = new Query(req.query, this.model.find())
       .filter()
       .sort()
       .limitFields()
-      .paginate(defaultPage, defaultLimit);
+      .paginate(defaultPage, defaultLimit)
+      .getQuery();
 
-    if (populate) {
+    if (populate && Array.isArray(populate)) {
       populate.forEach((field) => {
         query = query.populate(field);
       });
     }
 
-    const data = await query.mongooseQuery;
+    const data = await query;
 
     appResponder(StatusCodes.OK, data, res);
   }

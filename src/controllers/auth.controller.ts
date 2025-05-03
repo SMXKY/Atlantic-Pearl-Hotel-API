@@ -18,7 +18,7 @@ const createEmployeeAccount = catchAsync(
       strict: true,
     });
 
-    console.log(employeePassword);
+    console.log(process.env.NODE_ENV);
 
     req.body.password = employeePassword;
     req.body.passwordConfirm = employeePassword;
@@ -30,18 +30,19 @@ const createEmployeeAccount = catchAsync(
       user: user._id,
     });
 
-    sendEmail(
+    await sendEmail(
       user.email,
       "Your Account Password - Atlantic Pearl Hotel and Resort",
-      "Dear employee, please find your account password below.\n Your account password: ${employeePassword}",
-      `<b>Keep you password Confidential</b>`
+      `Dear employee, please find your account password below.`,
+      `<b>Keep you password Confidential</b><br><p>Your account password: ${employeePassword}</p>`
     );
 
     appResponder(
       StatusCodes.OK,
       {
         ok: true,
-        message: "Employee account created successfully",
+        message:
+          "Employee account created successfully. Password provide to employee throught thier email.",
       },
       res
     );
