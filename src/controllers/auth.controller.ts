@@ -9,6 +9,22 @@ import { sendEmail } from "../util/sendEmail.util";
 import { GuestModel } from "../models/Guest.model";
 import * as jwt from "jsonwebtoken";
 import { AppError } from "../util/AppError.util";
+import * as bcrypt from "bcrypt";
+
+const signToken = (userId: string) => {
+  const jwtSecret = process.env.JWT_SECRETE;
+  const jwtExpiresIn = process.env.JWT_EXPIRES_IN;
+
+  if (!jwtSecret) {
+    throw new Error("JWT_SECRET is not defined in environment variables.");
+  }
+
+  const options: jwt.SignOptions = {
+    expiresIn: jwtExpiresIn as jwt.SignOptions["expiresIn"],
+  };
+
+  return jwt.sign({ id: userId }, jwtSecret, options);
+};
 
 const createEmployeeAccount = catchAsync(
   async (req: Request, res: Response, next: NextFunction) => {
@@ -21,10 +37,11 @@ const createEmployeeAccount = catchAsync(
       strict: true,
     });
 
-    console.log(process.env.NODE_ENV);
+    // console.log(process.env.NODE_ENV);
 
     req.body.password = employeePassword;
     req.body.passwordConfirm = employeePassword;
+    req.body.userType = "Employee";
 
     const user = await UserModel.create(req.body);
 
@@ -55,6 +72,8 @@ const createEmployeeAccount = catchAsync(
 const signIn = catchAsync(
   async (req: Request, res: Response, nex: NextFunction) => {
     const user = await UserModel.create(req.body);
+
+    req.body.userType = "Guest";
 
     await GuestModel.create({ ...req.body, user: user._id });
 
@@ -130,7 +149,10 @@ const verifyEmail = catchAsync(
 
     if (guest?.hasConfirmedEmail) {
       return next(
-        new AppError("Account Email is already verified.", StatusCodes.CONFLICT)
+        new AppError(
+          "Account Email is already verified.",
+          StatusCodes.BAD_REQUEST
+        )
       );
     }
 
@@ -152,8 +174,57 @@ const verifyEmail = catchAsync(
   }
 );
 
+const login = catchAsync(
+  async (req: Request, res: Response, next: NextFunction) => {
+    const { email, password } = req.body;
+
+    if (!email || !password) {
+      return next(
+        new AppError(
+          "Please enter a valid and password",
+          StatusCodes.BAD_REQUEST
+        )
+      );
+    }
+
+    const user = await UserModel.findOne({ email }).select("+password");
+
+    if (!user || !(await bcrypt.compare(password, user.password))) {
+      return next(
+        new AppError("Incorrect Email or Password", StatusCodes.UNAUTHORIZED)
+      );
+    }
+
+    const employee = await EmployeeModel.findOne({ user: user._id }).populate(
+      "user"
+    );
+    const guest = await GuestModel.findOne({ user: user._id }).populate("user");
+
+    const data = employee || guest;
+
+    if (!data) {
+      return next(
+        new AppError(
+          "Access Denied. User is niether employee or guest.",
+          StatusCodes.UNAUTHORIZED
+        )
+      );
+    }
+
+    appResponder(
+      StatusCodes.OK,
+      {
+        token: signToken(data._id.toString()),
+        data,
+      },
+      res
+    );
+  }
+);
+
 export const authControllers = {
   createEmployeeAccount,
   signIn,
   verifyEmail,
+  login,
 };

@@ -113,6 +113,14 @@ const userSchema = new mongoose.Schema(
       ref: "roles",
       required: [true, "User role, is required (role, id)"],
     },
+    userType: {
+      type: String,
+      required: [true, "User must be assigned a type"],
+      enum: {
+        values: ["Guest", "Employee"],
+        message: "User must be of type Guest or Employee",
+      },
+    },
   },
   {
     timestamps: true,

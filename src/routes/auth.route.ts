@@ -95,3 +95,4 @@ authRouter
   .post(authControllers.createEmployeeAccount);
 
 authRouter.route("/sign-in").post(authControllers.signIn);
+authRouter.route("/login").post(authControllers.login);
