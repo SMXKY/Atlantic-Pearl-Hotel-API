@@ -17,15 +17,18 @@ const employeeSchema = new mongoose.Schema(
     },
     employmentType: {
       type: String,
-      enum: [
-        "Full time",
-        "Part time",
-        "Temporary",
-        "Internship",
-        "contract",
-        "Freelance",
-        "volunteer",
-      ],
+      enum: {
+        values: [
+          "Full time",
+          "Part time",
+          "Temporary",
+          "Internship",
+          "contract",
+          "Freelance",
+          "volunteer",
+        ],
+        message: `Employment type can only be "Full time","Part time", "Temporary", "Internship", "contract", "Freelance", or "volunteer",`,
+      },
     },
     dateHired: {
       type: Date,

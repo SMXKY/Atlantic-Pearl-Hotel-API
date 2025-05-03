@@ -14,13 +14,13 @@ const createGuest = catchAsync(
 
 const readOneGuest = catchAsync(
   async (req: Request, res: Response, next: NextFunction) => {
-    await CRUDGuest.readOne(req.params.id, res, []);
+    await CRUDGuest.readOne(req.params.id, res, ["user"]);
   }
 );
 
 const readAllGuests = catchAsync(
   async (req: Request, res: Response, next: NextFunction) => {
-    await CRUDGuest.readAll(res, req, 1, 100, []);
+    await CRUDGuest.readAll(res, req, 1, 100, ["user"]);
   }
 );
 

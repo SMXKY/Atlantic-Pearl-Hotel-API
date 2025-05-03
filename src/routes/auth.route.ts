@@ -93,3 +93,5 @@ export const authRouter = express.Router();
 authRouter
   .route("/create-employee")
   .post(authControllers.createEmployeeAccount);
+
+authRouter.route("/sign-in").post(authControllers.signIn);

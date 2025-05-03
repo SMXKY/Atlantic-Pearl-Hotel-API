@@ -56,6 +56,10 @@ const guestSchema = new mongoose.Schema(
       ],
       default: "Individual",
     },
+    hasConfirmedEmail: {
+      type: Boolean,
+      default: false,
+    },
   },
   {
     timestamps: true,
