@@ -181,7 +181,7 @@ const login = catchAsync(
     if (!email || !password) {
       return next(
         new AppError(
-          "Please enter a valid and password",
+          "Please enter a valid email and password",
           StatusCodes.BAD_REQUEST
         )
       );
@@ -189,23 +189,61 @@ const login = catchAsync(
 
     const user = await UserModel.findOne({ email }).select("+password");
 
-    if (!user || !(await bcrypt.compare(password, user.password))) {
+    if (!user) {
       return next(
         new AppError("Incorrect Email or Password", StatusCodes.UNAUTHORIZED)
       );
     }
 
+    // Checking if user is locked
+    if (user.lockUntil && user.lockUntil > new Date()) {
+      const remaining = Math.ceil(
+        (user.lockUntil.getTime() - Date.now()) / 60000
+      );
+      return next(
+        new AppError(
+          `Account locked. Try again in ${remaining} minute(s).`,
+          StatusCodes.UNAUTHORIZED
+        )
+      );
+    }
+
+    const isPasswordCorrect = await bcrypt.compare(password, user.password);
+    if (!isPasswordCorrect) {
+      user.failedLoginAttempts = (user.failedLoginAttempts || 0) + 1;
+
+      if (user.failedLoginAttempts >= 5) {
+        user.lockUntil = new Date(Date.now() + 30 * 60 * 1000); // 30 minutes
+        await user.save();
+        return next(
+          new AppError(
+            "Account locked due to too many failed attempts. Try again in 30 minutes.",
+            StatusCodes.UNAUTHORIZED
+          )
+        );
+      }
+
+      await user.save();
+      return next(
+        new AppError("Incorrect Email or Password", StatusCodes.UNAUTHORIZED)
+      );
+    }
+
+    // If login is successful, reset failed attempts
+    user.failedLoginAttempts = 0;
+    user.lockUntil = undefined;
+    await user.save();
+
     const employee = await EmployeeModel.findOne({ user: user._id }).populate(
       "user"
     );
     const guest = await GuestModel.findOne({ user: user._id }).populate("user");
-
     const data = employee || guest;
 
     if (!data) {
       return next(
         new AppError(
-          "Access Denied. User is niether employee or guest.",
+          "Access Denied. User is neither employee nor guest.",
           StatusCodes.UNAUTHORIZED
         )
       );
@@ -220,6 +258,10 @@ const login = catchAsync(
       res
     );
   }
+);
+
+const changePassword = catchAsync(
+  async (req: Request, res: Response, next: NextFunction) => {}
 );
 
 export const authControllers = {

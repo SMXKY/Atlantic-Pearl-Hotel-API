@@ -91,6 +91,7 @@ const userSchema = new mongoose.Schema(
     isActive: {
       type: Boolean,
       select: false,
+      default: true,
     },
     deactivatedUntil: {
       type: Date,
@@ -121,11 +122,23 @@ const userSchema = new mongoose.Schema(
         message: "User must be of type Guest or Employee",
       },
     },
+    failedLoginAttempts: {
+      type: Number,
+      default: 0,
+    },
+    lockUntil: {
+      type: Date,
+    },
   },
   {
     timestamps: true,
   }
 );
+
+userSchema.pre(/^find/, function (this: mongoose.Query<any, IUser>, next) {
+  this.where({ isActive: { $ne: false } });
+  next();
+});
 
 userSchema.pre("save", async function (next) {
   if (!this.isModified("password")) return next();
