@@ -10,14 +10,9 @@ interface IUser extends mongoose.Document {
 
 const userSchema = new mongoose.Schema(
   {
-    firstName: {
+    name: {
       type: String,
-      required: [true, "User first name is required."],
-      trim: true,
-    },
-    lastName: {
-      type: String,
-      required: [true, "User last name is required."],
+      required: [true, "User name is required."],
       trim: true,
     },
     email: {
@@ -128,6 +123,10 @@ const userSchema = new mongoose.Schema(
     },
     lockUntil: {
       type: Date,
+    },
+    googleId: {
+      type: String,
+      trim: true,
     },
   },
   {

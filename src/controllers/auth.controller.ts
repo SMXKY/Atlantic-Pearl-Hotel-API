@@ -12,6 +12,10 @@ import { AppError } from "../util/AppError.util";
 import * as bcrypt from "bcrypt";
 import * as Oauth from "google-auth-library";
 import { promisify } from "util";
+import { RoleModel } from "../models/Role.model";
+import { GoogleUserPayload } from "../types/googleUserPayload";
+
+const client = new Oauth.OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
 const signToken = (userId: string) => {
   const jwtSecret = process.env.JWT_SECRETE;
@@ -72,8 +76,19 @@ const createEmployeeAccount = catchAsync(
 );
 
 const signIn = catchAsync(
-  async (req: Request, res: Response, nex: NextFunction) => {
-    const user = await UserModel.create(req.body);
+  async (req: Request, res: Response, next: NextFunction) => {
+    const role = await RoleModel.findOne({ name: "guest" });
+
+    if (!role) {
+      return next(
+        new AppError(
+          "No guest role found in the db.",
+          StatusCodes.INTERNAL_SERVER_ERROR
+        )
+      );
+    }
+
+    const user = await UserModel.create({ ...req.body, role: role._id });
 
     req.body.userType = "Guest";
 
@@ -262,66 +277,62 @@ const login = catchAsync(
   }
 );
 
-// const protect = catchAsync(
-//   async (req: Request, res: Response, next: NextFunction) => {
-//     let token: string;
+const googleRedirect = catchAsync(
+  async (req: Request, res: Response, next: NextFunction) => {
+    const { idToken } = req.body;
 
-//     if (
-//       !req.headers.authorization ||
-//       !req.headers.authorization.startsWith("Bearer")
-//     ) {
-//       return next(
-//         new AppError(
-//           "Invalid auth token, please login to access this resource",
-//           StatusCodes.BAD_REQUEST
-//         )
-//       );
-//     }
+    const ticket = await client.verifyIdToken({
+      idToken,
+      audience: process.env.GOOGLE_CLIENT_ID,
+    });
 
-//     token = req.headers.authorization.split(" ")[1];
+    const role = await RoleModel.findOne({ name: "guest" });
 
-//     if (!token) {
-//       return next(
-//         new AppError(
-//           "Invalid auth token, please login to access this resource",
-//           StatusCodes.BAD_REQUEST
-//         )
-//       );
-//     }
+    if (!role) {
+      return next(
+        new AppError(
+          "No guest role found in the db.",
+          StatusCodes.INTERNAL_SERVER_ERROR
+        )
+      );
+    }
 
-//     if (!process.env.JWT_SECRETE) {
-//       return next(
-//         new AppError(
-//           "Server cant fine JWT Secret",
-//           StatusCodes.INTERNAL_SERVER_ERROR
-//         )
-//       );
-//     }
+    const payload = ticket.getPayload() as GoogleUserPayload;
+    const { sub: googleId, email, name, picture } = payload;
 
-//     const decodedToken = await promisify(jwt.verify)(
-//       token,
-//       process.env.JWT_SECRETE
-//     );
+    let user = await UserModel.findOne({ googleId });
+    let guest;
 
-//     const user = await UserModel.findById(decodedToken.id)
-//       .select("-password")
-//       .populate("role");
-//   }
-// );
+    if (!user) {
+      user = new UserModel({
+        googleId,
+        email,
+        name,
+        profilePictureUrl: picture,
+        role: role._id,
+        userType: "Guest",
+      });
+      await user?.save({ validateBeforeSave: false });
 
-// const loginWithGoogle = catchAsync(
-//   async (req: Request, res: Response, next: NextFunction) => {}
-// );
+      guest = await GuestModel.create({
+        user: user._id,
+        hasConfirmedEmail: true,
+      });
+    }
 
-// const changePassword = catchAsync(
-//   async (req: Request, res: Response, next: NextFunction) => {
-//     const { currentPassword, newPassword, passwordConfirm } = req.body;
-//   }
-// );
+    const data = {
+      token: signToken(user._id.toString()),
+      data: { ...guest, user },
+    };
+
+    appResponder(StatusCodes.OK, data, res);
+  }
+);
 
 export const authControllers = {
   createEmployeeAccount,
   signIn,
   verifyEmail,
   login,
+  googleRedirect,
 };
