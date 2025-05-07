@@ -10,6 +10,8 @@ import { GuestModel } from "../models/Guest.model";
 import * as jwt from "jsonwebtoken";
 import { AppError } from "../util/AppError.util";
 import * as bcrypt from "bcrypt";
+import * as Oauth from "google-auth-library";
+import { promisify } from "util";
 
 const signToken = (userId: string) => {
   const jwtSecret = process.env.JWT_SECRETE;
@@ -260,9 +262,62 @@ const login = catchAsync(
   }
 );
 
-const changePassword = catchAsync(
-  async (req: Request, res: Response, next: NextFunction) => {}
-);
+// const protect = catchAsync(
+//   async (req: Request, res: Response, next: NextFunction) => {
+//     let token: string;
+
+//     if (
+//       !req.headers.authorization ||
+//       !req.headers.authorization.startsWith("Bearer")
+//     ) {
+//       return next(
+//         new AppError(
+//           "Invalid auth token, please login to access this resource",
+//           StatusCodes.BAD_REQUEST
+//         )
+//       );
+//     }
+
+//     token = req.headers.authorization.split(" ")[1];
+
+//     if (!token) {
+//       return next(
+//         new AppError(
+//           "Invalid auth token, please login to access this resource",
+//           StatusCodes.BAD_REQUEST
+//         )
+//       );
+//     }
+
+//     if (!process.env.JWT_SECRETE) {
+//       return next(
+//         new AppError(
+//           "Server cant fine JWT Secret",
+//           StatusCodes.INTERNAL_SERVER_ERROR
+//         )
+//       );
+//     }
+
+//     const decodedToken = await promisify(jwt.verify)(
+//       token,
+//       process.env.JWT_SECRETE
+//     );
+
+//     const user = await UserModel.findById(decodedToken.id)
+//       .select("-password")
+//       .populate("role");
+//   }
+// );
+
+// const loginWithGoogle = catchAsync(
+//   async (req: Request, res: Response, next: NextFunction) => {}
+// );
+
+// const changePassword = catchAsync(
+//   async (req: Request, res: Response, next: NextFunction) => {
+//     const { currentPassword, newPassword, passwordConfirm } = req.body;
+//   }
+// );
 
 export const authControllers = {
   createEmployeeAccount,
