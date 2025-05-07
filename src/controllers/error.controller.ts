@@ -18,7 +18,6 @@ const developmentResponse = (err: Error | AppError, res: Response) => {
   });
 };
 
-// Production response: Generic error messages for production environment
 const productionResponse = (err: any, res: Response) => {
   if (err?.isOperational) {
     res.status(err.statusCode).json({
@@ -36,7 +35,6 @@ const productionResponse = (err: any, res: Response) => {
   }
 };
 
-// Global error handling middleware
 export const globalErrorController = (
   err: any,
   req: Request,
@@ -44,7 +42,7 @@ export const globalErrorController = (
   next: NextFunction
 ) => {
   err.statusCode = err.statusCode || 500;
-  err.status = err.status || "Server error"; // Corrected typo here from 'Sever error'
+  err.status = err.status || "Server error";
 
   if (process.env.NODE_ENV === "production") {
     productionResponse(err, res);

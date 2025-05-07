@@ -16,6 +16,7 @@ import { AppError } from "./util/AppError.util";
 import { globalErrorController } from "./controllers/error.controller";
 import { authRouter } from "./routes/auth.route";
 import { authControllers } from "./controllers/auth.controller";
+import cors from "cors";
 
 export const app = express();
 
@@ -145,6 +146,30 @@ export const app = express();
  *       500:
  *         description: Internal server error
  */
+
+app.use((req, res, next) => {
+  res.header("Access-Control-Allow-Origin", "*");
+  res.header("Access-Control-Allow-Methods", "GET,HEAD,PUT,PATCH,POST,DELETE");
+  res.header(
+    "Access-Control-Allow-Headers",
+    "Origin, X-Requested-With, Content-Type, Accept"
+  );
+  next();
+});
+
+const corsOptions = {
+  origin: "*", // Allow all origins
+  methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+  allowedHeaders: [
+    "Origin",
+    "X-Requested-With",
+    "Content-Type",
+    "Accept",
+    "Authorization",
+  ],
+};
+
+app.use(cors(corsOptions));
 
 app.get("/", (req: Request, res: Response) => {
   res.send("Hello from the Atlantic Pearl Hotel and Resort API...");

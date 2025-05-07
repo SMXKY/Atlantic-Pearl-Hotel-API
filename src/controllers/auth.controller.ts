@@ -11,11 +11,8 @@ import * as jwt from "jsonwebtoken";
 import { AppError } from "../util/AppError.util";
 import * as bcrypt from "bcrypt";
 import * as Oauth from "google-auth-library";
-import { promisify } from "util";
 import { RoleModel } from "../models/Role.model";
 import { GoogleUserPayload } from "../types/googleUserPayload";
-
-const client = new Oauth.OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
 const signToken = (userId: string) => {
   const jwtSecret = process.env.JWT_SECRETE;
@@ -277,28 +274,154 @@ const login = catchAsync(
   }
 );
 
+// const googleRedirect = catchAsync(
+//   async (req: Request, res: Response, next: NextFunction) => {
+//     const client = new Oauth.OAuth2Client({
+//       clientId: process.env.GOOGLE_CLIENT_ID,
+//       clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+//       redirectUri: process.env.GOOGLE_REDIRECT_URI,
+//     });
+
+//     const { code } = req.query;
+
+//     if (!code) {
+//       return next(
+//         new AppError("No authorization code found.", StatusCodes.BAD_REQUEST)
+//       );
+//     }
+
+//     const { tokens } = await client.getToken(code as string);
+
+//     // console.log("ALL TOKENS", tokens);
+
+//     const idToken = tokens.id_token;
+
+//     if (!idToken) {
+//       return next(
+//         new AppError(
+//           "ID token is missing from the response.",
+//           StatusCodes.BAD_REQUEST
+//         )
+//       );
+//     }
+
+//     const ticket = await client.verifyIdToken({
+//       idToken,
+//       audience: process.env.GOOGLE_CLIENT_ID,
+//     });
+
+//     console.log("TICKET", ticket);
+
+//     const role = await RoleModel.findOne({ name: "guest" });
+
+//     if (!role) {
+//       return next(
+//         new AppError(
+//           "No guest role found in the db.",
+//           StatusCodes.INTERNAL_SERVER_ERROR
+//         )
+//       );
+//     }
+
+//     const payload = ticket.getPayload() as GoogleUserPayload;
+//     const { sub: googleId, email, name, picture } = payload;
+
+//     let user = await UserModel.findOne({ googleId });
+//     let guest;
+
+//     if (!user) {
+//       user = new UserModel({
+//         googleId,
+//         email,
+//         name,
+//         profilePictureUrl: picture,
+//         role: role._id,
+//         userType: "Guest",
+//       });
+//       await user?.save({ validateBeforeSave: false });
+
+//       guest = await GuestModel.create({
+//         user: user._id,
+//         hasConfirmedEmail: true,
+//       });
+//     }
+
+//     const data = {
+//       token: signToken(user._id.toString()),
+//       data: { ...guest, user },
+//     };
+
+//     appResponder(StatusCodes.OK, data, res);
+//   }
+// );
 const googleRedirect = catchAsync(
   async (req: Request, res: Response, next: NextFunction) => {
-    const { idToken } = req.body;
+    // Verify environment variables
+    const clientId = process.env.GOOGLE_CLIENT_ID;
+    const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
+    const redirectUri = process.env.GOOGLE_REDIRECT_URI;
 
+    if (!clientId || !clientSecret || !redirectUri) {
+      return next(
+        new AppError(
+          "Google OAuth configuration missing in environment variables.",
+          StatusCodes.INTERNAL_SERVER_ERROR
+        )
+      );
+    }
+
+    const client = new Oauth.OAuth2Client({
+      clientId,
+      clientSecret,
+      redirectUri,
+    });
+
+    const { code } = req.query;
+
+    if (!code) {
+      return next(
+        new AppError("No authorization code found.", StatusCodes.BAD_REQUEST)
+      );
+    }
+
+    const { tokens } = await client.getToken(code as string);
+
+    const idToken = tokens.id_token;
+
+    if (!idToken) {
+      return next(
+        new AppError(
+          "ID token is missing from the response.",
+          StatusCodes.BAD_REQUEST
+        )
+      );
+    }
+
+    // Verify ID token
     const ticket = await client.verifyIdToken({
       idToken,
-      audience: process.env.GOOGLE_CLIENT_ID,
+      audience: clientId,
     });
+
+    const payload = ticket.getPayload() as GoogleUserPayload;
+    if (!payload) {
+      return next(
+        new AppError("Invalid ID token payload.", StatusCodes.BAD_REQUEST)
+      );
+    }
+
+    const { sub: googleId, email, name, picture } = payload;
 
     const role = await RoleModel.findOne({ name: "guest" });
 
     if (!role) {
       return next(
         new AppError(
-          "No guest role found in the db.",
+          "No guest role found in the database.",
           StatusCodes.INTERNAL_SERVER_ERROR
         )
       );
     }
-
-    const payload = ticket.getPayload() as GoogleUserPayload;
-    const { sub: googleId, email, name, picture } = payload;
 
     let user = await UserModel.findOne({ googleId });
     let guest;
@@ -312,7 +435,7 @@ const googleRedirect = catchAsync(
         role: role._id,
         userType: "Guest",
       });
-      await user?.save({ validateBeforeSave: false });
+      await user.save({ validateBeforeSave: false });
 
       guest = await GuestModel.create({
         user: user._id,
@@ -329,10 +452,34 @@ const googleRedirect = catchAsync(
   }
 );
 
+const authWithGoogle = catchAsync(
+  async (req: Request, res: Response, next: NextFunction) => {
+    const client = new Oauth.OAuth2Client({
+      clientId: process.env.GOOGLE_CLIENT_ID,
+      clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+      redirectUri: process.env.GOOGLE_REDIRECT_URI,
+    });
+
+    // console.log(process.env.GOOGLE_CLIENT_ID);
+    const redirectUri = client.generateAuthUrl({
+      access_type: "offline",
+      prompt: "consent",
+      scope: ["profile", "email"],
+      redirect_uri: process.env.GOOGLE_REDIRECT_URI,
+      client_id: process.env.GOOGLE_CLIENT_ID,
+    });
+
+    // console.log("Redirecting to...", redirectUri);
+
+    res.redirect(redirectUri);
+  }
+);
+
 export const authControllers = {
   createEmployeeAccount,
   signIn,
   verifyEmail,
   login,
   googleRedirect,
+  authWithGoogle,
 };

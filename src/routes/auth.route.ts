@@ -97,3 +97,4 @@ authRouter
 authRouter.route("/sign-in").post(authControllers.signIn);
 authRouter.route("/login").post(authControllers.login);
 authRouter.route("/google-redirect").get(authControllers.googleRedirect);
+authRouter.route("/google").get(authControllers.authWithGoogle);
