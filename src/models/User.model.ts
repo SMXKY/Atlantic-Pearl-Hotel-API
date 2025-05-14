@@ -2,10 +2,12 @@ import * as mongoose from "mongoose";
 import * as validator from "validator";
 import { isValidNumber } from "libphonenumber-js";
 import bcrypt from "bcrypt";
+import { RoleModel } from "./Role.model";
 
-interface IUser extends mongoose.Document {
+export interface IUser extends mongoose.Document {
   password: string;
   passwordConfirm: string;
+  passwordChangedAt?: Date;
 }
 
 const userSchema = new mongoose.Schema(
@@ -108,6 +110,14 @@ const userSchema = new mongoose.Schema(
       type: mongoose.Types.ObjectId,
       ref: "roles",
       required: [true, "User role, is required (role, id)"],
+      validate: {
+        validator: async function (id: mongoose.Types.ObjectId) {
+          // Check if the manager exists
+          const exists = await RoleModel.exists({ _id: id });
+          return exists !== null;
+        },
+        message: "Role Id not found iin the database.",
+      },
     },
     userType: {
       type: String,
@@ -128,9 +138,14 @@ const userSchema = new mongoose.Schema(
       type: String,
       trim: true,
     },
+    passWordChangedAt: {
+      type: Date,
+    },
   },
   {
     timestamps: true,
+    toJSON: { virtuals: true },
+    toObject: { virtuals: true },
   }
 );
 
@@ -149,6 +164,16 @@ userSchema.pre("save", async function (next) {
   if (!this.isNew) {
     this.passwordChangedAt = new Date(Date.now() - 2000);
   }
+
+  next();
+});
+
+userSchema.pre("save", function (next) {
+  if (!this.isModified("password") || this.isNew) {
+    return next();
+  }
+
+  this.passWordChangedAt = new Date(Date.now() - 2000);
 
   next();
 });

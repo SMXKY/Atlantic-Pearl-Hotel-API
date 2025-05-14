@@ -1,5 +1,14 @@
 import * as mongoose from "mongoose";
 
+import { Document } from "mongoose";
+
+export interface IPermission extends Document {
+  name: string;
+  description?: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
 const permisionSchema = new mongoose.Schema(
   {
     name: {
@@ -14,6 +23,8 @@ const permisionSchema = new mongoose.Schema(
   },
   {
     timestamps: true,
+    toJSON: { virtuals: true },
+    toObject: { virtuals: true },
   }
 );
 

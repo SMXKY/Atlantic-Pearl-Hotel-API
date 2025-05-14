@@ -1,4 +1,5 @@
 import * as mongoose from "mongoose";
+import { EmployeeModel } from "./Employee.model";
 
 const departmentSchema = new mongoose.Schema(
   {
@@ -15,6 +16,14 @@ const departmentSchema = new mongoose.Schema(
     manager: {
       type: mongoose.Types.ObjectId,
       ref: "employees",
+      validate: {
+        validator: async function (id: mongoose.Types.ObjectId) {
+          // Check if the manager exists
+          const exists = await EmployeeModel.exists({ _id: id });
+          return exists !== null;
+        },
+        message: "Manager must be an existing employee.",
+      },
     },
     isActive: {
       type: Boolean,
@@ -22,6 +31,8 @@ const departmentSchema = new mongoose.Schema(
   },
   {
     timestamps: true,
+    toJSON: { virtuals: true },
+    toObject: { virtuals: true },
   }
 );
 

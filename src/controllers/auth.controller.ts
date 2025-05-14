@@ -13,6 +13,11 @@ import * as bcrypt from "bcrypt";
 import * as Oauth from "google-auth-library";
 import { RoleModel } from "../models/Role.model";
 import { GoogleUserPayload } from "../types/googleUserPayload";
+import { promisify } from "util";
+import { RolePermissionModel } from "../models/RolePermission.model";
+import { ICustomRequest } from "../types/CustomRequest";
+import { PermissionOverideModel } from "../models/PermissionOveride";
+import { IPermission } from "../models/Permission.model";
 
 const signToken = (userId: string) => {
   const jwtSecret = process.env.JWT_SECRETE;
@@ -266,7 +271,7 @@ const login = catchAsync(
     appResponder(
       StatusCodes.OK,
       {
-        token: signToken(data._id.toString()),
+        token: signToken(user._id.toString()),
         data,
       },
       res
@@ -274,86 +279,6 @@ const login = catchAsync(
   }
 );
 
-// const googleRedirect = catchAsync(
-//   async (req: Request, res: Response, next: NextFunction) => {
-//     const client = new Oauth.OAuth2Client({
-//       clientId: process.env.GOOGLE_CLIENT_ID,
-//       clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-//       redirectUri: process.env.GOOGLE_REDIRECT_URI,
-//     });
-
-//     const { code } = req.query;
-
-//     if (!code) {
-//       return next(
-//         new AppError("No authorization code found.", StatusCodes.BAD_REQUEST)
-//       );
-//     }
-
-//     const { tokens } = await client.getToken(code as string);
-
-//     // console.log("ALL TOKENS", tokens);
-
-//     const idToken = tokens.id_token;
-
-//     if (!idToken) {
-//       return next(
-//         new AppError(
-//           "ID token is missing from the response.",
-//           StatusCodes.BAD_REQUEST
-//         )
-//       );
-//     }
-
-//     const ticket = await client.verifyIdToken({
-//       idToken,
-//       audience: process.env.GOOGLE_CLIENT_ID,
-//     });
-
-//     console.log("TICKET", ticket);
-
-//     const role = await RoleModel.findOne({ name: "guest" });
-
-//     if (!role) {
-//       return next(
-//         new AppError(
-//           "No guest role found in the db.",
-//           StatusCodes.INTERNAL_SERVER_ERROR
-//         )
-//       );
-//     }
-
-//     const payload = ticket.getPayload() as GoogleUserPayload;
-//     const { sub: googleId, email, name, picture } = payload;
-
-//     let user = await UserModel.findOne({ googleId });
-//     let guest;
-
-//     if (!user) {
-//       user = new UserModel({
-//         googleId,
-//         email,
-//         name,
-//         profilePictureUrl: picture,
-//         role: role._id,
-//         userType: "Guest",
-//       });
-//       await user?.save({ validateBeforeSave: false });
-
-//       guest = await GuestModel.create({
-//         user: user._id,
-//         hasConfirmedEmail: true,
-//       });
-//     }
-
-//     const data = {
-//       token: signToken(user._id.toString()),
-//       data: { ...guest, user },
-//     };
-
-//     appResponder(StatusCodes.OK, data, res);
-//   }
-// );
 const googleRedirect = catchAsync(
   async (req: Request, res: Response, next: NextFunction) => {
     // Verify environment variables
@@ -475,6 +400,92 @@ const authWithGoogle = catchAsync(
   }
 );
 
+const protect = catchAsync(
+  async (req: Request, res: Response, next: NextFunction) => {
+    let token;
+
+    if (
+      req.headers.authorization &&
+      req.headers.authorization.startsWith("Bearer")
+    ) {
+      token = req.headers.authorization.split(" ")[1];
+    }
+
+    if (!token) {
+      return next(
+        new AppError(
+          "Invalid auth token, please login to access this resource",
+          StatusCodes.UNAUTHORIZED
+        )
+      );
+    }
+
+    if (!process.env.JWT_SECRETE) {
+      return next(
+        new AppError("No JWT secret found", StatusCodes.INTERNAL_SERVER_ERROR)
+      );
+    }
+
+    const decodedToken = (await jwt.verify(
+      token,
+      process.env.JWT_SECRETE
+    )) as jwt.JwtPayload;
+
+    const user = await UserModel.findById(decodedToken.id).select("-password");
+
+    if (!user) {
+      return next(
+        new AppError(
+          "User no longer exist in the database.",
+          StatusCodes.NOT_FOUND
+        )
+      );
+    }
+
+    if (!decodedToken.iat) {
+      return next(
+        new AppError(
+          "Cant Find Token Issue Date",
+          StatusCodes.INTERNAL_SERVER_ERROR
+        )
+      );
+    }
+
+    if (
+      user.passWordChangedAt &&
+      user.passWordChangedAt.getTime() / 1000 > decodedToken.iat
+    ) {
+      return next(
+        new AppError(
+          "User password was changed!, Please Login Again to access this resource.",
+          StatusCodes.UNAUTHORIZED
+        )
+      );
+    }
+
+    const permissions = (
+      await RolePermissionModel.find({
+        role: user?.role,
+      })
+        .populate("permission")
+        .exec()
+    )?.map((doc) => (doc.permission as IPermission).name);
+
+    const permissionOverides = await PermissionOverideModel.find({
+      user: user._id,
+    }).populate("permission");
+
+    res.locals.user = {
+      ...user,
+      permissions,
+    };
+
+    //get all user permisons in the an array
+
+    next();
+  }
+);
+
 export const authControllers = {
   createEmployeeAccount,
   signIn,
@@ -482,4 +493,5 @@ export const authControllers = {
   login,
   googleRedirect,
   authWithGoogle,
+  protect,
 };

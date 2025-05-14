@@ -1,4 +1,6 @@
 import * as mongoose from "mongoose";
+import { DepartmentModel } from "./Department.model";
+import { PositionModel } from "./Position.model";
 
 const employeeSchema = new mongoose.Schema(
   {
@@ -50,15 +52,33 @@ const employeeSchema = new mongoose.Schema(
     department: {
       type: mongoose.Types.ObjectId,
       ref: "departments",
+      validate: {
+        validator: async function (id: mongoose.Types.ObjectId) {
+          // Check if the manager exists
+          const exists = await DepartmentModel.exists({ _id: id });
+          return exists !== null;
+        },
+        message: "Department Id not found iin the database.",
+      },
     },
     position: {
       type: mongoose.Types.ObjectId,
       ref: "positions",
       required: [true, "Every employee must be assigned a position"],
+      validate: {
+        validator: async function (id: mongoose.Types.ObjectId) {
+          // Check if the manager exists
+          const exists = await PositionModel.exists({ _id: id });
+          return exists !== null;
+        },
+        message: "Position Id not found iin the database.",
+      },
     },
   },
   {
     timestamps: true,
+    toJSON: { virtuals: true },
+    toObject: { virtuals: true },
   }
 );
 

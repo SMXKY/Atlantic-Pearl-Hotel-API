@@ -1,4 +1,6 @@
 import * as mongoose from "mongoose";
+import { UserModel } from "./User.model";
+import { PermissionModel } from "./Permission.model";
 
 interface IPermissionOveride extends mongoose.Document {
   isTemporary: boolean;
@@ -11,16 +13,40 @@ const permissionOverideSchema = new mongoose.Schema(
       type: mongoose.Types.ObjectId,
       ref: "users",
       required: true,
+      validate: {
+        validator: async function (id: mongoose.Types.ObjectId) {
+          // Check if the manager exists
+          const exists = await UserModel.exists({ _id: id });
+          return exists !== null;
+        },
+        message: "User Id not found iin the database.",
+      },
     },
     createdBy: {
       type: mongoose.Types.ObjectId,
       ref: "users",
       required: true,
+      validate: {
+        validator: async function (id: mongoose.Types.ObjectId) {
+          // Check if the manager exists
+          const exists = await UserModel.exists({ _id: id });
+          return exists !== null;
+        },
+        message: "User (created_by) Id not found iin the database.",
+      },
     },
     permission: {
       type: mongoose.Types.ObjectId,
       ref: "permissions",
       required: true,
+      validate: {
+        validator: async function (id: mongoose.Types.ObjectId) {
+          // Check if the manager exists
+          const exists = await PermissionModel.exists({ _id: id });
+          return exists !== null;
+        },
+        message: "Permission Id not found iin the database.",
+      },
     },
     isGranted: { type: Boolean, default: false },
     isTemporary: {
@@ -53,7 +79,11 @@ const permissionOverideSchema = new mongoose.Schema(
       ],
     },
   },
-  { timestamps: true }
+  {
+    timestamps: true,
+    toJSON: { virtuals: true },
+    toObject: { virtuals: true },
+  }
 );
 
 export const PermissionOverideModel = mongoose.model(
