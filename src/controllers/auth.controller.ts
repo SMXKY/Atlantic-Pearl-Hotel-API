@@ -482,13 +482,38 @@ const protect = catchAsync(
       permissions: await getUserPermissions(user as IUser),
     };
 
-    console.log(res.locals);
-
-    //get all user permisons in the an array
-
     next();
   }
 );
+
+const restrictTo = (...permissions: string[]) => {
+  return catchAsync(async (req: Request, res: Response, next: NextFunction) => {
+    if (!res.locals.user) {
+      return next(
+        new AppError(
+          "You are not logged in. You cannot access this resource.",
+          StatusCodes.UNAUTHORIZED
+        )
+      );
+    }
+
+    const hasPermission = permissions.some((perm) =>
+      res.locals.user.permissions.includes(perm)
+    );
+    if (!hasPermission) {
+      return next(
+        new AppError(
+          "You do not have permission to perform this action.",
+          StatusCodes.FORBIDDEN
+        )
+      );
+    }
+
+    console.log("access granted");
+
+    next();
+  });
+};
 
 export const authControllers = {
   createEmployeeAccount,
@@ -498,4 +523,5 @@ export const authControllers = {
   googleRedirect,
   authWithGoogle,
   protect,
+  restrictTo,
 };

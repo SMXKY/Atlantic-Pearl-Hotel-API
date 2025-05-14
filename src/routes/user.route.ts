@@ -2,6 +2,7 @@ import express from "express";
 
 import { userControllers } from "../controllers/user.controller";
 import { authControllers } from "../controllers/auth.controller";
+import { allPermissions } from "../types/Permissions.type";
 
 export const userRouter = express.Router();
 
@@ -12,6 +13,6 @@ userRouter
 
 userRouter
   .route("/:id")
-  .get(authControllers.protect, userControllers.readOneUser)
+  .get(userControllers.readOneUser)
   .patch(userControllers.updateUser)
   .delete(userControllers.deleteUser);
