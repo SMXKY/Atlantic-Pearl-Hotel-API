@@ -3,11 +3,29 @@ import * as validator from "validator";
 import { isValidNumber } from "libphonenumber-js";
 import bcrypt from "bcrypt";
 import { RoleModel } from "./Role.model";
+import { Document, Types } from "mongoose";
 
-export interface IUser extends mongoose.Document {
+export interface IUser extends Document {
+  name: string;
+  email: string;
+  phoneNumber: string;
   password: string;
-  passwordConfirm: string;
+  passwordConfirm?: string;
   passwordChangedAt?: Date;
+  dateOfBirth: Date;
+  gender: "M" | "F";
+  emergencyContact: string;
+  isActive?: boolean;
+  deactivatedUntil?: Date;
+  profilePictureUrl?: string;
+  role: Types.ObjectId;
+  userType: "Guest" | "Employee";
+  failedLoginAttempts?: number;
+  lockUntil?: Date;
+  googleId?: string;
+  passWordChangedAt?: Date;
+  createdAt: Date;
+  updatedAt: Date;
 }
 
 const userSchema = new mongoose.Schema(

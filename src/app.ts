@@ -182,10 +182,10 @@ app.use("/api/v1/departments", departmentRouter);
 app.use("/api/v1/employees", employeeRouter);
 app.use("/api/v1/guests", guestRouter);
 app.use("/api/v1/permissions", permissionRouter);
-app.use("/api/v1/permissionOverides", permissionOverideRouter);
+app.use("/api/v1/permission-overides", permissionOverideRouter);
 app.use("/api/v1/positions", positionRouter);
 app.use("/api/v1/roles", roleRouter);
-app.use("/api/v1/rolePermissions", rolePermissionRouter);
+app.use("/api/v1/role-permissions", rolePermissionRouter);
 app.use("/api/v1/users", userRouter);
 app.use("/api/v1/auth", authRouter);
 

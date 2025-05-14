@@ -1,6 +1,6 @@
 import { NextFunction, Request, Response } from "express";
 import { catchAsync } from "../util/catchAsync";
-import { UserModel } from "../models/User.model";
+import { IUser, UserModel } from "../models/User.model";
 import { appResponder } from "../util/appResponder.util";
 import { EmployeeModel } from "../models/Employee.model";
 import { StatusCodes } from "http-status-codes";
@@ -18,6 +18,8 @@ import { RolePermissionModel } from "../models/RolePermission.model";
 import { ICustomRequest } from "../types/CustomRequest";
 import { PermissionOverideModel } from "../models/PermissionOveride";
 import { IPermission } from "../models/Permission.model";
+import { getUserPermissions } from "../util/getUserPermissions";
+import mongoose from "mongoose";
 
 const signToken = (userId: string) => {
   const jwtSecret = process.env.JWT_SECRETE;
@@ -272,7 +274,12 @@ const login = catchAsync(
       StatusCodes.OK,
       {
         token: signToken(user._id.toString()),
-        data,
+        data: {
+          ...data.toObject(),
+          permissions: await getUserPermissions(
+            user.toObject() as unknown as IUser
+          ),
+        },
       },
       res
     );
@@ -348,8 +355,11 @@ const googleRedirect = catchAsync(
       );
     }
 
-    let user = await UserModel.findOne({ googleId });
-    let guest;
+    let user = await UserModel.findOne({ googleId }).populate("role");
+    let guest = user ? await GuestModel.findOne({ user: user._id }) : null;
+    const permissions = user
+      ? await getUserPermissions(user.toObject() as unknown as IUser)
+      : null;
 
     if (!user) {
       user = new UserModel({
@@ -370,7 +380,7 @@ const googleRedirect = catchAsync(
 
     const data = {
       token: signToken(user._id.toString()),
-      data: { ...guest, user },
+      data: { ...guest?.toObject(), user, permissions },
     };
 
     appResponder(StatusCodes.OK, data, res);
@@ -431,7 +441,11 @@ const protect = catchAsync(
       process.env.JWT_SECRETE
     )) as jwt.JwtPayload;
 
-    const user = await UserModel.findById(decodedToken.id).select("-password");
+    const user = await UserModel.findById(decodedToken.id)
+      .select("-password")
+      .populate("role")
+      .lean<IUser>()
+      .exec();
 
     if (!user) {
       return next(
@@ -463,22 +477,12 @@ const protect = catchAsync(
       );
     }
 
-    const permissions = (
-      await RolePermissionModel.find({
-        role: user?.role,
-      })
-        .populate("permission")
-        .exec()
-    )?.map((doc) => (doc.permission as IPermission).name);
-
-    const permissionOverides = await PermissionOverideModel.find({
-      user: user._id,
-    }).populate("permission");
-
     res.locals.user = {
       ...user,
-      permissions,
+      permissions: await getUserPermissions(user as IUser),
     };
+
+    console.log(res.locals);
 
     //get all user permisons in the an array
 

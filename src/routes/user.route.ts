@@ -1,16 +1,17 @@
 import express from "express";
 
 import { userControllers } from "../controllers/user.controller";
+import { authControllers } from "../controllers/auth.controller";
 
 export const userRouter = express.Router();
 
 userRouter
   .route("/")
   .post(userControllers.createUser)
-  .get(userControllers.readAllUsers);
+  .get(authControllers.protect, userControllers.readAllUsers);
 
 userRouter
   .route("/:id")
-  .get(userControllers.readOneUser)
+  .get(authControllers.protect, userControllers.readOneUser)
   .patch(userControllers.updateUser)
   .delete(userControllers.deleteUser);
