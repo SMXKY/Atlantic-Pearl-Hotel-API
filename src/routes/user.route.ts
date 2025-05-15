@@ -19,4 +19,8 @@ userRouter
   .route("/:id")
   .get(userControllers.readOneUser)
   .patch(userControllers.updateUser)
-  .delete(userControllers.deleteUser);
+  .delete(
+    authControllers.protect,
+    authControllers.restrictTo(allPermissions.users.delete),
+    userControllers.deleteUser
+  );

@@ -84,6 +84,10 @@ export class CRUD {
   public async delete(id: string, res: Response) {
     const data = await this.model.findByIdAndDelete(id);
 
+    if (!data) {
+      throw new AppError("No such Id in the database", StatusCodes.NOT_FOUND);
+    }
+
     appResponder(
       StatusCodes.OK,
       { message: "Resource deleted successfully" },

@@ -2,6 +2,7 @@ import * as dotEnv from "dotenv";
 import * as mongoose from "mongoose";
 
 import { app } from "./app";
+import { createDefualtDcouments } from "./defaults/documents.default";
 
 dotEnv.config();
 
@@ -31,6 +32,10 @@ mongoose
   .catch((err) => {
     console.log("Error connecting to database: ", err);
   });
+
+createDefualtDcouments().catch((err) => {
+  console.log("Error: Creating default documents", err);
+});
 
 const port: Number = Number(process.env.PORT) || 3000;
 
