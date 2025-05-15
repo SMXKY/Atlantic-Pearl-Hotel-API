@@ -12,6 +12,10 @@ userRouter
   .get(authControllers.protect, userControllers.readAllUsers);
 
 userRouter
+  .route("/update-password")
+  .patch(authControllers.protect, userControllers.updatePassword);
+
+userRouter
   .route("/:id")
   .get(userControllers.readOneUser)
   .patch(userControllers.updateUser)
