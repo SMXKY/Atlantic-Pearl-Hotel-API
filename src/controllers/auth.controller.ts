@@ -14,7 +14,7 @@ import * as Oauth from "google-auth-library";
 import { RoleModel } from "../models/Role.model";
 import { GoogleUserPayload } from "../types/googleUserPayload";
 import { getUserPermissions } from "../util/getUserPermissions";
-import mongoose from "mongoose";
+import crypto from "crypto";
 
 const signToken = (userId: string) => {
   const jwtSecret = process.env.JWT_SECRETE;
@@ -571,6 +571,208 @@ const restrictTo = (...permissions: string[]) => {
   });
 };
 
+const forgotPassword = catchAsync(
+  async (req: Request, res: Response, next: NextFunction) => {
+    const { email } = req.body;
+
+    const user = await UserModel.findOne({ email }).select(
+      "+passwordReset.code +passwordReset.issuedAt"
+    );
+
+    if (!user) {
+      return next(
+        new AppError("No email in the database", StatusCodes.NOT_FOUND)
+      );
+    }
+
+    const passwordResetCode = Array.from({ length: 6 }, () =>
+      crypto.randomInt(1, 9)
+    ).join("");
+
+    await UserModel.findByIdAndUpdate(
+      user._id,
+      {
+        $set: {
+          "passwordReset.code": await bcrypt.hash(passwordResetCode, 12),
+          "passwordReset.issuedAt": Date.now(),
+          "passwordReset.expiresAt": Date.now() + 25 * 60 * 1000,
+        },
+      },
+      { runValidators: true, new: true }
+    );
+
+    await sendEmail(
+      user.email,
+      "Password Reset",
+      "Clikck on the link access you password reset token",
+      `<b style="font-size: 4rem;">${passwordResetCode}</b>`
+    );
+
+    appResponder(
+      StatusCodes.OK,
+      { message: "Password reset link sent to your email" },
+      res
+    );
+  }
+);
+
+const verifyPasswordResetCode = catchAsync(
+  async (req: Request, res: Response, next: NextFunction) => {
+    const { email, code } = req.body;
+
+    const user = await UserModel.findOne({ email }).select(
+      "+passwordReset.code +passwordReset.issuedAt +passwordReset.expiresAt"
+    );
+
+    if (!user) {
+      return next(
+        new AppError("User No longer exist in the db.", StatusCodes.NOT_FOUND)
+      );
+    }
+
+    if (!user.passwordReset) {
+      return next(
+        new AppError(
+          "User has not been issued a password reset code",
+          StatusCodes.UNAUTHORIZED
+        )
+      );
+    }
+
+    if (
+      !user.passwordReset.code ||
+      !(await bcrypt.compare(code, user.passwordReset?.code))
+    ) {
+      return next(
+        new AppError("Invalid password rest code", StatusCodes.BAD_REQUEST)
+      );
+    }
+
+    if (
+      !user.passwordReset.expiresAt ||
+      !user.passwordReset.issuedAt ||
+      user.passwordReset.expiresAt.getTime() < Date.now()
+    ) {
+      return next(
+        new AppError(
+          "This password reset code has expired. Please request a new one.",
+          StatusCodes.UNAUTHORIZED
+        )
+      );
+    }
+
+    const jwtSecret = process.env.JWT_SECRETE;
+    const jwtExpiresIn = "1h";
+
+    if (!jwtSecret) {
+      throw new Error("JWT_SECRET is not defined in environment variables.");
+    }
+
+    const options: jwt.SignOptions = {
+      expiresIn: jwtExpiresIn as jwt.SignOptions["expiresIn"],
+    };
+
+    const token = jwt.sign({ id: user._id.toString() }, jwtSecret, options);
+
+    appResponder(
+      StatusCodes.OK,
+      {
+        token,
+      },
+      res
+    );
+  }
+);
+
+const resetPassword = catchAsync(
+  async (req: Request, res: Response, next: NextFunction) => {
+    const token = req.params.token;
+    const { password, passwordConfirm } = req.body;
+
+    if (!token) {
+      return next(
+        new AppError(
+          "Invalid auth token, please login to access this resource",
+          StatusCodes.UNAUTHORIZED
+        )
+      );
+    }
+
+    if (!process.env.JWT_SECRETE) {
+      return next(
+        new AppError(
+          "Incorrect JWT enviroment variable settings.",
+          StatusCodes.INTERNAL_SERVER_ERROR
+        )
+      );
+    }
+
+    const decodedToken = (await jwt.verify(
+      token,
+      process.env.JWT_SECRETE
+    )) as jwt.JwtPayload;
+
+    const user = await UserModel.findById(decodedToken.id)
+      .select("+password")
+      .select(
+        "+passwordReset.code +passwordReset.issuedAt +passwordReset.expiresAt"
+      );
+
+    if (!user) {
+      return next(
+        new AppError(
+          "User no longer exist in the database.",
+          StatusCodes.BAD_REQUEST
+        )
+      );
+    }
+
+    if (!password || !passwordConfirm) {
+      return next(
+        new AppError(
+          "Enter valid new password, and confirm password values.",
+          StatusCodes.BAD_REQUEST
+        )
+      );
+    }
+
+    if (password.length < 8) {
+      return next(
+        new AppError(
+          "Password must be atleast 8 characters long.",
+          StatusCodes.BAD_REQUEST
+        )
+      );
+    }
+
+    if (password != passwordConfirm) {
+      return next(
+        new AppError(
+          "Password and password confirmation must match.",
+          StatusCodes.BAD_REQUEST
+        )
+      );
+    }
+
+    const newUserPassword = await bcrypt.hash(password, 12);
+
+    await UserModel.findByIdAndUpdate(
+      user._id,
+      {
+        password: newUserPassword,
+        passwordReset: undefined,
+      },
+      { new: true, runValidators: true }
+    );
+
+    appResponder(
+      StatusCodes.OK,
+      { message: "Password successfully Reseted." },
+      res
+    );
+  }
+);
+
 export const authControllers = {
   createEmployeeAccount,
   signIn,
@@ -580,4 +782,7 @@ export const authControllers = {
   authWithGoogle,
   protect,
   restrictTo,
+  forgotPassword,
+  verifyPasswordResetCode,
+  resetPassword,
 };

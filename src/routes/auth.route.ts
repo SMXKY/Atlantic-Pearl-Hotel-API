@@ -98,3 +98,8 @@ authRouter.route("/sign-in").post(authControllers.signIn);
 authRouter.route("/login").post(authControllers.login);
 authRouter.route("/google-redirect").get(authControllers.googleRedirect);
 authRouter.route("/google").get(authControllers.authWithGoogle);
+authRouter.route("/forgot-password").post(authControllers.forgotPassword);
+authRouter
+  .route("/verify-password-reset-code")
+  .post(authControllers.verifyPasswordResetCode);
+authRouter.route("/reset-password/:token").post(authControllers.resetPassword);

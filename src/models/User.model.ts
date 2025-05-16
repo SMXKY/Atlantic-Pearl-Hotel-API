@@ -158,6 +158,20 @@ const userSchema = new mongoose.Schema(
     passWordChangedAt: {
       type: Date,
     },
+    passwordReset: {
+      code: {
+        type: String,
+        select: false,
+      },
+      issuedAt: {
+        type: Date,
+        select: false,
+      },
+      expiresAt: {
+        type: Date,
+        select: false,
+      },
+    },
   },
   {
     timestamps: true,
