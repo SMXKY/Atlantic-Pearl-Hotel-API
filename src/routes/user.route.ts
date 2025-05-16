@@ -18,7 +18,11 @@ userRouter
 userRouter
   .route("/:id")
   .get(userControllers.readOneUser)
-  .patch(userControllers.updateUser)
+  .patch(
+    authControllers.protect,
+    authControllers.restrictTo(allPermissions.users.update),
+    userControllers.updateUser
+  )
   .delete(
     authControllers.protect,
     authControllers.restrictTo(allPermissions.users.delete),
