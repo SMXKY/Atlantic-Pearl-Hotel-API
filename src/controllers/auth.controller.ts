@@ -13,11 +13,6 @@ import * as bcrypt from "bcrypt";
 import * as Oauth from "google-auth-library";
 import { RoleModel } from "../models/Role.model";
 import { GoogleUserPayload } from "../types/googleUserPayload";
-import { promisify } from "util";
-import { RolePermissionModel } from "../models/RolePermission.model";
-import { ICustomRequest } from "../types/CustomRequest";
-import { PermissionOverideModel } from "../models/PermissionOveride";
-import { IPermission } from "../models/Permission.model";
 import { getUserPermissions } from "../util/getUserPermissions";
 import mongoose from "mongoose";
 
@@ -36,6 +31,54 @@ const signToken = (userId: string) => {
   return jwt.sign({ id: userId }, jwtSecret, options);
 };
 
+// const createEmployeeAccount = catchAsync(
+//   async (req: Request, res: Response, next: NextFunction) => {
+//     const employeePassword = generatePassword.generate({
+//       length: 8,
+//       numbers: true,
+//       symbols: true,
+//       uppercase: true,
+//       lowercase: true,
+//       strict: true,
+//     });
+
+//     // console.log(process.env.NODE_ENV);
+
+//     req.body.password = employeePassword;
+//     req.body.passwordConfirm = employeePassword;
+//     req.body.userType = "Employee";
+
+//     const user = await UserModel.create(req.body);
+
+//     EmployeeModel.create({
+//       ...req.body,
+//       user: user._id,
+//     })
+//       .then(async () => {
+//         await sendEmail(
+//           user.email,
+//           "Your Account Password - Atlantic Pearl Hotel and Resort",
+//           `Dear employee, please find your account password below.`,
+//           `<b>Keep you password Confidential</b><br><p>Your account password: ${employeePassword}</p>`
+//         );
+
+//         appResponder(
+//           StatusCodes.OK,
+//           {
+//             ok: true,
+//             message:
+//               "Employee account created successfully. Password provide to employee throught thier email.",
+//           },
+//           res
+//         );
+//       })
+//       .catch(async (err) => {
+//         await UserModel.findByIdAndDelete(user._id);
+//         return next(new AppError(err.message, StatusCodes.BAD_REQUEST));
+//       });
+//   }
+// );
+
 const createEmployeeAccount = catchAsync(
   async (req: Request, res: Response, next: NextFunction) => {
     const employeePassword = generatePassword.generate({
@@ -47,35 +90,48 @@ const createEmployeeAccount = catchAsync(
       strict: true,
     });
 
-    // console.log(process.env.NODE_ENV);
-
     req.body.password = employeePassword;
     req.body.passwordConfirm = employeePassword;
     req.body.userType = "Employee";
 
-    const user = await UserModel.create(req.body);
+    let user;
+    try {
+      user = await UserModel.create(req.body);
+    } catch (err) {
+      return next(err);
+    }
 
-    await EmployeeModel.create({
+    EmployeeModel.create({
       ...req.body,
       user: user._id,
-    });
+    })
+      .then(async () => {
+        await sendEmail(
+          user.email,
+          "Your Account Password - Atlantic Pearl Hotel and Resort",
+          `Dear employee, please find your account password below.`,
+          `<b>Keep you password Confidential</b><br><p>Your account password: ${employeePassword}</p>`
+        );
 
-    await sendEmail(
-      user.email,
-      "Your Account Password - Atlantic Pearl Hotel and Resort",
-      `Dear employee, please find your account password below.`,
-      `<b>Keep you password Confidential</b><br><p>Your account password: ${employeePassword}</p>`
-    );
-
-    appResponder(
-      StatusCodes.OK,
-      {
-        ok: true,
-        message:
-          "Employee account created successfully. Password provide to employee throught thier email.",
-      },
-      res
-    );
+        appResponder(
+          StatusCodes.OK,
+          {
+            ok: true,
+            message:
+              "Employee account created successfully. Password provided to employee through their email.",
+          },
+          res
+        );
+      })
+      .catch(async (err) => {
+        try {
+          await UserModel.findByIdAndDelete(user._id);
+        } catch (deleteErr) {
+          console.error("Failed to delete user:", deleteErr);
+          // Depending on your requirements, you might want to notify the client about this failure as well
+        }
+        return next(new AppError(err.message, StatusCodes.BAD_REQUEST));
+      });
   }
 );
 

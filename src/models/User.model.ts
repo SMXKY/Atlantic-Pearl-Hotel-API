@@ -130,7 +130,6 @@ const userSchema = new mongoose.Schema(
       required: [true, "User role, is required (role, id)"],
       validate: {
         validator: async function (id: mongoose.Types.ObjectId) {
-          // Check if the manager exists
           const exists = await RoleModel.exists({ _id: id });
           return exists !== null;
         },

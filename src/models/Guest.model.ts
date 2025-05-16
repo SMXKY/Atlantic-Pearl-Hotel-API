@@ -1,6 +1,8 @@
 import * as mongoose from "mongoose";
 import * as currencyCodes from "currency-codes";
 
+//NB: only the user Id should be required in this model.
+
 const guestSchema = new mongoose.Schema(
   {
     user: {
