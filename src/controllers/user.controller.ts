@@ -33,7 +33,16 @@ const updateUser = catchAsync(
     if (req.body.password) {
       return next(
         new AppError(
-          "You cannnot update user passwords, on this route",
+          "You cannot update user passwords, on this route.",
+          StatusCodes.BAD_REQUEST
+        )
+      );
+    }
+
+    if (req.body.isActive) {
+      return next(
+        new AppError(
+          "You cannot activate user accounts on this route.",
           StatusCodes.BAD_REQUEST
         )
       );

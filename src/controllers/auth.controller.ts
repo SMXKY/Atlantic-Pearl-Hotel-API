@@ -773,6 +773,82 @@ const resetPassword = catchAsync(
   }
 );
 
+const activateAndDeactivateUserAccounts = catchAsync(
+  async (req: Request, res: Response, next: NextFunction) => {
+    const userId = req.params.id;
+    let { deactivatedUntil, isActive } = req.body;
+
+    if (!userId || typeof isActive !== "boolean") {
+      return next(
+        new AppError(
+          "You must provide a valid user ID and a boolean value for 'isActive'.",
+          StatusCodes.BAD_REQUEST
+        )
+      );
+    }
+
+    if (isActive) {
+      deactivatedUntil = undefined;
+    }
+
+    const user = await UserModel.findOne({
+      _id: userId,
+      includeInactive: true,
+    }).select("+isActive +deactivatedUntil");
+
+    if (!user) {
+      return next(
+        new AppError(
+          "No user found with the provided ID.",
+          StatusCodes.BAD_REQUEST
+        )
+      );
+    }
+
+    if (deactivatedUntil) {
+      const parsedDate = new Date(deactivatedUntil);
+      if (isNaN(parsedDate.getTime())) {
+        return next(
+          new AppError(
+            "Invalid 'deactivatedUntil' date format.",
+            StatusCodes.BAD_REQUEST
+          )
+        );
+      }
+
+      if (parsedDate.getTime() <= Date.now()) {
+        console.log("");
+        return next(
+          new AppError(
+            "Deactivated account, dates must be in the future",
+            StatusCodes.BAD_REQUEST
+          )
+        );
+      }
+    }
+
+    // console.log(user);
+
+    const data = await UserModel.findOneAndUpdate(
+      { _id: user._id, includeInactive: true },
+      {
+        isActive,
+        deactivatedUntil:
+          !deactivatedUntil || isActive
+            ? undefined
+            : new Date(deactivatedUntil),
+      },
+      { new: true, runValidators: true }
+    );
+
+    appResponder(
+      StatusCodes.OK,
+      { message: "User account updated successfully.", data },
+      res
+    );
+  }
+);
+
 export const authControllers = {
   createEmployeeAccount,
   signIn,
@@ -785,4 +861,5 @@ export const authControllers = {
   forgotPassword,
   verifyPasswordResetCode,
   resetPassword,
+  activateAndDeactivateUserAccounts,
 };

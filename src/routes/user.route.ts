@@ -6,10 +6,11 @@ import { allPermissions } from "../types/Permissions.type";
 
 export const userRouter = express.Router();
 
-userRouter
-  .route("/")
-  .post(userControllers.createUser)
-  .get(authControllers.protect, userControllers.readAllUsers);
+userRouter.route("/").post(userControllers.createUser).get(
+  // authControllers.protect,
+  // authControllers.restrictTo(allPermissions.users.readAll),
+  userControllers.readAllUsers
+);
 
 userRouter
   .route("/update-password")

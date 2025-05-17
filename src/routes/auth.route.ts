@@ -103,3 +103,6 @@ authRouter
   .route("/verify-password-reset-code")
   .post(authControllers.verifyPasswordResetCode);
 authRouter.route("/reset-password/:token").post(authControllers.resetPassword);
+authRouter
+  .route("/activation/:id")
+  .patch(authControllers.activateAndDeactivateUserAccounts);

@@ -105,12 +105,13 @@ const userSchema = new mongoose.Schema(
     },
     isActive: {
       type: Boolean,
-      select: false,
+      // select: false,
       default: true,
     },
     deactivatedUntil: {
       type: Date,
-      select: false,
+      // select: false,
+      default: undefined,
     },
     passwordChangedAt: {
       type: Date,
@@ -180,7 +181,39 @@ const userSchema = new mongoose.Schema(
   }
 );
 
+userSchema.pre(
+  /^find/,
+  async function (this: mongoose.Query<any, IUser>, next) {
+    const nowMillis = new Date().getTime();
+
+    await this.model.collection.updateMany(
+      {
+        isActive: false,
+        $expr: {
+          $lte: [{ $toLong: { $toDate: "$deactivatedUntil" } }, nowMillis],
+        },
+      },
+      {
+        $set: { isActive: true },
+        $unset: { deactivatedUntil: "" },
+      }
+    );
+
+    next();
+  }
+);
+
 userSchema.pre(/^find/, function (this: mongoose.Query<any, IUser>, next) {
+  const query = this.getQuery();
+
+  // Check if the user explicitly wants to include inactive users
+  if (query.includeInactive) {
+    // Remove this custom flag so MongoDB doesn't get confused
+    delete query.includeInactive;
+    return next();
+  }
+
+  // Otherwise exclude inactive users
   this.where({ isActive: { $ne: false } });
   next();
 });
