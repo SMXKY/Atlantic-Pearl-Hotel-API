@@ -181,27 +181,27 @@ const userSchema = new mongoose.Schema(
   }
 );
 
-userSchema.pre(
-  /^find/,
-  async function (this: mongoose.Query<any, IUser>, next) {
-    const nowMillis = new Date().getTime();
+// userSchema.pre(
+//   /^find/,
+//   async function (this: mongoose.Query<any, IUser>, next) {
+//     const nowMillis = new Date().getTime();
 
-    await this.model.collection.updateMany(
-      {
-        isActive: false,
-        $expr: {
-          $lte: [{ $toLong: { $toDate: "$deactivatedUntil" } }, nowMillis],
-        },
-      },
-      {
-        $set: { isActive: true },
-        $unset: { deactivatedUntil: "" },
-      }
-    );
+//     await this.model.collection.updateMany(
+//       {
+//         isActive: false,
+//         $expr: {
+//           $lte: [{ $toLong: { $toDate: "$deactivatedUntil" } }, nowMillis],
+//         },
+//       },
+//       {
+//         $set: { isActive: true },
+//         $unset: { deactivatedUntil: "" },
+//       }
+//     );
 
-    next();
-  }
-);
+//     next();
+//   }
+// );
 
 userSchema.pre(/^find/, function (this: mongoose.Query<any, IUser>, next) {
   const query = this.getQuery();

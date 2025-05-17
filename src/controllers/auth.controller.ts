@@ -843,7 +843,7 @@ const activateAndDeactivateUserAccounts = catchAsync(
 
     appResponder(
       StatusCodes.OK,
-      { message: "User account updated successfully.", data },
+      { message: "User account updated successfully." },
       res
     );
   }
