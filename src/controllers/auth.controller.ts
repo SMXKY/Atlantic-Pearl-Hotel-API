@@ -31,55 +31,8 @@ const signToken = (userId: string) => {
   return jwt.sign({ id: userId }, jwtSecret, options);
 };
 
-// const createEmployeeAccount = catchAsync(
-//   async (req: Request, res: Response, next: NextFunction) => {
-//     const employeePassword = generatePassword.generate({
-//       length: 8,
-//       numbers: true,
-//       symbols: true,
-//       uppercase: true,
-//       lowercase: true,
-//       strict: true,
-//     });
-
-//     // console.log(process.env.NODE_ENV);
-
-//     req.body.password = employeePassword;
-//     req.body.passwordConfirm = employeePassword;
-//     req.body.userType = "Employee";
-
-//     const user = await UserModel.create(req.body);
-
-//     EmployeeModel.create({
-//       ...req.body,
-//       user: user._id,
-//     })
-//       .then(async () => {
-//         await sendEmail(
-//           user.email,
-//           "Your Account Password - Atlantic Pearl Hotel and Resort",
-//           `Dear employee, please find your account password below.`,
-//           `<b>Keep you password Confidential</b><br><p>Your account password: ${employeePassword}</p>`
-//         );
-
-//         appResponder(
-//           StatusCodes.OK,
-//           {
-//             ok: true,
-//             message:
-//               "Employee account created successfully. Password provide to employee throught thier email.",
-//           },
-//           res
-//         );
-//       })
-//       .catch(async (err) => {
-//         await UserModel.findByIdAndDelete(user._id);
-//         return next(new AppError(err.message, StatusCodes.BAD_REQUEST));
-//       });
-//   }
-// );
-
 //Todo: Log user acctivity in production for creating Employees
+
 const createEmployeeAccount = catchAsync(
   async (req: Request, res: Response, next: NextFunction) => {
     const employeePassword = generatePassword.generate({
@@ -129,7 +82,6 @@ const createEmployeeAccount = catchAsync(
           await UserModel.findByIdAndDelete(user._id);
         } catch (deleteErr) {
           console.error("Failed to delete user:", deleteErr);
-          // Depending on your requirements, you might want to notify the client about this failure as well
         }
         return next(new AppError(err.message, StatusCodes.BAD_REQUEST));
       });
@@ -269,45 +221,61 @@ const login = catchAsync(
 
     if (!user) {
       return next(
-        new AppError("Incorrect Email or Password", StatusCodes.UNAUTHORIZED)
+        new AppError("Incorrect Email or Password.", StatusCodes.UNAUTHORIZED)
       );
     }
 
-    // Checking if user is locked
-    if (user.lockUntil && user.lockUntil > new Date()) {
-      const remaining = Math.ceil(
-        (user.lockUntil.getTime() - Date.now()) / 60000
-      );
+    if (user.lockUntil && user.lockUntil.getTime() >= Date.now()) {
+      const remainingTime = (user.lockUntil.getTime() - Date.now()) / 60 / 1000;
+
       return next(
         new AppError(
-          `Account locked. Try again in ${remaining} minute(s).`,
-          StatusCodes.UNAUTHORIZED
+          `Your account is locked for too many failed attempts, please try again in ${Math.ceil(
+            remainingTime
+          )} minutes.`,
+          StatusCodes.BAD_REQUEST
         )
       );
     }
 
     const isPasswordCorrect = await bcrypt.compare(password, user.password);
+
+    if (!process.env.ACCOUNT_LOGIN_WAIT_TIME) {
+      return next(
+        new AppError(
+          "No account lock time set in enviroment variables.",
+          StatusCodes.INTERNAL_SERVER_ERROR
+        )
+      );
+    }
+
     if (!isPasswordCorrect) {
-      user.failedLoginAttempts = (user.failedLoginAttempts || 0) + 1;
+      user.failedLoginAttempts = user.failedLoginAttempts + 1;
 
       if (user.failedLoginAttempts >= 5) {
-        user.lockUntil = new Date(Date.now() + 30 * 60 * 1000); // 30 minutes
-        await user.save();
+        user.lockUntil = new Date(
+          Date.now() + Number(process.env.ACCOUNT_LOGIN_WAIT_TIME) * 60 * 1000
+        );
+
+        user.save();
+
         return next(
           new AppError(
-            "Account locked due to too many failed attempts. Try again in 30 minutes.",
+            `Too many failed login attempts your account has been locked for ${Number(
+              process.env.ACCOUNT_LOGIN_WAIT_TIME
+            )} minutes.`,
             StatusCodes.UNAUTHORIZED
           )
         );
       }
 
       await user.save();
+
       return next(
-        new AppError("Incorrect Email or Password", StatusCodes.UNAUTHORIZED)
+        new AppError("Incorrect Email or Password.", StatusCodes.UNAUTHORIZED)
       );
     }
 
-    // If login is successful, reset failed attempts
     user.failedLoginAttempts = 0;
     user.lockUntil = undefined;
     await user.save();
