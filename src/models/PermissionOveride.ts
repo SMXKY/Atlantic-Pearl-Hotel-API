@@ -86,6 +86,26 @@ const permissionOverideSchema = new mongoose.Schema(
   }
 );
 
+permissionOverideSchema.pre("save", function (next) {
+  if (!this.isTemporary) return next();
+
+  if (!this.expiresAt) {
+    return next(
+      new Error("Temporary permission overrides must have an expiry date.")
+    );
+  }
+
+  if (this.expiresAt.getTime() <= Date.now()) {
+    return next(
+      new Error("Expiration date for permissions must be in the future.")
+    );
+  }
+
+  next();
+});
+
+permissionOverideSchema.index({ user: 1, permission: 1 }, { unique: true });
+
 export const PermissionOverideModel = mongoose.model(
   "permissionoverides",
   permissionOverideSchema

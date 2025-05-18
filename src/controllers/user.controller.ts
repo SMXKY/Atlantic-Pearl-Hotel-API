@@ -49,6 +49,15 @@ const updateUser = catchAsync(
       );
     }
 
+    if (req.body.role) {
+      return next(
+        new AppError(
+          "You cannot update users on this route.",
+          StatusCodes.BAD_REQUEST
+        )
+      );
+    }
+
     req.body.password = undefined;
     delete req.body.password;
 

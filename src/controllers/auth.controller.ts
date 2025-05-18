@@ -566,7 +566,7 @@ const restrictTo = (...permissions: string[]) => {
       );
     }
 
-    console.log("access granted");
+    // console.log("access granted");
 
     next();
   });
@@ -850,6 +850,24 @@ const activateAndDeactivateUserAccounts = catchAsync(
   }
 );
 
+const changeUserRole = catchAsync(
+  async (req: Request, res: Response, next: NextFunction) => {
+    const userId = req.params.id;
+
+    await UserModel.findByIdAndUpdate(
+      userId,
+      { role: req.body.role },
+      { runValidators: true, new: true }
+    );
+
+    appResponder(
+      StatusCodes.OK,
+      { message: "User role updated successffuly" },
+      res
+    );
+  }
+);
+
 export const authControllers = {
   createEmployeeAccount,
   signIn,
@@ -863,4 +881,5 @@ export const authControllers = {
   verifyPasswordResetCode,
   resetPassword,
   activateAndDeactivateUserAccounts,
+  changeUserRole,
 };
