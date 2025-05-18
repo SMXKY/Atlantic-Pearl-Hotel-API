@@ -60,6 +60,7 @@ const corsOptions = {
 };
 
 app.use(cors(corsOptions));
+app.set("trust proxy", true);
 
 app.get("/", (req: Request, res: Response) => {
   res.send("Hello from the Atlantic Pearl Hotel and Resort API...");

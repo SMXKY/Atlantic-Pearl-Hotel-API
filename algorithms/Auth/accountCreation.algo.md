@@ -24,3 +24,7 @@ There a two ways in which account can be created in the system those are employe
 - create guest document
 - send and email of account creation confimraiton together with an email comfirm link
 - send email saying account has been successfuy confirmed
+
+## activityLog
+
+- In every controller before sending an Ok response store the activity log in the database

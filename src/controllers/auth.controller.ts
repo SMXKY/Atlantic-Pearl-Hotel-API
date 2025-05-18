@@ -105,7 +105,7 @@ const createEmployeeAccount = catchAsync(
       ...req.body,
       user: user._id,
     })
-      .then(async () => {
+      .then(async (data) => {
         await sendEmail(
           user.email,
           "Your Account Password - Atlantic Pearl Hotel and Resort",

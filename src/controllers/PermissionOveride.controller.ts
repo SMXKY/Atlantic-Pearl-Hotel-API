@@ -8,13 +8,13 @@ const CRUDPermissionOveride: CRUD = new CRUD(PermissionOverideModel);
 
 const createPermissionOveride = catchAsync(
   async (req: Request, res: Response, next: NextFunction) => {
-    await CRUDPermissionOveride.create(req.body, res);
+    await CRUDPermissionOveride.create(req.body, res, req);
   }
 );
 
 const readOnePermissionOveride = catchAsync(
   async (req: Request, res: Response, next: NextFunction) => {
-    await CRUDPermissionOveride.readOne(req.params.id, res, []);
+    await CRUDPermissionOveride.readOne(req.params.id, res, [], req);
   }
 );
 
@@ -32,7 +32,7 @@ const updatePermissionOveride = catchAsync(
 
 const deletePermissionOveride = catchAsync(
   async (req: Request, res: Response, next: NextFunction) => {
-    await CRUDPermissionOveride.delete(req.params.id, res);
+    await CRUDPermissionOveride.delete(req.params.id, res, req);
   }
 );
 

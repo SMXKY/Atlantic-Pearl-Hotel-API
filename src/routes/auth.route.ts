@@ -1,5 +1,6 @@
 import express from "express";
 import { authControllers } from "../controllers/auth.controller";
+import { allPermissions } from "../types/Permissions.type";
 
 export const authRouter = express.Router();
 
@@ -90,6 +91,7 @@ export const authRouter = express.Router();
  *                       example: Employee account created successfully
  */
 
+//TODO: In production ensure create employee is protected, and restricted
 authRouter
   .route("/create-employee")
   .post(authControllers.createEmployeeAccount);
@@ -105,4 +107,11 @@ authRouter
 authRouter.route("/reset-password/:token").post(authControllers.resetPassword);
 authRouter
   .route("/activation/:id")
-  .patch(authControllers.activateAndDeactivateUserAccounts);
+  .patch(
+    authControllers.protect,
+    authControllers.restrictTo(
+      allPermissions.auth.activateAccount,
+      allPermissions.auth.deActivateAccount
+    ),
+    authControllers.activateAndDeactivateUserAccounts
+  );

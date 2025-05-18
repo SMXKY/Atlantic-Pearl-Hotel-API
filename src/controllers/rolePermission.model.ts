@@ -8,13 +8,13 @@ const CRUDRolePermission: CRUD = new CRUD(RolePermissionModel);
 
 const createRolePermission = catchAsync(
   async (req: Request, res: Response, next: NextFunction) => {
-    await CRUDRolePermission.create(req.body, res);
+    await CRUDRolePermission.create(req.body, res, req);
   }
 );
 
 const readOneRolePermission = catchAsync(
   async (req: Request, res: Response, next: NextFunction) => {
-    await CRUDRolePermission.readOne(req.params.id, res, []);
+    await CRUDRolePermission.readOne(req.params.id, res, [], req);
   }
 );
 
@@ -32,7 +32,7 @@ const updateRolePermission = catchAsync(
 
 const deleteRolePermission = catchAsync(
   async (req: Request, res: Response, next: NextFunction) => {
-    await CRUDRolePermission.delete(req.params.id, res);
+    await CRUDRolePermission.delete(req.params.id, res, req);
   }
 );
 

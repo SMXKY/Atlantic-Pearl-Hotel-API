@@ -13,18 +13,18 @@ const departmentSchema = new mongoose.Schema(
       type: String,
       trim: true,
     },
-    manager: {
-      type: mongoose.Types.ObjectId,
-      ref: "employees",
-      validate: {
-        validator: async function (id: mongoose.Types.ObjectId) {
-          // Check if the manager exists
-          const exists = await EmployeeModel.exists({ _id: id });
-          return exists !== null;
-        },
-        message: "Manager must be an existing employee.",
-      },
-    },
+    // manager: {
+    //   type: mongoose.Types.ObjectId,
+    //   ref: "employees",
+    //   validate: {
+    //     validator: async function (id: mongoose.Types.ObjectId) {
+    //       // Check if the manager exists
+    //       const exists = await EmployeeModel.exists({ _id: id });
+    //       return exists !== null;
+    //     },
+    //     message: "Manager must be an existing employee.",
+    //   },
+    // },
     isActive: {
       type: Boolean,
     },

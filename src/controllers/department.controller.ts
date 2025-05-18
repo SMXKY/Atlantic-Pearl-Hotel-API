@@ -8,13 +8,13 @@ const CRUDDepartment: CRUD = new CRUD(DepartmentModel);
 
 const createDepartment = catchAsync(
   async (req: Request, res: Response, next: NextFunction) => {
-    await CRUDDepartment.create(req.body, res);
+    await CRUDDepartment.create(req.body, res, req);
   }
 );
 
 const readOneDepartment = catchAsync(
   async (req: Request, res: Response, next: NextFunction) => {
-    await CRUDDepartment.readOne(req.params.id, res, []);
+    await CRUDDepartment.readOne(req.params.id, res, [], req);
   }
 );
 
@@ -32,7 +32,7 @@ const updateDepartment = catchAsync(
 
 const deleteDepartment = catchAsync(
   async (req: Request, res: Response, next: NextFunction) => {
-    await CRUDDepartment.delete(req.params.id, res);
+    await CRUDDepartment.delete(req.params.id, res, req);
   }
 );
 

@@ -12,13 +12,13 @@ const CRUDUser: CRUD = new CRUD(UserModel);
 
 const createUser = catchAsync(
   async (req: Request, res: Response, next: NextFunction) => {
-    await CRUDUser.create(req.body, res);
+    await CRUDUser.create(req.body, res, req);
   }
 );
 
 const readOneUser = catchAsync(
   async (req: Request, res: Response, next: NextFunction) => {
-    await CRUDUser.readOne(req.params.id, res, []);
+    await CRUDUser.readOne(req.params.id, res, [], req);
   }
 );
 
@@ -57,7 +57,7 @@ const updateUser = catchAsync(
 
 const deleteUser = catchAsync(
   async (req: Request, res: Response, next: NextFunction) => {
-    await CRUDUser.delete(req.params.id, res);
+    await CRUDUser.delete(req.params.id, res, req);
   }
 );
 

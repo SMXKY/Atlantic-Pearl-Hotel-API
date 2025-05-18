@@ -8,13 +8,13 @@ const CRUDPosition: CRUD = new CRUD(PositionModel);
 
 const createPosition = catchAsync(
   async (req: Request, res: Response, next: NextFunction) => {
-    await CRUDPosition.create(req.body, res);
+    await CRUDPosition.create(req.body, res, req);
   }
 );
 
 const readOnePosition = catchAsync(
   async (req: Request, res: Response, next: NextFunction) => {
-    await CRUDPosition.readOne(req.params.id, res, []);
+    await CRUDPosition.readOne(req.params.id, res, [], req);
   }
 );
 
@@ -32,7 +32,7 @@ const updatePosition = catchAsync(
 
 const deletePosition = catchAsync(
   async (req: Request, res: Response, next: NextFunction) => {
-    await CRUDPosition.delete(req.params.id, res);
+    await CRUDPosition.delete(req.params.id, res, req);
   }
 );
 

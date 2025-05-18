@@ -8,13 +8,13 @@ const CRUDEmployee: CRUD = new CRUD(EmployeeModel);
 
 const createEmployee = catchAsync(
   async (req: Request, res: Response, next: NextFunction) => {
-    await CRUDEmployee.create(req.body, res);
+    await CRUDEmployee.create(req.body, res, req);
   }
 );
 
 const readOneEmployee = catchAsync(
   async (req: Request, res: Response, next: NextFunction) => {
-    await CRUDEmployee.readOne(req.params.id, res, ["user"]);
+    await CRUDEmployee.readOne(req.params.id, res, ["user"], req);
   }
 );
 
@@ -32,7 +32,7 @@ const updateEmployee = catchAsync(
 
 const deleteEmployee = catchAsync(
   async (req: Request, res: Response, next: NextFunction) => {
-    await CRUDEmployee.delete(req.params.id, res);
+    await CRUDEmployee.delete(req.params.id, res, req);
   }
 );
 

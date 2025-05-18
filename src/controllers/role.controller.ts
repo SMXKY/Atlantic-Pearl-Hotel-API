@@ -8,13 +8,13 @@ const CRUDRole: CRUD = new CRUD(RoleModel);
 
 const createRole = catchAsync(
   async (req: Request, res: Response, next: NextFunction) => {
-    await CRUDRole.create(req.body, res);
+    await CRUDRole.create(req.body, res, req);
   }
 );
 
 const readOneRole = catchAsync(
   async (req: Request, res: Response, next: NextFunction) => {
-    await CRUDRole.readOne(req.params.id, res, []);
+    await CRUDRole.readOne(req.params.id, res, [], req);
   }
 );
 
@@ -32,7 +32,7 @@ const updateRole = catchAsync(
 
 const deleteRole = catchAsync(
   async (req: Request, res: Response, next: NextFunction) => {
-    await CRUDRole.delete(req.params.id, res);
+    await CRUDRole.delete(req.params.id, res, req);
   }
 );
 

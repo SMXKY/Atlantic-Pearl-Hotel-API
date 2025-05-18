@@ -19,4 +19,15 @@ export const allPermissions = {
     delete: "can_delete_user",
     update: "can_update_user",
   },
+  auth: {
+    activateAccount: "can_activate_account",
+    deActivateAccount: "can_de_activate_account",
+  },
+  departments: {
+    readOne: "can_read_department",
+    readAll: "can_read_all_departments",
+    delete: "can_delete_department",
+    update: "can_update_department",
+    create: "can_create_department",
+  },
 };

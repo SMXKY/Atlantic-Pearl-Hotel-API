@@ -8,13 +8,13 @@ const CRUDGuest: CRUD = new CRUD(GuestModel);
 
 const createGuest = catchAsync(
   async (req: Request, res: Response, next: NextFunction) => {
-    await CRUDGuest.create(req.body, res);
+    await CRUDGuest.create(req.body, res, req);
   }
 );
 
 const readOneGuest = catchAsync(
   async (req: Request, res: Response, next: NextFunction) => {
-    await CRUDGuest.readOne(req.params.id, res, ["user"]);
+    await CRUDGuest.readOne(req.params.id, res, ["user"], req);
   }
 );
 
@@ -32,7 +32,7 @@ const updateGuest = catchAsync(
 
 const deleteGuest = catchAsync(
   async (req: Request, res: Response, next: NextFunction) => {
-    await CRUDGuest.delete(req.params.id, res);
+    await CRUDGuest.delete(req.params.id, res, req);
   }
 );
 

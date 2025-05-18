@@ -4,6 +4,7 @@ import { appResponder } from "./appResponder.util";
 import { AppError } from "./AppError.util";
 import { Query } from "./Query.util";
 import { Request, Response } from "express";
+import { logUserActivity } from "./logUserActivity.util";
 
 //try and catch blocks are handled within controllers
 export class CRUD {
@@ -13,13 +14,28 @@ export class CRUD {
     this.model = model;
   }
 
-  public async create(body: any, res: Response) {
+  public async create(body: any, res: Response, req: Request) {
     const data = await this.model.create(body);
+
+    await logUserActivity(
+      req,
+      res.locals.user._id,
+      `Created a document in ${this.model.collection.collectionName}`,
+      this.model.collection.collectionName,
+      data._id,
+      undefined,
+      data.toObject()
+    );
 
     appResponder(StatusCodes.OK, data, res);
   }
 
-  public async readOne(id: string, res: Response, populate: string[]) {
+  public async readOne(
+    id: string,
+    res: Response,
+    populate: string[],
+    req: Request
+  ) {
     let query = this.model.findById(id);
 
     if (populate) {
@@ -36,6 +52,16 @@ export class CRUD {
         StatusCodes.NOT_FOUND
       );
     }
+
+    await logUserActivity(
+      req,
+      res.locals.user._id,
+      `Read document in ${this.model.collection.collectionName}`,
+      this.model.collection.collectionName,
+      data._id,
+      data.toObject(),
+      data.toObject()
+    );
 
     appResponder(StatusCodes.OK, data, res);
   }
@@ -62,10 +88,21 @@ export class CRUD {
 
     const data = await query;
 
+    await logUserActivity(
+      req,
+      res.locals.user._id,
+      `Read all documents in ${this.model.collection.collectionName}`,
+      this.model.collection.collectionName,
+      undefined,
+      undefined,
+      undefined
+    );
+
     appResponder(StatusCodes.OK, data, res);
   }
 
   public async update(id: string, res: Response, req: Request) {
+    const prevData = await this.model.findOne({ _id: id });
     const data = await this.model.findOneAndUpdate({ _id: id }, req.body, {
       new: true,
       runValidators: true,
@@ -78,15 +115,36 @@ export class CRUD {
       );
     }
 
+    await logUserActivity(
+      req,
+      res.locals.user._id,
+      `Updated document in ${this.model.collection.collectionName}`,
+      this.model.collection.collectionName,
+      data._id,
+      prevData.toObject(),
+      data.toObject()
+    );
+
     appResponder(StatusCodes.OK, data, res);
   }
 
-  public async delete(id: string, res: Response) {
+  public async delete(id: string, res: Response, req: Request) {
+    const prevData = await this.model.findOne({ _id: id });
     const data = await this.model.findByIdAndDelete(id);
 
     if (!data) {
       throw new AppError("No such Id in the database", StatusCodes.NOT_FOUND);
     }
+
+    await logUserActivity(
+      req,
+      res.locals.user._id,
+      `Deleted document in ${this.model.collection.collectionName}`,
+      this.model.collection.collectionName,
+      prevData._id,
+      prevData.toObject(),
+      undefined
+    );
 
     appResponder(
       StatusCodes.OK,
