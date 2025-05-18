@@ -17,10 +17,10 @@ import { globalErrorController } from "./controllers/error.controller";
 import { authRouter } from "./routes/auth.route";
 import { authControllers } from "./controllers/auth.controller";
 import cors from "cors";
+import { activityLogRouter } from "./routes/activityLogs.route";
 
 export const app = express();
 
-//Use this as reference for api comments
 /**
  * @openapi
  * /:
@@ -79,6 +79,7 @@ app.use("/api/v1/roles", roleRouter);
 app.use("/api/v1/role-permissions", rolePermissionRouter);
 app.use("/api/v1/users", userRouter);
 app.use("/api/v1/auth", authRouter);
+app.use("/api/v1/activity-logs", activityLogRouter);
 
 const swaggerSpec = swaggerJSDoc({
   definition: {

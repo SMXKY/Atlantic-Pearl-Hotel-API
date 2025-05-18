@@ -10,6 +10,6 @@ export const activateUsersCronJob = () => {
       { $set: { isActive: true }, $unset: { deactivatedUntil: "" } }
     );
 
-    console.log(`Reactivated ${result.modifiedCount} users`);
+    // console.log(`Reactivated ${result.modifiedCount} users`);
   });
 };

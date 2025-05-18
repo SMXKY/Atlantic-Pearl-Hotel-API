@@ -24,11 +24,11 @@ export const logUserActivity = async (
   previousDocumentState: object | undefined,
   newDocumentState: object | undefined
 ) => {
-  console.log("User IP", getClientIp(req));
+  // console.log("User IP", getClientIp(req));
   await ActivityLogModel.create({
     user: userId,
     action,
-    collection,
+    collectionName: collection,
     resourceId,
     previousDocumentState,
     newDocumentState,

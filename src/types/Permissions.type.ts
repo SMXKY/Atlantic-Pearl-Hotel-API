@@ -82,4 +82,7 @@ export const allPermissions = {
     update: "can_update_role_permission",
     create: "can_create_role_permission",
   },
+  activityLogs: {
+    read: "can_read_activity_logs",
+  },
 };

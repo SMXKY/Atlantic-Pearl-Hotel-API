@@ -79,6 +79,7 @@ const signToken = (userId: string) => {
 //   }
 // );
 
+//Todo: Log user acctivity in production for creating Employees
 const createEmployeeAccount = catchAsync(
   async (req: Request, res: Response, next: NextFunction) => {
     const employeePassword = generatePassword.generate({

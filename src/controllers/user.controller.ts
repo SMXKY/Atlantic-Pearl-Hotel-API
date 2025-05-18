@@ -7,6 +7,7 @@ import { UserModel } from "../models/User.model";
 import { AppError } from "../util/AppError.util";
 import { StatusCodes } from "http-status-codes";
 import { appResponder } from "../util/appResponder.util";
+import { logUserActivity } from "../util/logUserActivity.util";
 
 const CRUDUser: CRUD = new CRUD(UserModel);
 
@@ -126,12 +127,22 @@ const updatePassword = catchAsync(
 
     const newUserPassword = await bcrypt.hash(newPassword, 12);
 
-    await UserModel.findByIdAndUpdate(
+    const data = await UserModel.findByIdAndUpdate(
       res.locals.user._id,
       {
         password: newUserPassword,
       },
       { new: true, runValidators: true }
+    );
+
+    logUserActivity(
+      req,
+      res.locals.user._id,
+      "Updated thier password",
+      "users",
+      res.locals.user._id,
+      undefined,
+      undefined
     );
 
     appResponder(

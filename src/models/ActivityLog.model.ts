@@ -20,14 +20,14 @@ const activityLogSchema = new mongoose.Schema(
       required: [true, "Action is required to create an Activity Log"],
       trim: true,
     },
-    collection: {
+    collectionName: {
       type: String,
       required: [true, "Collection name is required to create an Activity Log"],
       trim: true,
     },
     resourceId: {
       type: String,
-      required: [true, "Resource ID is required to create an Activity Log"],
+      // required: [true, "Resource ID is required to create an Activity Log"],
       trim: true,
     },
     previousDocumentState: {
