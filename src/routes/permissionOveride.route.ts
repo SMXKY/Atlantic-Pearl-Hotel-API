@@ -10,7 +10,7 @@ permissionOverideRouter
   .route("/")
   .post(
     authControllers.protect,
-    // authControllers.restrictTo(allPermissions.permissionOverides.create),
+    authControllers.restrictTo(allPermissions.permissionOverides.create),
     permissionOverideControllers.createPermissionOveride
   )
   .get(

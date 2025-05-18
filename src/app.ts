@@ -18,6 +18,7 @@ import { authRouter } from "./routes/auth.route";
 import { authControllers } from "./controllers/auth.controller";
 import cors from "cors";
 import { activityLogRouter } from "./routes/activityLogs.route";
+import { roleOverideRouter } from "./routes/roleOveride.route";
 
 export const app = express();
 
@@ -80,6 +81,7 @@ app.use("/api/v1/role-permissions", rolePermissionRouter);
 app.use("/api/v1/users", userRouter);
 app.use("/api/v1/auth", authRouter);
 app.use("/api/v1/activity-logs", activityLogRouter);
+app.use("/api/v1/role-overides", roleOverideRouter);
 
 const swaggerSpec = swaggerJSDoc({
   definition: {

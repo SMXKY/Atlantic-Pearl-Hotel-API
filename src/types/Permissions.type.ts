@@ -53,13 +53,19 @@ export const allPermissions = {
     update: "can_update_permission",
     create: "can_create_permission",
   },
-
   permissionOverides: {
     readOne: "can_read_permission_overide",
     readAll: "can_read_all_permission_overides",
     delete: "can_delete_permission_overide",
     update: "can_update_permission_overide",
     create: "can_create_permission_overide",
+  },
+  roleOverides: {
+    readOne: "can_read_role_overide",
+    readAll: "can_read_all_role_overides",
+    delete: "can_delete_role_overide",
+    update: "can_update_role_overide",
+    create: "can_create_role_overide",
   },
   position: {
     readOne: "can_read_position",
