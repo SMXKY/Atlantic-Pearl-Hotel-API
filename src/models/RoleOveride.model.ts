@@ -1,5 +1,6 @@
 import * as mongoose from "mongoose";
 import { UserModel } from "./User.model";
+import { RoleModel } from "./Role.model";
 
 interface IRolenOveride extends mongoose.Document {
   isTemporary: boolean;
@@ -54,7 +55,18 @@ const roleOverideSchema = new mongoose.Schema(
         message: "Temporary permissions must have an expiration date.",
       },
     },
-
+    role: {
+      type: mongoose.Types.ObjectId,
+      ref: "roles",
+      required: true,
+      validate: {
+        validator: async function (id: mongoose.Types.ObjectId) {
+          const exists = await RoleModel.exists({ _id: id });
+          return exists !== null;
+        },
+        message: "Role Id not found iin the database.",
+      },
+    },
     reason: {
       type: String,
       trim: true,
@@ -87,7 +99,7 @@ roleOverideSchema.pre("save", function (next) {
   next();
 });
 
-roleOverideSchema.index({ user: 1, permission: 1 }, { unique: true });
+roleOverideSchema.index({ user: 1, role: 1 }, { unique: true });
 
 export const RoleOverideModel = mongoose.model(
   "roleOverides",
