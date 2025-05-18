@@ -6,19 +6,34 @@ import { allPermissions } from "../types/Permissions.type";
 
 export const userRouter = express.Router();
 
-userRouter.route("/").post(userControllers.createUser).get(
-  // authControllers.protect,
-  // authControllers.restrictTo(allPermissions.users.readAll),
-  userControllers.readAllUsers
-);
+userRouter
+  .route("/")
+  .post(
+    authControllers.protect,
+    authControllers.restrictTo(allPermissions.users.create),
+    userControllers.createUser
+  )
+  .get(
+    authControllers.protect,
+    authControllers.restrictTo(allPermissions.users.readAll),
+    userControllers.readAllUsers
+  );
 
 userRouter
   .route("/update-password")
-  .patch(authControllers.protect, userControllers.updatePassword);
+  .patch(
+    authControllers.protect,
+    authControllers.restrictTo(allPermissions.users.updatePassword),
+    userControllers.updatePassword
+  );
 
 userRouter
   .route("/:id")
-  .get(userControllers.readOneUser)
+  .get(
+    authControllers.protect,
+    authControllers.restrictTo(allPermissions.users.readOne),
+    userControllers.readOneUser
+  )
   .patch(
     authControllers.protect,
     authControllers.restrictTo(allPermissions.users.update),
