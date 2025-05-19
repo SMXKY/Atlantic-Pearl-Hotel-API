@@ -38,6 +38,9 @@
     "ts-node": "^10.9.2",
     "typescript": "^5.8.3"
   },
+  "name": "Atlantic-Pearl-Hotel-and-Resort-API",
+  "version": "1.0.0",
+  "main": "index.js",
   "scripts": {
     "dev": "nodemon src/index.ts",
     "build": "tsc",
