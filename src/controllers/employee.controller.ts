@@ -1,7 +1,7 @@
 import { NextFunction, Request, Response } from "express";
 
 import { catchAsync } from "../util/catchAsync";
-import { CRUD } from "../util/CRUD.util";
+import { CRUD } from "../util/Crud.util";
 import { EmployeeModel } from "../models/Employee.model";
 
 const CRUDEmployee: CRUD = new CRUD(EmployeeModel);

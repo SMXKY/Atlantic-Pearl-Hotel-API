@@ -2,7 +2,7 @@ import { NextFunction, Request, Response } from "express";
 import * as bcrypt from "bcrypt";
 
 import { catchAsync } from "../util/catchAsync";
-import { CRUD } from "../util/CRUD.util";
+import { CRUD } from "../util/Crud.util";
 import { UserModel } from "../models/User.model";
 import { AppError } from "../util/AppError.util";
 import { StatusCodes } from "http-status-codes";

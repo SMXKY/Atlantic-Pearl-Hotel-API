@@ -1,7 +1,7 @@
 import { NextFunction, Request, Response } from "express";
 
 import { catchAsync } from "../util/catchAsync";
-import { CRUD } from "../util/CRUD.util";
+import { CRUD } from "../util/Crud.util";
 import { RolePermissionModel } from "../models/RolePermission.model";
 
 const CRUDRolePermission: CRUD = new CRUD(RolePermissionModel);
