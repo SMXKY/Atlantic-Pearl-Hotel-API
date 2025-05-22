@@ -4,11 +4,12 @@ import { isValidNumber } from "libphonenumber-js";
 import { AppError } from "util/AppError.util";
 import { StatusCodes } from "http-status-codes";
 import { GuestModel } from "./Guest.model";
+import { EmployeeModel } from "./Employee.model";
+import { DiscountModel } from "./Discount.model";
 const { v4: uuidv4 } = require("uuid");
 
 interface IReservation extends mongoose.Document {
   bookingReference: string;
-  // Add other fields as needed
 }
 
 /*
@@ -38,30 +39,13 @@ const reservationSchema = new mongoose.Schema(
     },
     guestName: {
       type: String,
-      required: [true, "Guest name is required to create a reservation"],
       trim: true,
     },
     guestEmail: {
       type: String,
-      required: [true, "Guest email is required to create a reservation"],
-      validate: {
-        validator: function (email: string) {
-          return validator.isEmail(email);
-        },
-        message: "Invalid email format",
-      },
     },
     guestPhoneNumber: {
       type: String,
-      required: [true, "Phone number is required."],
-      max: [12, "Phone number cannot be more than 12 characters"],
-      min: [8, "Phone number cannot be less than 8 characters"],
-      validate: {
-        validator: function (phoneNumber: string) {
-          return isValidNumber(phoneNumber, "CM");
-        },
-        message: "Invalid phone number format",
-      },
       unique: true,
     },
     countryOfResidence: {
@@ -111,6 +95,28 @@ const reservationSchema = new mongoose.Schema(
       enum: {
         values: ["Mobile Money", "Orange Money", "Credit Card", "Cash Payment"],
         message: `Invalid payment method! Allowed methods are: ["Mobile Money", "Orange Money", "Credit Card", "Cash Payment"]`,
+      },
+    },
+    createdby: {
+      type: mongoose.Types.ObjectId,
+      ref: "employees",
+      validate: {
+        validator: async function (id: mongoose.Types.ObjectId) {
+          const exists = await EmployeeModel.exists({ _id: id });
+          return exists !== null;
+        },
+        message: "Invalid Employee Id.",
+      },
+    },
+    discount: {
+      type: mongoose.Types.ObjectId,
+      ref: "discounts",
+      validate: {
+        validator: async function (id: mongoose.Types.ObjectId) {
+          const exists = await DiscountModel.exists({ _id: id });
+          return exists !== null;
+        },
+        message: "Invalid discount Id.",
       },
     },
   },
@@ -166,6 +172,52 @@ reservationSchema.pre<IReservation>("save", async function (next) {
         StatusCodes.INTERNAL_SERVER_ERROR
       )
     );
+  }
+
+  next();
+});
+
+reservationSchema.pre("save", function (next) {
+  if (this.guestId) {
+    next();
+  }
+
+  if (!this.guestEmail) {
+    return next(
+      new AppError(
+        "Guest Email is required, to create a reservation",
+        StatusCodes.BAD_REQUEST
+      )
+    );
+  }
+
+  if (!validator.isEmail(this.guestEmail)) {
+    return next(new AppError("Invalid Email format", StatusCodes.BAD_REQUEST));
+  }
+
+  if (!this.guestName) {
+    return next(
+      new AppError("Guest full name is reuqired.", StatusCodes.BAD_REQUEST)
+    );
+  }
+
+  if (!this.guestPhoneNumber) {
+    return next(
+      new AppError("Guest phone number is required", StatusCodes.BAD_REQUEST)
+    );
+  }
+
+  if (this.guestPhoneNumber.length < 8 || this.guestPhoneNumber.length > 12) {
+    return next(
+      new AppError(
+        "Guest phone number must be 8 characters or more but not mored than 12 characters",
+        StatusCodes.BAD_REQUEST
+      )
+    );
+  }
+
+  if (!isValidNumber(this.guestPhoneNumber, "CM")) {
+    return next(new AppError("Invalid phone number", StatusCodes.BAD_REQUEST));
   }
 
   next();
