@@ -62,6 +62,9 @@ const guestSchema = new mongoose.Schema(
       type: Boolean,
       default: false,
     },
+    NIC: {
+      type: String,
+    },
   },
   {
     timestamps: true,

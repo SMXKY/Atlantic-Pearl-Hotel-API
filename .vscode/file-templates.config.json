@@ -1,0 +1,9 @@
+{
+  "templates": [
+    {
+      "name": "Mongoose Model Template",
+      "match": ".*\\.model\\.ts$",
+      "template": "import { Schema, model, Document } from 'mongoose';\n\nexport interface IModelName extends Document {\n  // Define fields\n}\n\nconst ModelNameSchema = new Schema<IModelName>({\n  // Define schema\n}, { timestamps: true });\n\nexport default model<IModelName>('ModelName', ModelNameSchema);"
+    }
+  ]
+}

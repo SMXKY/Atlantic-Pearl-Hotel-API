@@ -6,21 +6,13 @@ import { StatusCodes } from "http-status-codes";
 import { GuestModel } from "./Guest.model";
 import { EmployeeModel } from "./Employee.model";
 import { DiscountModel } from "./Discount.model";
+import { RateModel } from "./Rate.model";
+import { RoomTypeModel } from "./RoomType.model";
 const { v4: uuidv4 } = require("uuid");
 
 interface IReservation extends mongoose.Document {
   bookingReference: string;
 }
-
-/*
-TODO:
-  - Automatically change status to "no show" if reservation is not redeemed 3 hours after check-in time (consider using a cron job).
-  - Automatically cancel or mark as expired if a reservation is not paid for after a given time.
-  - Feature: create guest account from reservation info.
-  - Feature: auto-fill reservation info for guests with an account.
-  - Return different room lists for employees and regular guests.
-  - If account created from reservation with deposit, set the used payment method as their default preferred payment method.
-*/
 
 const reservationSchema = new mongoose.Schema(
   {
@@ -31,94 +23,98 @@ const reservationSchema = new mongoose.Schema(
     },
     status: {
       type: String,
-      enum: {
-        values: ["checked in", "no showed", "canceled", "pending", "expired"],
-        message: `Invalid status: Allowed statuses: ["checked in", "no showed", "canceled", "pending", "expired"]`,
-      },
+      enum: ["checked in", "no showed", "canceled", "pending", "expired"],
       default: "pending",
     },
-    guestName: {
-      type: String,
-      trim: true,
-    },
-    guestEmail: {
-      type: String,
-    },
-    guestPhoneNumber: {
-      type: String,
-      unique: true,
-    },
-    countryOfResidence: {
-      type: String,
-      trim: true,
-    },
-    specialRequest: {
-      type: String,
-      trim: true,
-    },
-    checkInDate: {
-      type: Date,
-      required: [true, "Check In date is required to create a reservation"],
-    },
-    checkOutDate: {
-      type: Date,
-      required: [true, "Check Out date is required to create a reservation"],
-    },
-    numberOfGuest: {
-      type: Number,
-      required: [
-        true,
-        "Number of guest for reservation is required to create a reservation",
-      ],
-      default: 1,
-    },
-    guestId: {
+    guestName: { type: String, trim: true },
+    guestEmail: { type: String },
+    guestPhoneNumber: { type: String, unique: true },
+    countryOfResidence: { type: String, trim: true },
+    specialRequest: { type: String, trim: true },
+    checkInDate: { type: Date },
+    checkOutDate: { type: Date },
+    numberOfGuest: { type: Number, default: 1, required: true },
+    guestNIC: { type: String },
+
+    guest: {
       type: mongoose.Types.ObjectId,
       ref: "guests",
       validate: {
         validator: async function (id: mongoose.Types.ObjectId) {
-          const exists = await GuestModel.exists({ _id: id });
-          return exists !== null;
+          return (await GuestModel.exists({ _id: id })) !== null;
         },
         message: "Guest must be an existing guest.",
       },
     },
+
     bookingSource: {
       type: String,
-      enum: {
-        values: ["online", "onsite", "phone call"],
-        message: `Invalid booking source! Allowed values are: ["online", "onsite", "phone call"]`,
-      },
+      enum: ["online", "onsite", "phone call"],
     },
+
     paymentMethod: {
       type: String,
-      enum: {
-        values: ["Mobile Money", "Orange Money", "Credit Card", "Cash Payment"],
-        message: `Invalid payment method! Allowed methods are: ["Mobile Money", "Orange Money", "Credit Card", "Cash Payment"]`,
-      },
+      enum: ["Mobile Money", "Orange Money", "Credit Card", "Cash Payment"],
     },
+
     createdby: {
       type: mongoose.Types.ObjectId,
       ref: "employees",
       validate: {
         validator: async function (id: mongoose.Types.ObjectId) {
-          const exists = await EmployeeModel.exists({ _id: id });
-          return exists !== null;
+          return (await EmployeeModel.exists({ _id: id })) !== null;
         },
         message: "Invalid Employee Id.",
       },
     },
+
     discount: {
-      type: mongoose.Types.ObjectId,
-      ref: "discounts",
+      type: String,
       validate: {
-        validator: async function (id: mongoose.Types.ObjectId) {
-          const exists = await DiscountModel.exists({ _id: id });
-          return exists !== null;
+        validator: async function (code: string) {
+          return await DiscountModel.exists({ code });
         },
-        message: "Invalid discount Id.",
+        message: "Invalid discount code.",
       },
     },
+
+    items: [
+      new mongoose.Schema(
+        {
+          roomType: {
+            type: mongoose.Types.ObjectId,
+            ref: "roomtypes",
+            required: [true, "Room type is required for a reservation item"],
+            validate: {
+              validator: async function (id: mongoose.Types.ObjectId) {
+                return (await RoomTypeModel.exists({ _id: id })) !== null;
+              },
+              message: "Invalid room type Id for this reservation item.",
+            },
+          },
+          mealPlan: {
+            type: String,
+            enum: ["RO", "B&B", "HB", "FB", "AI"],
+            required: true,
+          },
+          quantity: { type: Number, min: 1, default: 1 },
+          checkIn: { type: Date, required: true },
+          checkOut: { type: Date, required: true },
+          rate: {
+            type: mongoose.Types.ObjectId,
+            ref: "rates",
+            required: [true, "Rate is required for each reservation item"],
+            validate: {
+              validator: async function (id: mongoose.Types.ObjectId) {
+                return (await RateModel.exists({ _id: id })) !== null;
+              },
+              message: "Invalid rate Id in reservation item.",
+            },
+          },
+        },
+        { _id: false }
+      ),
+    ],
   },
   {
     timestamps: true,
@@ -127,109 +123,137 @@ const reservationSchema = new mongoose.Schema(
   }
 );
 
-//TODO: Calculate the number of Rooms property, for a reservation from the rooms that a mapped to that reservation
-//TODO: Calculate tooalChargesInCFA with by calculation the prices of the rooms multipleid by the number of nights the guest will stay for
-
-// Validate check-out date > check-in date
+// Check-in/check-out date validation (if provided)
 reservationSchema.pre("save", function (next) {
-  if (this.checkOutDate.getTime() <= this.checkInDate.getTime()) {
-    return next(
-      new AppError(
-        "Check out date must be later than check in date.",
-        StatusCodes.BAD_REQUEST
-      )
-    );
+  if (this.checkInDate && this.checkOutDate) {
+    if (this.checkOutDate.getTime() <= this.checkInDate.getTime()) {
+      return next(
+        new AppError(
+          "Check out date must be later than check in date.",
+          StatusCodes.BAD_REQUEST
+        )
+      );
+    }
   }
   next();
 });
 
 // Generate unique booking reference before saving
 reservationSchema.pre<IReservation>("save", async function (next) {
-  if (this.bookingReference) {
-    return next();
-  }
+  if (this.bookingReference) return next();
 
   const MAX_ATTEMPTS = 10;
-  let attempts = 0;
-
-  while (attempts < MAX_ATTEMPTS) {
+  for (let attempts = 0; attempts < MAX_ATTEMPTS; attempts++) {
     const ref = uuidv4().split("-")[0].toUpperCase();
     const exists = await mongoose.models.reservations.exists({
       bookingReference: ref,
     });
-
     if (!exists) {
       this.bookingReference = ref;
-      break;
+      return next();
     }
-    attempts++;
   }
 
-  if (!this.bookingReference) {
-    return next(
-      new AppError(
-        "Failed to generate unique booking reference",
-        StatusCodes.INTERNAL_SERVER_ERROR
-      )
-    );
-  }
-
-  next();
+  return next(
+    new AppError(
+      "Failed to generate unique booking reference",
+      StatusCodes.INTERNAL_SERVER_ERROR
+    )
+  );
 });
 
+// Validate required guest details when `guest` account not linked
 reservationSchema.pre("save", function (next) {
-  if (this.guestId) {
-    next();
-  }
+  if (this.guest) return next();
 
-  if (!this.guestEmail) {
+  if (!this.guestEmail || !validator.isEmail(this.guestEmail)) {
     return next(
-      new AppError(
-        "Guest Email is required, to create a reservation",
-        StatusCodes.BAD_REQUEST
-      )
+      new AppError("Valid guest email is required", StatusCodes.BAD_REQUEST)
     );
   }
-
-  if (!validator.isEmail(this.guestEmail)) {
-    return next(new AppError("Invalid Email format", StatusCodes.BAD_REQUEST));
-  }
-
   if (!this.guestName) {
     return next(
-      new AppError("Guest full name is reuqired.", StatusCodes.BAD_REQUEST)
+      new AppError("Guest full name is required.", StatusCodes.BAD_REQUEST)
     );
   }
-
   if (!this.guestPhoneNumber) {
     return next(
       new AppError("Guest phone number is required", StatusCodes.BAD_REQUEST)
     );
   }
-
   if (this.guestPhoneNumber.length < 8 || this.guestPhoneNumber.length > 12) {
     return next(
-      new AppError(
-        "Guest phone number must be 8 characters or more but not mored than 12 characters",
-        StatusCodes.BAD_REQUEST
-      )
+      new AppError("Phone number must be 8–12 digits", StatusCodes.BAD_REQUEST)
     );
   }
-
   if (!isValidNumber(this.guestPhoneNumber, "CM")) {
     return next(new AppError("Invalid phone number", StatusCodes.BAD_REQUEST));
+  }
+  if (!this.guestNIC) {
+    return next(
+      new AppError("Guest NIC number required.", StatusCodes.BAD_REQUEST)
+    );
   }
 
   next();
 });
 
-// Virtual to calculate number of nights between check-in and check-out
+// Virtual: Overall nights for the top-level check-in/check-out
 reservationSchema.virtual("numberOfNights").get(function () {
   const msInDay = 1000 * 60 * 60 * 24;
+  if (!this.checkInDate || !this.checkOutDate) return 0;
   return Math.round(
     (this.checkOutDate.getTime() - this.checkInDate.getTime()) / msInDay
   );
 });
+
+// Virtual: Calculate total nights from items
+reservationSchema.virtual("totalNightsFromItems").get(function () {
+  const msInDay = 1000 * 60 * 60 * 24;
+  if (!this.items || !Array.isArray(this.items)) return 0;
+
+  return this.items.reduce((acc, item) => {
+    if (!item.checkIn || !item.checkOut) return acc;
+    const nights = Math.round(
+      (item.checkOut.getTime() - item.checkIn.getTime()) / msInDay
+    );
+    return acc + nights * (item.quantity || 1);
+  }, 0);
+});
+
+// Virtual: Total charges in CFA (requires populated rate with price field)
+reservationSchema.methods.calculateTotalChargesInCFA =
+  async function (): Promise<number> {
+    if (!Array.isArray(this.items)) return 0;
+
+    await this.populate("items.rate");
+
+    const msInDay = 1000 * 60 * 60 * 24;
+
+    return this.items.reduce((total: number, item: any) => {
+      if (
+        !item.rate ||
+        !item.rate.totalPriceInCFA || // Adjusted field name
+        !item.checkIn ||
+        !item.checkOut
+      )
+        return total;
+
+      const nights = Math.max(
+        Math.round(
+          (new Date(item.checkOut).getTime() -
+            new Date(item.checkIn).getTime()) /
+            msInDay
+        ),
+        1
+      );
+
+      const quantity = item.quantity || 1;
+      const price = item.rate.totalPriceInCFA;
+
+      return total + nights * quantity * price;
+    }, 0);
+  };
 
 export const ReservationModel = mongoose.model<IReservation>(
   "reservations",

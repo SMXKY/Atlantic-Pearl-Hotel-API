@@ -564,7 +564,7 @@ const forgotPassword = catchAsync(
         $set: {
           "passwordReset.code": await bcrypt.hash(passwordResetCode, 12),
           "passwordReset.issuedAt": Date.now(),
-          "passwordReset.expiresAt": Date.now() + 25 * 60 * 1000,
+          "passwordReset.expiresAt": Date.now() + 5 * 60 * 1000,
         },
       },
       { runValidators: true, new: true }

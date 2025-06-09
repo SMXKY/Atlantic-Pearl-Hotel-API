@@ -20,6 +20,7 @@ const discountSchema = new mongoose.Schema(
       type: String,
       required: [true, "Discount must have a name"],
       trim: true,
+      unique: true,
     },
     code: {
       type: String,
