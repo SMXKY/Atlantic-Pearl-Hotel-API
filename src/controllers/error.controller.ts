@@ -26,6 +26,7 @@ const productionResponse = (err: any, res: Response) => {
       message: err.message,
     });
   } else {
+    console.log(err);
     res.status(500).json({
       ok: false,
       status: "Server error",
