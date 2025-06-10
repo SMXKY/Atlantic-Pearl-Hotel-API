@@ -1,7 +1,7 @@
 import * as mongoose from "mongoose";
 import validator from "validator";
 import { isValidNumber } from "libphonenumber-js";
-import { AppError } from "util/AppError.util";
+import { AppError } from "../util/AppError.util";
 import { StatusCodes } from "http-status-codes";
 import { GuestModel } from "./Guest.model";
 import { EmployeeModel } from "./Employee.model";
@@ -91,11 +91,6 @@ const reservationSchema = new mongoose.Schema(
               },
               message: "Invalid room type Id for this reservation item.",
             },
-          },
-          mealPlan: {
-            type: String,
-            enum: ["RO", "B&B", "HB", "FB", "AI"],
-            required: true,
           },
           quantity: { type: Number, min: 1, default: 1 },
           checkIn: { type: Date, required: true },

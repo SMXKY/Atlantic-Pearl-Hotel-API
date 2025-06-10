@@ -91,4 +91,39 @@ export const allPermissions = {
   activityLogs: {
     read: "can_read_activity_logs",
   },
+  reservations: {
+    readOne: "can_read_reservation",
+    readAll: "can_read_all_reservations",
+    delete: "can_delete_reservation",
+    update: "can_update_reservation",
+    create: "can_create_reservation",
+  },
+  buildings: {
+    readOne: "can_read_building",
+    readAll: "can_read_all_buildings",
+    delete: "can_delete_building",
+    update: "can_update_building",
+    create: "can_create_building",
+  },
+  rooms: {
+    readOne: "can_read_room",
+    readAll: "can_read_all_rooms",
+    delete: "can_delete_room",
+    update: "can_update_room",
+    create: "can_create_room",
+  },
+  roomTypes: {
+    readOne: "can_read_room_type",
+    readAll: "can_read_all_room_types",
+    delete: "can_delete_room_type",
+    update: "can_update_room_type",
+    create: "can_create_room_type",
+  },
+  rates: {
+    readOne: "can_read_rate",
+    readAll: "can_read_all_rates",
+    delete: "can_delete_rate",
+    update: "can_update_rate",
+    create: "can_create_rate",
+  },
 };

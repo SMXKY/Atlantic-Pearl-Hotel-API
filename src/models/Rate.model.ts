@@ -1,6 +1,6 @@
 import * as mongoose from "mongoose";
 import { RoomTypeModel } from "./RoomType.model";
-import { AppError } from "util/AppError.util";
+import { AppError } from "../util/AppError.util";
 import { StatusCodes } from "http-status-codes";
 import { CancellationPolicyModel } from "./CancelationPolicy.model";
 
@@ -103,18 +103,18 @@ const rateSchema = new mongoose.Schema(
         message: "Invalid room type Id.",
       },
     },
-    cancelationPolicy: {
-      type: mongoose.Types.ObjectId,
-      ref: "cancellationpolicies",
-      required: true,
-      validate: {
-        validator: async function (id: mongoose.Types.ObjectId) {
-          const exists = await CancellationPolicyModel.exists({ _id: id });
-          return exists !== null;
-        },
-        message: "Invalid Cancelation Policy Id.",
-      },
-    },
+    // cancelationPolicy: {
+    //   type: mongoose.Types.ObjectId,
+    //   ref: "cancellationpolicies",
+    //   required: true,
+    //   validate: {
+    //     validator: async function (id: mongoose.Types.ObjectId) {
+    //       const exists = await CancellationPolicyModel.exists({ _id: id });
+    //       return exists !== null;
+    //     },
+    //     message: "Invalid Cancelation Policy Id.",
+    //   },
+    // },
   },
   {
     timestamps: true,

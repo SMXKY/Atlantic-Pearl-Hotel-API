@@ -19,6 +19,11 @@ import { authControllers } from "./controllers/auth.controller";
 import cors from "cors";
 import { activityLogRouter } from "./routes/activityLogs.route";
 import { roleOverideRouter } from "./routes/roleOveride.route";
+import { reservationRouter } from "./routes/reservation.route";
+import { buildingRouter } from "./routes/building.route";
+import { roomRouter } from "./routes/room.route";
+import { roomTypeRouter } from "./routes/roomType.route";
+import { rateRouter } from "./routes/rate.route";
 
 export const app = express();
 
@@ -82,6 +87,11 @@ app.use("/api/v1/users", userRouter);
 app.use("/api/v1/auth", authRouter);
 app.use("/api/v1/activity-logs", activityLogRouter);
 app.use("/api/v1/role-overides", roleOverideRouter);
+app.use("/api/v1/reservations", reservationRouter);
+app.use("/api/v1/buildings", buildingRouter);
+app.use("/api/v1/rooms", roomRouter);
+app.use("/api/v1/room-types", roomTypeRouter);
+app.use("/api/v1/rates", rateRouter);
 
 const swaggerSpec = swaggerJSDoc({
   definition: {

@@ -2,7 +2,7 @@ import * as mongoose from "mongoose";
 import { RoomModel } from "./Room.model";
 import { ReservationModel } from "./Reservation.model";
 import { autoFilterInactive } from "util/filterIsActive";
-import { AppError } from "util/AppError.util";
+import { AppError } from "../util/AppError.util";
 import { StatusCodes } from "http-status-codes";
 
 const roomReservationSchema = new mongoose.Schema(

@@ -24,7 +24,8 @@ export class CRUD {
       this.model.collection.collectionName,
       data._id,
       undefined,
-      data.toObject()
+      //Bellow is so if we are createing an rray the toObject() method does not caurse and error
+      data.toObject() ? data.toObject() : { data }
     );
 
     appResponder(StatusCodes.OK, data, res);

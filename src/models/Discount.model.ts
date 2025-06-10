@@ -1,6 +1,6 @@
 import { StatusCodes } from "http-status-codes";
 import * as mongoose from "mongoose";
-import { AppError } from "util/AppError.util";
+import { AppError } from "../util/AppError.util";
 const { v4: uuidv4 } = require("uuid");
 
 interface IDiscount extends mongoose.Document {
