@@ -8,6 +8,7 @@ import { EmployeeModel } from "./Employee.model";
 import { DiscountModel } from "./Discount.model";
 import { RateModel } from "./Rate.model";
 import { RoomTypeModel } from "./RoomType.model";
+import { RoomModel } from "./Room.model";
 const { v4: uuidv4 } = require("uuid");
 
 interface IReservation extends mongoose.Document {
@@ -109,6 +110,19 @@ const reservationSchema = new mongoose.Schema(
         },
         { _id: false }
       ),
+    ],
+    rooms: [
+      {
+        type: mongoose.Types.ObjectId,
+        ref: "rooms",
+        required: [true, "Rooms reserved are required"],
+        validate: {
+          validator: async function (id: mongoose.Types.ObjectId) {
+            return (await RoomModel.exists({ _id: id })) !== null;
+          },
+          message: "Invalid room Id in reservtion.",
+        },
+      },
     ],
   },
   {

@@ -17,16 +17,16 @@ export class CRUD {
   public async create(body: any, res: Response, req: Request) {
     const data = await this.model.create(body);
 
-    await logUserActivity(
-      req,
-      res.locals.user._id,
-      `Created a document in ${this.model.collection.collectionName}`,
-      this.model.collection.collectionName,
-      data._id,
-      undefined,
-      //Bellow is so if we are createing an rray the toObject() method does not caurse and error
-      data.toObject() ? data.toObject() : { data }
-    );
+    // logUserActivity(
+    //   req,
+    //   res.locals.user._id,
+    //   `Created a document in ${this.model.collection.collectionName}`,
+    //   this.model.collection.collectionName,
+    //   data._id,
+    //   undefined,
+    //   //Bellow is so if we are createing an rray the toObject() method does not caurse and error
+    //   data.toObject() ? data.toObject() : { data }
+    // );
 
     appResponder(StatusCodes.OK, data, res);
   }
@@ -54,15 +54,15 @@ export class CRUD {
       );
     }
 
-    await logUserActivity(
-      req,
-      res.locals.user._id,
-      `Read document in ${this.model.collection.collectionName}`,
-      this.model.collection.collectionName,
-      data._id,
-      data.toObject(),
-      data.toObject()
-    );
+    // await logUserActivity(
+    //   req,
+    //   res.locals.user._id,
+    //   `Read document in ${this.model.collection.collectionName}`,
+    //   this.model.collection.collectionName,
+    //   data._id,
+    //   data.toObject(),
+    //   data.toObject()
+    // );
 
     appResponder(StatusCodes.OK, data, res);
   }
@@ -89,15 +89,15 @@ export class CRUD {
 
     const data = await query;
 
-    await logUserActivity(
-      req,
-      res.locals.user._id,
-      `Read all documents in ${this.model.collection.collectionName}`,
-      this.model.collection.collectionName,
-      undefined,
-      undefined,
-      undefined
-    );
+    // await logUserActivity(
+    //   req,
+    //   res.locals.user._id,
+    //   `Read all documents in ${this.model.collection.collectionName}`,
+    //   this.model.collection.collectionName,
+    //   undefined,
+    //   undefined,
+    //   undefined
+    // );
 
     appResponder(StatusCodes.OK, data, res);
   }
@@ -137,15 +137,15 @@ export class CRUD {
       throw new AppError("No such Id in the database", StatusCodes.NOT_FOUND);
     }
 
-    await logUserActivity(
-      req,
-      res.locals.user._id,
-      `Deleted document in ${this.model.collection.collectionName}`,
-      this.model.collection.collectionName,
-      prevData._id,
-      prevData.toObject(),
-      undefined
-    );
+    // await logUserActivity(
+    //   req,
+    //   res.locals.user._id,
+    //   `Deleted document in ${this.model.collection.collectionName}`,
+    //   this.model.collection.collectionName,
+    //   prevData._id,
+    //   prevData.toObject(),
+    //   undefined
+    // );
 
     appResponder(
       StatusCodes.OK,

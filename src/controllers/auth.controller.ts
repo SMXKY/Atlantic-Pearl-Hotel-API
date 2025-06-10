@@ -38,7 +38,6 @@ const createEmployeeAccount = catchAsync(
     const employeePassword = generatePassword.generate({
       length: 8,
       numbers: true,
-      symbols: true,
       uppercase: true,
       lowercase: true,
       strict: true,
@@ -63,7 +62,7 @@ const createEmployeeAccount = catchAsync(
         await sendEmail(
           user.email,
           "Your Account Password - Atlantic Pearl Hotel and Resort",
-          `Dear employee, please find your account password below.`,
+          `Dear employee, please find your account password bellow.`,
           `<b>Keep you password Confidential</b><br><p>Your account password: ${employeePassword}</p>`
         );
 
