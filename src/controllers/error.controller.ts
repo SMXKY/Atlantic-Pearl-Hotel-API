@@ -18,15 +18,20 @@ const developmentResponse = (err: Error | AppError, res: Response) => {
   });
 };
 
-const productionResponse = (err: any, res: Response) => {
-  if (err?.isOperational) {
+const productionResponse = (err: Error | AppError, res: Response) => {
+  const statusCode = err instanceof AppError ? err.statusCode : 500;
+  const status = err instanceof AppError ? err.status : "error";
+  const message =
+    err instanceof AppError ? err.message : "Something went wrong";
+  const stack = err instanceof AppError ? err.stack : null;
+
+  if (err instanceof AppError && err.isOperational) {
     res.status(err.statusCode).json({
       ok: false,
       status: err.status,
       message: err.message,
     });
   } else {
-    console.log(err);
     res.status(500).json({
       ok: false,
       status: "Server error",
