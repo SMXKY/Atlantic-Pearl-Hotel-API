@@ -38,6 +38,7 @@ const createEmployeeAccount = catchAsync(
     const employeePassword = generatePassword.generate({
       length: 8,
       numbers: true,
+      symbols: true,
       uppercase: true,
       lowercase: true,
       strict: true,
@@ -47,12 +48,7 @@ const createEmployeeAccount = catchAsync(
     req.body.passwordConfirm = employeePassword;
     req.body.userType = "Employee";
 
-    let user;
-    try {
-      user = await UserModel.create(req.body);
-    } catch (err) {
-      return next(err);
-    }
+    const user = await UserModel.create(req.body);
 
     EmployeeModel.create({
       ...req.body,
@@ -62,7 +58,7 @@ const createEmployeeAccount = catchAsync(
         await sendEmail(
           user.email,
           "Your Account Password - Atlantic Pearl Hotel and Resort",
-          `Dear employee, please find your account password bellow.`,
+          `Dear employee, please find your account password below.`,
           `<b>Keep you password Confidential</b><br><p>Your account password: ${employeePassword}</p>`
         );
 
@@ -100,9 +96,9 @@ const signIn = catchAsync(
       );
     }
 
-    const user = await UserModel.create({ ...req.body, role: role._id });
-
     req.body.userType = "Guest";
+
+    const user = await UserModel.create({ ...req.body, role: role._id });
 
     await GuestModel.create({ ...req.body, user: user._id });
 

@@ -25,14 +25,16 @@ const productionResponse = (err: Error | AppError, res: Response) => {
     err instanceof AppError ? err.message : "Something went wrong";
   const stack = err instanceof AppError ? err.stack : null;
 
-  if (err instanceof AppError && err.isOperational) {
-    res.status(err.statusCode).json({
+  console.log("ERROR", err);
+
+  if (err instanceof AppError) {
+    res.status(statusCode).json({
       ok: false,
-      status: err.status,
-      message: err.message,
+      status: status,
+      message: message,
     });
   } else {
-    res.status(500).json({
+    res.status(statusCode).json({
       ok: false,
       status: "Server error",
       message:
