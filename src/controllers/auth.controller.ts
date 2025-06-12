@@ -38,7 +38,7 @@ const createEmployeeAccount = catchAsync(
     const employeePassword = generatePassword.generate({
       length: 8,
       numbers: true,
-      symbols: true,
+      // symbols: true,
       uppercase: true,
       lowercase: true,
       strict: true,

@@ -1,3 +1,4 @@
+import { TaxModel } from "../models/Tax.model";
 import { PermissionModel } from "../models/Permission.model";
 import { RoleModel } from "../models/Role.model";
 import { RolePermissionModel } from "../models/RolePermission.model";
@@ -79,7 +80,25 @@ export const createDefualtDcouments = async () => {
     }
   };
 
+  const createDefaultTaxes = async () => {
+    await TaxModel.create([
+      {
+        name: "Value Added Tax",
+        percentage: 19.25,
+        taxType: "percentage",
+        protected: true,
+      },
+      {
+        name: "Tourist Tax",
+        amount: 3000,
+        taxType: "amount",
+        protected: true,
+      },
+    ]);
+  };
+
   await createDefaultRoles();
   await createDefaultPermissions();
   await createDefaultRolePermissions();
+  await createDefaultTaxes();
 };

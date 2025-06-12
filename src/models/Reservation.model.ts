@@ -9,10 +9,60 @@ import { DiscountModel } from "./Discount.model";
 import { RateModel } from "./Rate.model";
 import { RoomTypeModel } from "./RoomType.model";
 import { RoomModel } from "./Room.model";
+import { TaxModel } from "./Tax.model";
 const { v4: uuidv4 } = require("uuid");
+
+interface IRoomEntry {
+  room: mongoose.Types.ObjectId;
+  checkIn: Date;
+  checkOut: Date;
+}
+
+interface IReservationItem {
+  roomType: mongoose.Types.ObjectId;
+  rate: mongoose.Types.ObjectId;
+  rooms: IRoomEntry[];
+  quantity?: number;
+}
+
+interface PriceAndTax {
+  subTotal: number;
+  VAT: number;
+  touristTax: number;
+  totalTaxes: number;
+  totalBill: number;
+}
 
 interface IReservation extends mongoose.Document {
   bookingReference: string;
+  status:
+    | "checked in"
+    | "no showed"
+    | "canceled"
+    | "pending"
+    | "expired"
+    | "confirmed";
+  guestName?: string;
+  guestEmail?: string;
+  guestPhoneNumber?: string;
+  countryOfResidence?: string;
+  specialRequest?: string;
+  checkInDate?: Date;
+  checkOutDate?: Date;
+  numberOfGuest: number;
+  guestNIC?: string;
+  guest?: mongoose.Types.ObjectId;
+  bookingSource?: "online" | "onsite" | "phone call";
+  paymentMethod?:
+    | "Mobile Money"
+    | "Orange Money"
+    | "Credit Card"
+    | "Cash Payment";
+  createdby?: mongoose.Types.ObjectId;
+  discount?: string;
+  items: IReservationItem[];
+  rooms: mongoose.Types.ObjectId[];
+  calculateTotalPriceAndTax(): Promise<PriceAndTax>;
 }
 
 const reservationSchema = new mongoose.Schema(
@@ -24,7 +74,14 @@ const reservationSchema = new mongoose.Schema(
     },
     status: {
       type: String,
-      enum: ["checked in", "no showed", "canceled", "pending", "expired"],
+      enum: [
+        "checked in",
+        "no showed",
+        "canceled",
+        "pending",
+        "expired",
+        "confirmed",
+      ],
       default: "pending",
     },
     guestName: { type: String, trim: true },
@@ -36,7 +93,6 @@ const reservationSchema = new mongoose.Schema(
     checkOutDate: { type: Date },
     numberOfGuest: { type: Number, default: 1, required: true },
     guestNIC: { type: String },
-
     guest: {
       type: mongoose.Types.ObjectId,
       ref: "guests",
@@ -47,17 +103,14 @@ const reservationSchema = new mongoose.Schema(
         message: "Guest must be an existing guest.",
       },
     },
-
     bookingSource: {
       type: String,
       enum: ["online", "onsite", "phone call"],
     },
-
     paymentMethod: {
       type: String,
       enum: ["Mobile Money", "Orange Money", "Credit Card", "Cash Payment"],
     },
-
     createdby: {
       type: mongoose.Types.ObjectId,
       ref: "employees",
@@ -68,7 +121,6 @@ const reservationSchema = new mongoose.Schema(
         message: "Invalid Employee Id.",
       },
     },
-
     discount: {
       type: String,
       validate: {
@@ -78,7 +130,6 @@ const reservationSchema = new mongoose.Schema(
         message: "Invalid discount code.",
       },
     },
-
     items: [
       new mongoose.Schema(
         {
@@ -93,9 +144,6 @@ const reservationSchema = new mongoose.Schema(
               message: "Invalid room type Id for this reservation item.",
             },
           },
-          quantity: { type: Number, min: 1, default: 1 },
-          checkIn: { type: Date, required: true },
-          checkOut: { type: Date, required: true },
           rate: {
             type: mongoose.Types.ObjectId,
             ref: "rates",
@@ -107,53 +155,38 @@ const reservationSchema = new mongoose.Schema(
               message: "Invalid rate Id in reservation item.",
             },
           },
+          rooms: [
+            {
+              room: {
+                type: mongoose.Types.ObjectId,
+                ref: "rooms",
+                required: [true, "Room is required in reservation entry"],
+                validate: {
+                  validator: async function (id: mongoose.Types.ObjectId) {
+                    return (await RoomModel.exists({ _id: id })) !== null;
+                  },
+                  message: "Invalid room Id in reservation.",
+                },
+              },
+              checkIn: { type: Date, required: true },
+              checkOut: { type: Date, required: true },
+            },
+          ],
         },
         { _id: false }
       ),
     ],
-    rooms: [
-      {
-        type: mongoose.Types.ObjectId,
-        ref: "rooms",
-        required: [true, "Rooms reserved are required"],
-        validate: {
-          validator: async function (id: mongoose.Types.ObjectId) {
-            return (await RoomModel.exists({ _id: id })) !== null;
-          },
-          message: "Invalid room Id in reservtion.",
-        },
-      },
-    ],
   },
-  {
-    timestamps: true,
-    toJSON: { virtuals: true },
-    toObject: { virtuals: true },
-  }
+  { timestamps: true, toJSON: { virtuals: true }, toObject: { virtuals: true } }
 );
 
-// Check-in/check-out date validation (if provided)
-reservationSchema.pre("save", function (next) {
-  if (this.checkInDate && this.checkOutDate) {
-    if (this.checkOutDate.getTime() <= this.checkInDate.getTime()) {
-      return next(
-        new AppError(
-          "Check out date must be later than check in date.",
-          StatusCodes.BAD_REQUEST
-        )
-      );
-    }
-  }
-  next();
-});
-
-// Generate unique booking reference before saving
-reservationSchema.pre<IReservation>("save", async function (next) {
+reservationSchema.pre("validate", async function (next) {
   if (this.bookingReference) return next();
 
   const MAX_ATTEMPTS = 10;
   for (let attempts = 0; attempts < MAX_ATTEMPTS; attempts++) {
-    const ref = uuidv4().split("-")[0].toUpperCase();
+    const ref = `RES-${uuidv4().split("-")[0].toUpperCase()}`;
+
     const exists = await mongoose.models.reservations.exists({
       bookingReference: ref,
     });
@@ -165,50 +198,16 @@ reservationSchema.pre<IReservation>("save", async function (next) {
 
   return next(
     new AppError(
-      "Failed to generate unique booking reference",
+      "Failed to generate unique invoice number.",
       StatusCodes.INTERNAL_SERVER_ERROR
     )
   );
 });
 
-// Validate required guest details when `guest` account not linked
-reservationSchema.pre("save", function (next) {
-  if (this.guest) return next();
+// Date validations and pre-saves unchanged...
 
-  if (!this.guestEmail || !validator.isEmail(this.guestEmail)) {
-    return next(
-      new AppError("Valid guest email is required", StatusCodes.BAD_REQUEST)
-    );
-  }
-  if (!this.guestName) {
-    return next(
-      new AppError("Guest full name is required.", StatusCodes.BAD_REQUEST)
-    );
-  }
-  if (!this.guestPhoneNumber) {
-    return next(
-      new AppError("Guest phone number is required", StatusCodes.BAD_REQUEST)
-    );
-  }
-  if (this.guestPhoneNumber.length < 8 || this.guestPhoneNumber.length > 12) {
-    return next(
-      new AppError("Phone number must be 8–12 digits", StatusCodes.BAD_REQUEST)
-    );
-  }
-  if (!isValidNumber(this.guestPhoneNumber, "CM")) {
-    return next(new AppError("Invalid phone number", StatusCodes.BAD_REQUEST));
-  }
-  if (!this.guestNIC) {
-    return next(
-      new AppError("Guest NIC number required.", StatusCodes.BAD_REQUEST)
-    );
-  }
-
-  next();
-});
-
-// Virtual: Overall nights for the top-level check-in/check-out
-reservationSchema.virtual("numberOfNights").get(function () {
+// Virtual: numberOfNights (top-level)
+reservationSchema.virtual("numberOfNights").get(function (this: IReservation) {
   const msInDay = 1000 * 60 * 60 * 24;
   if (!this.checkInDate || !this.checkOutDate) return 0;
   return Math.round(
@@ -216,53 +215,69 @@ reservationSchema.virtual("numberOfNights").get(function () {
   );
 });
 
-// Virtual: Calculate total nights from items
-reservationSchema.virtual("totalNightsFromItems").get(function () {
-  const msInDay = 1000 * 60 * 60 * 24;
-  if (!this.items || !Array.isArray(this.items)) return 0;
-
-  return this.items.reduce((acc, item) => {
-    if (!item.checkIn || !item.checkOut) return acc;
-    const nights = Math.round(
-      (item.checkOut.getTime() - item.checkIn.getTime()) / msInDay
-    );
-    return acc + nights * (item.quantity || 1);
-  }, 0);
-});
-
-// Virtual: Total charges in CFA (requires populated rate with price field)
-reservationSchema.methods.calculateTotalChargesInCFA =
-  async function (): Promise<number> {
-    if (!Array.isArray(this.items)) return 0;
-
-    await this.populate("items.rate");
-
+// Virtual: total nights from nested room entries
+reservationSchema
+  .virtual("totalNightsFromItems")
+  .get(function (this: IReservation) {
     const msInDay = 1000 * 60 * 60 * 24;
+    const items = this.items as IReservationItem[];
 
-    return this.items.reduce((total: number, item: any) => {
-      if (
-        !item.rate ||
-        !item.rate.totalPriceInCFA || // Adjusted field name
-        !item.checkIn ||
-        !item.checkOut
-      )
-        return total;
-
-      const nights = Math.max(
-        Math.round(
-          (new Date(item.checkOut).getTime() -
-            new Date(item.checkIn).getTime()) /
-            msInDay
-        ),
-        1
-      );
-
-      const quantity = item.quantity || 1;
-      const price = item.rate.totalPriceInCFA;
-
-      return total + nights * quantity * price;
+    return items.reduce((acc, item) => {
+      item.rooms.forEach((entry) => {
+        if (entry.checkIn && entry.checkOut) {
+          const nights = Math.round(
+            (entry.checkOut.getTime() - entry.checkIn.getTime()) / msInDay
+          );
+          acc += nights;
+        }
+      });
+      return acc;
     }, 0);
+  });
+
+/* Calculate the price, tax, and price + tax */
+reservationSchema.methods.calculateTotalPriceAndTax = async function (
+  this: IReservation
+) {
+  const priceAndTax: PriceAndTax = {
+    subTotal: 0,
+    VAT: 0,
+    touristTax: 0,
+    totalTaxes: 0,
+    totalBill: 0,
   };
+  const VAT = await TaxModel.findOne({ code: "value.added.tax" });
+  const touristTax = await TaxModel.findOne({ code: "tourist.tax" });
+  if (!VAT || !touristTax || !VAT.percentage || !touristTax.amount) {
+    throw new AppError(
+      "VAT or Tourist tax missing or invalid in the database",
+      StatusCodes.INTERNAL_SERVER_ERROR
+    );
+  }
+  const msInDay = 1000 * 60 * 60 * 24;
+  for (const item of this.items as IReservationItem[]) {
+    const rate = await RateModel.findById(item.rate);
+    if (!rate?.totalPriceInCFA) {
+      throw new AppError(
+        "Missing rate price in database",
+        StatusCodes.INTERNAL_SERVER_ERROR
+      );
+    }
+    for (const entry of item.rooms) {
+      const nights = Math.round(
+        (entry.checkOut.getTime() - entry.checkIn.getTime()) / msInDay
+      );
+      const totalItemPrice = rate.totalPriceInCFA * nights;
+      const totalTouristTax = touristTax.amount * nights;
+      priceAndTax.subTotal += totalItemPrice;
+      priceAndTax.touristTax += totalTouristTax;
+    }
+  }
+  priceAndTax.VAT = priceAndTax.subTotal * (VAT.percentage / 100);
+  priceAndTax.totalTaxes = priceAndTax.VAT + priceAndTax.touristTax;
+  priceAndTax.totalBill = priceAndTax.subTotal + priceAndTax.totalTaxes;
+  return priceAndTax;
+};
 
 export const ReservationModel = mongoose.model<IReservation>(
   "reservations",

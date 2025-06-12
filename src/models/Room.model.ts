@@ -17,11 +17,11 @@ export interface IRoom extends mongoose.Document {
     | "renovation";
   state: "clean" | "dirty";
   basePriceInCFA: number;
-  veiwType?: string; // optional because it has a default
-  isSmokingAllowed?: boolean; // optional because it has a default
-  isActive?: boolean; // optional because it has a default
+  veiwType?: string;
+  isSmokingAllowed?: boolean;
+  isActive?: boolean;
   description: string;
-  sizeInSquareMeters?: number; // select: false
+  sizeInSquareMeters?: number;
   accessType: "key" | "code" | "key-card";
   building?: mongoose.Types.ObjectId;
   type?: mongoose.Types.ObjectId;

@@ -126,4 +126,18 @@ export const allPermissions = {
     update: "can_update_rate",
     create: "can_create_rate",
   },
+  discounts: {
+    readOne: "can_read_discount",
+    readAll: "can_read_all_discounts",
+    delete: "can_delete_discount",
+    update: "can_update_discount",
+    create: "can_create_discount",
+  },
+  taxes: {
+    readOne: "can_read_tax",
+    readAll: "can_read_all_taxes",
+    delete: "can_delete_tax",
+    update: "can_update_tax",
+    create: "can_create_tax",
+  },
 };

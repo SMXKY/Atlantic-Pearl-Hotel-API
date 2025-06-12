@@ -45,14 +45,6 @@ const rateSchema = new mongoose.Schema(
       required: [true, "Rate price is required."],
       min: 100,
     },
-    taxIncluded: {
-      type: Boolean,
-      default: false,
-      required: [
-        true,
-        "Please specify if tax is included in rate price or not",
-      ],
-    },
     mealPlan: {
       type: String,
       enum: {
@@ -78,14 +70,6 @@ const rateSchema = new mongoose.Schema(
       type: Number,
       default: 2,
       min: [1, "Occupancy must be at least 1 person"],
-    },
-    validFrom: {
-      type: Date,
-      required: [true, "Valid from date is required"],
-    },
-    validTo: {
-      type: Date,
-      required: [true, "Valid to date is required"],
     },
     isActive: {
       type: Boolean,
@@ -138,16 +122,6 @@ rateSchema.pre("save", async function (next) {
     return next(
       new AppError(
         "Rate total price cannot be less than the room type minimum price",
-        StatusCodes.BAD_REQUEST
-      )
-    );
-  }
-
-  // Validate validTo > validFrom
-  if (this.validTo <= this.validFrom) {
-    return next(
-      new AppError(
-        "'Valid To' date must be greater than 'Valid From' date.",
         StatusCodes.BAD_REQUEST
       )
     );
