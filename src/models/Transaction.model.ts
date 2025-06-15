@@ -59,17 +59,6 @@ const transactionSchema = new mongoose.Schema(
         message: "Invalid refund Id.",
       },
     },
-    // roomType: {
-    //   type: mongoose.Types.ObjectId,
-    //   ref: "bills",
-    //   validate: {
-    //     validator: async function (id: mongoose.Types.ObjectId) {
-    //       const exists = await RoomTypeModel.exists({ _id: id });
-    //       return exists !== null;
-    //     },
-    //     message: "Invalid bill Id.",
-    //   },
-    // },
   },
   { timestamps: true, toObject: { virtuals: true }, toJSON: { virtuals: true } }
 );

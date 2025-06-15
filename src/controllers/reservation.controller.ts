@@ -16,6 +16,11 @@ import {
   renderInvoiceHTMLFromTemplate,
 } from "../util/generateInvoiceEmailTemplate.util";
 import * as mongoose from "mongoose";
+import { RecieptModel } from "../models/Reciept.model";
+import { TransactionModel } from "../models/Transaction.model";
+import { expirePay } from "../external-apis/fapshi.api";
+import path from "path";
+import fs from "fs";
 
 const CRUDReservation: CRUD = new CRUD(ReservationModel);
 
@@ -87,10 +92,147 @@ const deleteReservation = catchAsync(
   }
 );
 
+const depositPaymentRedirect = catchAsync(
+  async (req: Request, res: Response, next: NextFunction) => {
+    if (typeof req.query.data !== "string") {
+      return next(new AppError("Invalid data format", StatusCodes.BAD_REQUEST));
+    }
+
+    const data = JSON.parse(decodeURIComponent(req.query.data));
+
+    if (!data.amount || !data.reservationId) {
+      return next(
+        new AppError("Invalid data object format", StatusCodes.BAD_REQUEST)
+      );
+    }
+
+    try {
+      const reservation = await ReservationModel.findById(
+        data.reservationId
+      ).populate({
+        path: "guest",
+        populate: {
+          path: "user",
+        },
+      });
+
+      if (!reservation) {
+        throw new AppError(
+          "No such reservation Id in the database.",
+          StatusCodes.BAD_REQUEST
+        );
+      }
+
+      const guestId = reservation.guest?._id;
+
+      const transaction = await TransactionModel.create({
+        transactionType: "bill payment",
+        reason: "Payment of reservation down payment.",
+        amountInCFA: data.amount,
+        status: "success",
+        reservation: data.reservationId,
+        guest: guestId,
+      });
+
+      const reciept = await RecieptModel.create({
+        transaction: transaction._id,
+        amountInCFA: data.amount,
+        issued: true,
+        method: "Email",
+        guest: guestId,
+      });
+
+      const invoice = await InvoiceModel.findOne({
+        reservation: data.reservationId,
+      });
+      if (!invoice) {
+        throw new AppError(
+          "No invoice associated with the reservation",
+          StatusCodes.BAD_REQUEST
+        );
+      }
+
+      if (invoice.amountPaid == null || invoice.amountDue == null) {
+        throw new AppError(
+          "Invoice fields amountPaid or amountDue are missing",
+          StatusCodes.INTERNAL_SERVER_ERROR
+        );
+      }
+
+      invoice.amountPaid += data.amount;
+      invoice.amountDue -= data.amount;
+      await invoice.save();
+
+      reservation.status = "confirmed";
+      await reservation.save();
+
+      const expirePaymentLink = await expirePay(invoice.paymentLinkId);
+
+      if (expirePaymentLink.status !== "EXPIRED") {
+        console.log(expirePaymentLink);
+        console.log("Transaction Id", invoice.paymentLinkId);
+        throw new AppError(
+          "Failed to expire the payment link",
+          StatusCodes.INTERNAL_SERVER_ERROR
+        );
+      }
+
+      const templatePath = path.join(
+        __dirname,
+        "/../templates/receipt.template.html"
+      );
+      const rawHtml = fs.readFileSync(templatePath, "utf-8");
+
+      if (!rawHtml) {
+        console.log(templatePath);
+        return next(
+          new AppError(
+            "Error finding reciept html template",
+            StatusCodes.INTERNAL_SERVER_ERROR
+          )
+        );
+      }
+
+      const guestEmail =
+        (reservation.guest &&
+          typeof reservation.guest !== "string" &&
+          (reservation.guest as any).user &&
+          typeof (reservation.guest as any).user !== "string" &&
+          (reservation.guest as any).user.email) ||
+        reservation.guestEmail;
+
+      if (!guestEmail) {
+        throw new AppError(
+          "No guest email available to send receipt.",
+          StatusCodes.INTERNAL_SERVER_ERROR
+        );
+      }
+
+      const finalHtml = rawHtml
+        .replace(/{{receiptId}}/g, String(reciept._id))
+        .replace(/{{date}}/g, new Date().toLocaleString())
+        .replace(/{{method}}/g, "Email")
+        .replace(/{{transactionId}}/g, String(transaction._id))
+        .replace(/{{transactionType}}/g, String(transaction.transactionType))
+        .replace(/{{reason}}/g, String(transaction.reason))
+        .replace(/{{reservationId}}/g, String(reservation._id))
+        .replace(/{{status}}/g, String(transaction.status))
+        .replace(/{{amount}}/g, data.amount.toLocaleString());
+
+      await sendEmail(guestEmail, "RESERVATION RECEIPT", "", finalHtml);
+
+      res.status(StatusCodes.OK).send(finalHtml);
+    } catch (err) {
+      return next(err);
+    }
+  }
+);
+
 export const reservationControllers = {
   createReservation,
   readOneReservation,
   readAllReservations,
   updateReservation,
   deleteReservation,
+  depositPaymentRedirect,
 };

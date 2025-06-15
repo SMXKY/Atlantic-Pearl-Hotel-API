@@ -9,6 +9,7 @@ const { v4: uuidv4 } = require("uuid");
 import { initiatePay, InitiatePayData } from "../external-apis/fapshi.api";
 import * as mongoose from "mongoose";
 import { RoomModel } from "./Room.model";
+import { AdminConfigurationModel } from "./AdminConfiguration.model";
 
 interface IRoomEntry {
   room: mongoose.Types.ObjectId;
@@ -39,6 +40,7 @@ interface IInvoice extends Document {
   invoiceNumber: string;
   dueDate: Date;
   discount: Types.ObjectId;
+  paymentLinkId: string;
 }
 
 const InvoiceSchema = new Schema<IInvoice>(
@@ -120,6 +122,9 @@ const InvoiceSchema = new Schema<IInvoice>(
       },
       required: [true, "Payment link is required."],
     },
+    paymentLinkId: {
+      type: String,
+    },
     dueDate: {
       type: Date,
     },
@@ -181,14 +186,37 @@ InvoiceSchema.pre("validate", async function (next) {
   this.grandTotal = priceAndTax.totalBill;
   this.amountDue = priceAndTax.totalBill;
 
+  if (!process.env.PROD_BASE_URL || !process.env.DEV_BASE_URL) {
+    throw new AppError(
+      "Prod or Dev base URL's not set in the enviroment variables.",
+      StatusCodes.INTERNAL_SERVER_ERROR
+    );
+  }
+
+  const baseUrl =
+    process.env.NODE_ENV === "production"
+      ? process.env.PROD_BASE_URL
+      : process.env.DEV_BASE_URL;
+
+  const data = {
+    amount: reservation.depositInCFA,
+    reservationId: String(reservation._id),
+  };
+
+  const dataString = encodeURIComponent(JSON.stringify(data));
+  const redirectUrl = `${baseUrl}/api/v1/reservations/deposit-redirect?data=${dataString}`;
+
   const payData: InitiatePayData = {
-    amount: Math.round(priceAndTax.totalBill * 0.3),
-    // redirectUrl: "localhost:8000/",
+    amount: reservation.depositInCFA,
+    redirectUrl,
     userId: this.reservation.toString(),
     message: "Atlantic Pearl Hotel and Resort, Reservation Deposit", // Optional message shown to user
   };
 
-  this.paymentLink = (await initiatePay(payData)).link;
+  const payment = await initiatePay(payData);
+  // console.log("PAYMENT", payment);
+  this.paymentLink = payment.link;
+  this.paymentLinkId = payment.transId;
 
   next();
 });

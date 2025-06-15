@@ -1,6 +1,35 @@
 import * as mongoose from "mongoose";
 import * as currencyCodes from "currency-codes";
 
+import { Document, Types } from "mongoose";
+import { IUser } from "./User.model";
+
+export interface IGuest extends Document {
+  user: Types.ObjectId | IUser;
+  countryOfResidence?: string;
+  preferedCurrency?: string;
+  preferedLanguage?: "English" | "French";
+  isLoyaltyProgramMember?: boolean;
+  guestTag?: string;
+  guestType:
+    | "Individual"
+    | "Couple"
+    | "Family"
+    | "Group"
+    | "Corporate"
+    | "Walk-in"
+    | "VIP"
+    | "Loyalty Member"
+    | "Event Attendee"
+    | "Government/Military"
+    | "Long-stay"
+    | "OTA";
+  hasConfirmedEmail?: boolean;
+  NIC?: string;
+  createdAt?: Date;
+  updatedAt?: Date;
+}
+
 //NB: only the user Id should be required in this model.
 
 const guestSchema = new mongoose.Schema(
@@ -73,4 +102,4 @@ const guestSchema = new mongoose.Schema(
   }
 );
 
-export const GuestModel = mongoose.model("guests", guestSchema);
+export const GuestModel = mongoose.model<IGuest>("guests", guestSchema);

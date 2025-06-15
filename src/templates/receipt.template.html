@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Atlantic Pearl Hotel and Resort - Receipt</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+        line-height: 1.6;
+        color: #333;
+        background-color: #f8f9fa;
+        padding: 20px;
+      }
+
+      .receipt-container {
+        max-width: 600px;
+        margin: 0 auto;
+        background: white;
+        border-radius: 12px;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+        overflow: hidden;
+      }
+
+      .header {
+        background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%);
+        color: white;
+        padding: 30px;
+        text-align: center;
+        position: relative;
+      }
+
+      .header::before {
+        content: "";
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.05'%3E%3Cpath d='M30 0L60 30L30 60L0 30z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")
+          repeat;
+        opacity: 0.1;
+      }
+
+      .hotel-name {
+        position: relative;
+        z-index: 1;
+        font-size: 28px;
+        font-weight: 700;
+        margin-bottom: 5px;
+        letter-spacing: 1px;
+      }
+
+      .hotel-tagline {
+        position: relative;
+        z-index: 1;
+        font-size: 14px;
+        opacity: 0.9;
+        font-style: italic;
+      }
+
+      .receipt-title {
+        position: relative;
+        z-index: 1;
+        background: rgba(255, 255, 255, 0.2);
+        padding: 8px 20px;
+        border-radius: 20px;
+        display: inline-block;
+        margin-top: 15px;
+        font-weight: 600;
+        font-size: 16px;
+      }
+
+      .content {
+        padding: 40px 30px;
+      }
+
+      .receipt-info {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 30px;
+        flex-wrap: wrap;
+        gap: 20px;
+      }
+
+      .info-section {
+        flex: 1;
+        min-width: 200px;
+      }
+
+      .info-label {
+        font-size: 12px;
+        color: #666;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        margin-bottom: 5px;
+        font-weight: 600;
+      }
+
+      .info-value {
+        font-size: 16px;
+        color: #333;
+        font-weight: 500;
+      }
+
+      .transaction-details {
+        background: #f8fafc;
+        border-radius: 8px;
+        padding: 25px;
+        margin: 30px 0;
+        border-left: 4px solid #3b82f6;
+      }
+
+      .detail-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 12px 0;
+        border-bottom: 1px solid #e2e8f0;
+      }
+
+      .detail-row:last-child {
+        border-bottom: none;
+        font-weight: 700;
+        font-size: 18px;
+        color: #1e40af;
+        margin-top: 10px;
+        padding-top: 20px;
+        border-top: 2px solid #3b82f6;
+      }
+
+      .detail-label {
+        color: #475569;
+        font-weight: 500;
+      }
+
+      .detail-value {
+        font-weight: 600;
+        color: #1e293b;
+      }
+
+      .status-badge {
+        display: inline-block;
+        padding: 6px 12px;
+        border-radius: 20px;
+        font-size: 12px;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+      }
+
+      .status-success {
+        background: #dcfce7;
+        color: #166534;
+      }
+
+      .footer {
+        background: #f1f5f9;
+        padding: 25px 30px;
+        text-align: center;
+        border-top: 1px solid #e2e8f0;
+      }
+
+      .footer-text {
+        color: #64748b;
+        font-size: 14px;
+        margin-bottom: 10px;
+      }
+
+      .contact-info {
+        color: #475569;
+        font-size: 13px;
+        line-height: 1.8;
+      }
+
+      .print-note {
+        background: #fef3c7;
+        border: 1px solid #f59e0b;
+        padding: 15px;
+        border-radius: 8px;
+        margin: 20px 0;
+        text-align: center;
+        color: #3b82f6;
+        font-size: 14px;
+        font-weight: 600;
+      }
+
+      .action-buttons {
+        display: flex;
+        gap: 10px;
+        justify-content: center;
+        margin: 20px 0;
+      }
+
+      .action-btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 10px 20px;
+        background: #3b82f6;
+        color: white;
+        border: none;
+        border-radius: 6px;
+        cursor: pointer;
+        font-size: 14px;
+        font-weight: 600;
+        text-decoration: none;
+        transition: background-color 0.2s;
+      }
+
+      .action-btn:hover {
+        background: #2563eb;
+      }
+
+      .action-btn svg {
+        width: 16px;
+        height: 16px;
+      }
+
+      @media print {
+        body {
+          background: white;
+          padding: 0;
+        }
+
+        .receipt-container {
+          box-shadow: none;
+          border-radius: 0;
+        }
+
+        .print-note,
+        .action-buttons {
+          display: none !important;
+        }
+      }
+
+      @media (max-width: 600px) {
+        .receipt-info {
+          flex-direction: column;
+        }
+
+        .detail-row {
+          flex-direction: column;
+          align-items: flex-start;
+          gap: 5px;
+        }
+
+        .content {
+          padding: 20px;
+        }
+
+        .header {
+          padding: 20px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="receipt-container" id="receipt">
+      <div class="header">
+        <div class="hotel-name">Atlantic Pearl Hotel and Resort</div>
+        <div class="hotel-tagline">Where Luxury Meets the Ocean</div>
+        <div class="receipt-title">Payment Receipt</div>
+      </div>
+
+      <div class="content">
+        <div class="action-buttons">
+          <button class="action-btn" onclick="printReceipt()">
+            🖨 Print Receipt
+          </button>
+          <button class="action-btn" onclick="downloadReceipt()">
+            📥 Download PDF
+          </button>
+        </div>
+
+        <div class="receipt-info">
+          <div class="info-section">
+            <div class="info-label">Receipt ID</div>
+            <div class="info-value">{{receiptId}}</div>
+          </div>
+          <div class="info-section">
+            <div class="info-label">Issue Date</div>
+            <div class="info-value">{{date}}</div>
+          </div>
+          <div class="info-section">
+            <div class="info-label">Method</div>
+            <div class="info-value">{{method}}</div>
+          </div>
+        </div>
+
+        <div class="print-note">
+          💡 This receipt can be printed for your records. Use Ctrl+P or Cmd+P
+          to print.
+        </div>
+
+        <div class="transaction-details">
+          <div class="detail-row">
+            <span class="detail-label">Transaction ID</span>
+            <span class="detail-value">{{transactionId}}</span>
+          </div>
+          <div class="detail-row">
+            <span class="detail-label">Transaction Type</span>
+            <span class="detail-value">{{transactionType}}</span>
+          </div>
+          <div class="detail-row">
+            <span class="detail-label">Description</span>
+            <span class="detail-value">{{reason}}</span>
+          </div>
+          <div class="detail-row">
+            <span class="detail-label">Reservation ID</span>
+            <span class="detail-value">{{reservationId}}</span>
+          </div>
+          <div class="detail-row">
+            <span class="detail-label">Payment Status</span>
+            <span class="detail-value">
+              <span class="status-badge status-success">{{status}}</span>
+            </span>
+          </div>
+          <div class="detail-row">
+            <span class="detail-label">Total Amount</span>
+            <span class="detail-value">{{amount}}</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="footer">
+        <div class="footer-text">
+          Thank you for choosing Atlantic Pearl Hotel and Resort
+        </div>
+        <div class="contact-info">
+          For inquiries, please contact us at reservations@atlanticpearl.com<br />
+          Phone: +1 (555) 123-4567 | Website: www.atlanticpearl.com<br />
+          123 Ocean Drive, Paradise Bay, PB 12345
+        </div>
+      </div>
+    </div>
+
+    <script>
+      function printReceipt() {
+        const printContents = document.getElementById("receipt").outerHTML;
+        const originalContents = document.body.innerHTML;
+        document.body.innerHTML = printContents;
+        window.print();
+        document.body.innerHTML = originalContents;
+        location.reload();
+      }
+
+      function downloadReceipt() {
+        const element = document.getElementById("receipt");
+        const opt = {
+          margin: 0.5,
+          filename: "Atlantic_Pearl_Receipt_666b1d5070f87b41c4f6a0a5.pdf",
+          image: { type: "jpeg", quality: 0.98 },
+          html2canvas: { scale: 2 },
+          jsPDF: { unit: "in", format: "a4", orientation: "portrait" },
+        };
+        html2pdf().from(element).set(opt).save();
+      }
+
+      document.addEventListener("keydown", function (e) {
+        if ((e.ctrlKey || e.metaKey) && e.key === "p") {
+          e.preventDefault();
+          printReceipt();
+        }
+      });
+    </script>
+  </body>
+</html>

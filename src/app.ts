@@ -26,6 +26,7 @@ import { roomTypeRouter } from "./routes/roomType.route";
 import { rateRouter } from "./routes/rate.route";
 import { discountRouter } from "./routes/discount.route";
 import { taxRouter } from "./routes/tax.route";
+import { adminConfigurationRouter } from "./routes/adminConfiguration.route";
 
 export const app = express();
 
@@ -96,6 +97,7 @@ app.use("/api/v1/room-types", roomTypeRouter);
 app.use("/api/v1/rates", rateRouter);
 app.use("/api/v1/discounts", discountRouter);
 app.use("/api/v1/taxes", taxRouter);
+app.use("/api/v1/admin-configurations", adminConfigurationRouter);
 
 const swaggerSpec = swaggerJSDoc({
   definition: {

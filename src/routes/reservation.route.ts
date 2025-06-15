@@ -143,6 +143,10 @@ reservationRouter
   );
 
 reservationRouter
+  .route("/deposit-redirect/")
+  .get(reservationControllers.depositPaymentRedirect);
+
+reservationRouter
   .route("/:id")
   .get(
     // authControllers.protect,

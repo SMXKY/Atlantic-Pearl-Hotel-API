@@ -100,6 +100,7 @@ export async function generateInvoiceEmailTemplateData(invoiceId: string) {
       paymentMethod: reservation.paymentMethod,
       roomDetails: roomSummaries,
       specialRequest: reservation.specialRequest || "None",
+      initialDeposit: reservation.depositInCFA.toLocaleString() + " FCFA",
     },
   };
 }
@@ -174,6 +175,7 @@ export function renderInvoiceHTMLFromTemplate(data: any): string {
       <li><strong>Due Date:</strong> ${invoice.dueDate}</li>
       <li><strong>Net Amount:</strong> ${invoice.netAmount}</li>
       <li><strong>Tax:</strong> ${invoice.taxAmount}</li>
+      <li><strong>Initial Deposit:</strong> ${reservation.initialDeposit}</li>
       <li><strong>Total:</strong> <strong style="color: #28a745;">${invoice.total}</strong></li>
       <li><strong>Status:</strong> ${invoice.status}</li>
     </ul>

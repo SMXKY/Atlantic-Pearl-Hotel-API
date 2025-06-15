@@ -140,4 +140,8 @@ export const allPermissions = {
     update: "can_update_tax",
     create: "can_create_tax",
   },
+  adminConfigurations: {
+    update: "can_update_admin_configuration",
+    read: "can_read_admin_configuration",
+  },
 };

@@ -3,13 +3,14 @@ import validator from "validator";
 import { isValidNumber } from "libphonenumber-js";
 import { AppError } from "../util/AppError.util";
 import { StatusCodes } from "http-status-codes";
-import { GuestModel } from "./Guest.model";
+import { GuestModel, IGuest } from "./Guest.model";
 import { EmployeeModel } from "./Employee.model";
 import { DiscountModel } from "./Discount.model";
 import { RateModel } from "./Rate.model";
 import { RoomTypeModel } from "./RoomType.model";
 import { RoomModel } from "./Room.model";
 import { TaxModel } from "./Tax.model";
+import { AdminConfigurationModel } from "./AdminConfiguration.model";
 const { v4: uuidv4 } = require("uuid");
 
 interface IRoomEntry {
@@ -51,7 +52,7 @@ interface IReservation extends mongoose.Document {
   checkOutDate?: Date;
   numberOfGuest: number;
   guestNIC?: string;
-  guest?: mongoose.Types.ObjectId;
+  guest?: mongoose.Types.ObjectId | IGuest;
   bookingSource?: "online" | "onsite" | "phone call";
   paymentMethod?:
     | "Mobile Money"
@@ -62,10 +63,11 @@ interface IReservation extends mongoose.Document {
   discount?: string;
   items: IReservationItem[];
   rooms: mongoose.Types.ObjectId[];
+  depositInCFA: number;
   calculateTotalPriceAndTax(): Promise<PriceAndTax>;
 }
 
-const reservationSchema = new mongoose.Schema(
+const reservationSchema = new mongoose.Schema<IReservation>(
   {
     bookingReference: {
       type: String,
@@ -86,7 +88,7 @@ const reservationSchema = new mongoose.Schema(
     },
     guestName: { type: String, trim: true },
     guestEmail: { type: String },
-    guestPhoneNumber: { type: String, unique: true },
+    guestPhoneNumber: { type: String },
     countryOfResidence: { type: String, trim: true },
     specialRequest: { type: String, trim: true },
     checkInDate: { type: Date },
@@ -176,6 +178,10 @@ const reservationSchema = new mongoose.Schema(
         { _id: false }
       ),
     ],
+    depositInCFA: {
+      type: Number,
+      required: [true, "Reservation deposit amount is required."],
+    },
   },
   { timestamps: true, toJSON: { virtuals: true }, toObject: { virtuals: true } }
 );
@@ -278,6 +284,38 @@ reservationSchema.methods.calculateTotalPriceAndTax = async function (
   priceAndTax.totalBill = priceAndTax.subTotal + priceAndTax.totalTaxes;
   return priceAndTax;
 };
+
+reservationSchema.pre("save", async function (next) {
+  const adminConfiguration = await AdminConfigurationModel.findOne();
+
+  if (!adminConfiguration) {
+    return next(
+      new AppError(
+        "Error fetching admin configuration",
+        StatusCodes.INTERNAL_SERVER_ERROR
+      )
+    );
+  }
+
+  const priceAndTax = await this.calculateTotalPriceAndTax();
+
+  const minDeposit =
+    priceAndTax.totalBill *
+    (adminConfiguration.reservations.minimumDepositPercentage.value / 100);
+
+  const formattedMinDeposit = new Intl.NumberFormat("en-US").format(minDeposit);
+
+  if (this.depositInCFA < minDeposit) {
+    return next(
+      new AppError(
+        `Deposit is less than allowed, the minimum deposit for this reservation is XAF ${formattedMinDeposit}`,
+        StatusCodes.BAD_REQUEST
+      )
+    );
+  }
+
+  next();
+});
 
 export const ReservationModel = mongoose.model<IReservation>(
   "reservations",
