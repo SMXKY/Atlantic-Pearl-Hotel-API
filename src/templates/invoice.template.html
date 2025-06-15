@@ -30,7 +30,6 @@
         text-decoration: none;
       }
 
-      /* Main styles */
       body {
         margin: 0 !important;
         padding: 0 !important;
@@ -61,256 +60,8 @@
         letter-spacing: 2px;
       }
 
-      .header .subtitle {
-        margin: 8px 0 0 0;
-        font-size: 18px;
-        opacity: 0.9;
-        font-weight: 300;
-      }
-
       .content {
         padding: 40px 30px;
-      }
-
-      .invoice-header {
-        border-bottom: 3px solid #e5e7eb;
-        padding-bottom: 30px;
-        margin-bottom: 30px;
-      }
-
-      .invoice-info {
-        display: table;
-        width: 100%;
-        margin-bottom: 30px;
-      }
-
-      .invoice-left,
-      .invoice-right {
-        display: table-cell;
-        vertical-align: top;
-        width: 50%;
-      }
-
-      .invoice-right {
-        text-align: right;
-      }
-
-      .invoice-number {
-        font-size: 28px;
-        font-weight: bold;
-        color: #1e40af;
-        margin-bottom: 15px;
-      }
-
-      .field-label {
-        font-weight: bold;
-        color: #4b5563;
-        margin-bottom: 5px;
-        font-size: 14px;
-        text-transform: uppercase;
-        letter-spacing: 0.5px;
-      }
-
-      .field-value {
-        font-size: 16px;
-        margin-bottom: 20px;
-        color: #1f2937;
-      }
-
-      .guest-info {
-        background-color: #f9fafb;
-        padding: 25px;
-        border-radius: 8px;
-        margin-bottom: 30px;
-        border-left: 4px solid #3b82f6;
-      }
-
-      .guest-name {
-        font-weight: bold;
-        font-size: 20px;
-        margin-bottom: 8px;
-        color: #1e40af;
-      }
-
-      .line-items-table {
-        width: 100%;
-        border-collapse: collapse;
-        margin: 30px 0;
-        background-color: #ffffff;
-        border-radius: 8px;
-        overflow: hidden;
-        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
-      }
-
-      .line-items-table th {
-        background-color: #f3f4f6;
-        color: #374151;
-        font-weight: bold;
-        padding: 18px 15px;
-        text-align: left;
-        border-bottom: 2px solid #d1d5db;
-        font-size: 14px;
-        text-transform: uppercase;
-        letter-spacing: 0.5px;
-      }
-
-      .line-items-table td {
-        padding: 18px 15px;
-        border-bottom: 1px solid #f3f4f6;
-        font-size: 15px;
-      }
-
-      .line-items-table tr:last-child td {
-        border-bottom: none;
-      }
-
-      .line-items-table tr:nth-child(even) {
-        background-color: #fafafa;
-      }
-
-      .amount {
-        text-align: right;
-        font-weight: bold;
-      }
-
-      .totals-section {
-        background-color: #f8fafc;
-        padding: 30px;
-        border-radius: 10px;
-        margin: 30px 0;
-        border: 1px solid #e5e7eb;
-      }
-
-      .totals-table {
-        width: 100%;
-        border-collapse: collapse;
-      }
-
-      .totals-table td {
-        padding: 12px 0;
-        border: none;
-        font-size: 16px;
-      }
-
-      .totals-table .label-col {
-        text-align: right;
-        font-weight: bold;
-        color: #4b5563;
-        width: 65%;
-        padding-right: 25px;
-      }
-
-      .totals-table .amount-col {
-        text-align: right;
-        font-weight: bold;
-        font-size: 17px;
-        color: #1f2937;
-      }
-
-      .grand-total {
-        border-top: 3px solid #1e40af;
-        padding-top: 15px !important;
-        font-size: 22px !important;
-        color: #1e40af !important;
-      }
-
-      .amount-due-row {
-        background-color: #fef2f2;
-        padding: 15px !important;
-        border-radius: 6px;
-      }
-
-      .amount-due {
-        color: #dc2626 !important;
-        font-size: 20px !important;
-      }
-
-      .status-badge {
-        display: inline-block;
-        padding: 8px 16px;
-        border-radius: 25px;
-        font-size: 13px;
-        font-weight: bold;
-        text-transform: uppercase;
-        letter-spacing: 0.8px;
-      }
-
-      .status-unpaid {
-        background-color: #fef2f2;
-        color: #dc2626;
-      }
-
-      .status-partial {
-        background-color: #fffbeb;
-        color: #d97706;
-      }
-
-      .status-paid {
-        background-color: #f0fdf4;
-        color: #059669;
-      }
-
-      .payment-section {
-        background: linear-gradient(135deg, #059669 0%, #10b981 100%);
-        color: #ffffff;
-        padding: 35px;
-        border-radius: 12px;
-        text-align: center;
-        margin: 35px 0;
-      }
-
-      .payment-section h3 {
-        margin: 0 0 15px 0;
-        font-size: 24px;
-        font-weight: bold;
-      }
-
-      .payment-section p {
-        margin: 0 0 20px 0;
-        opacity: 0.95;
-        font-size: 16px;
-      }
-
-      .payment-button {
-        display: inline-block;
-        background-color: #ffffff;
-        color: #059669;
-        padding: 18px 35px;
-        text-decoration: none;
-        border-radius: 8px;
-        font-weight: bold;
-        font-size: 18px;
-        margin-top: 10px;
-        transition: all 0.3s ease;
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-      }
-
-      .payment-button:hover {
-        background-color: #f0fdf4;
-        transform: translateY(-2px);
-        box-shadow: 0 6px 20px rgba(0, 0, 0, 0.2);
-      }
-
-      .terms-section {
-        margin-top: 40px;
-        padding: 25px;
-        background-color: #f9fafb;
-        border-radius: 8px;
-        border-left: 4px solid #6b7280;
-      }
-
-      .terms-title {
-        font-weight: bold;
-        color: #374151;
-        margin-bottom: 12px;
-        font-size: 16px;
-      }
-
-      .terms-text {
-        margin: 0;
-        font-size: 14px;
-        color: #6b7280;
-        line-height: 1.6;
       }
 
       .footer {
@@ -331,7 +82,6 @@
         font-size: 16px;
       }
 
-      /* Responsive design */
       @media only screen and (max-width: 600px) {
         .email-container {
           width: 100% !important;
@@ -342,37 +92,6 @@
         .content,
         .footer {
           padding: 25px 20px !important;
-        }
-
-        .invoice-left,
-        .invoice-right {
-          display: block !important;
-          width: 100% !important;
-          margin-bottom: 25px;
-        }
-
-        .invoice-right {
-          text-align: left !important;
-        }
-
-        .line-items-table th,
-        .line-items-table td {
-          padding: 12px 10px !important;
-          font-size: 13px;
-        }
-
-        .totals-section,
-        .payment-section {
-          padding: 20px !important;
-        }
-
-        .invoice-number {
-          font-size: 24px !important;
-        }
-
-        .payment-button {
-          padding: 15px 25px !important;
-          font-size: 16px !important;
         }
       }
     </style>
@@ -385,7 +104,6 @@
       </div>
 
       <!-- Main Content -->
-      <!-- invoiceTemplate.html -->
       <div
         style="
           font-family: Arial, sans-serif;
@@ -395,6 +113,24 @@
         "
       >
         <h2 style="color: #007bff">Invoice: {{invoiceNumber}}</h2>
+
+        <!-- Warning Banner -->
+        <div
+          style="
+            background-color: #fef2f2;
+            color: #b91c1c;
+            border-left: 6px solid #dc2626;
+            padding: 16px 20px;
+            margin: 20px 0;
+            border-radius: 8px;
+            font-size: 15px;
+            line-height: 1.5;
+          "
+        >
+          ⚠️ <strong>Important:</strong> This reservation will automatically
+          expire if the deposit amount is not paid within
+          <strong>{{expirationTime}} minutes</strong> of receiving this invoice.
+        </div>
 
         <p>Dear {{guestName}},</p>
         <p>Thank you for choosing our hotel...</p>

@@ -36,6 +36,7 @@ interface PriceAndTax {
 
 interface IReservation extends mongoose.Document {
   bookingReference: string;
+  _id: mongoose.Types.ObjectId;
   status:
     | "checked in"
     | "no showed"
@@ -315,6 +316,47 @@ reservationSchema.pre("save", async function (next) {
   }
 
   next();
+});
+
+reservationSchema.post("save", async function (this: IReservation) {
+  const adminConfig = await AdminConfigurationModel.findOne();
+
+  if (!adminConfig || !adminConfig.reservations?.expireAfter.value) {
+    throw new AppError(
+      "Admin configuration or lock expiry time is missing",
+      StatusCodes.INTERNAL_SERVER_ERROR
+    );
+  }
+
+  const LOCK_DURATION_MINUTES = Number(
+    adminConfig.reservations.expireAfter.value
+  );
+  const lockUntil = new Date(Date.now() + LOCK_DURATION_MINUTES * 60 * 1000);
+
+  const savePromises = [];
+
+  for (const item of this.items) {
+    for (const roomEntry of item.rooms) {
+      const RoomObj = await RoomModel.findById(roomEntry.room);
+
+      if (!RoomObj) {
+        throw new AppError(
+          `No room found with ID ${roomEntry.room}`,
+          StatusCodes.BAD_REQUEST
+        );
+      }
+
+      RoomObj.status = "unavailable";
+      RoomObj.lock = {
+        until: lockUntil,
+        reservation: this._id,
+      };
+
+      savePromises.push(RoomObj.save());
+    }
+  }
+
+  await Promise.all(savePromises);
 });
 
 export const ReservationModel = mongoose.model<IReservation>(

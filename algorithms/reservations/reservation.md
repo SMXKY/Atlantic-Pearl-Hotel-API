@@ -21,9 +21,9 @@ Todo after reservation:
 - On payment update transactions ✅
 - On payment update Invoice ✅
 - On payment confirm reservation ✅
-- look rooms for the reaservation period for 30mins
+- look rooms for the reaservation period for 30mins ✅
+- expire reservation after admin decided time (with cron job) ✅
 - link should expire after 30mins
-- expire reservation after admin decided time (with cron job)
 - accomodate cash payments for reservation
 - send back the
 - user should decide how much they want to deposite, but it should never be less than the minimum set by the admin

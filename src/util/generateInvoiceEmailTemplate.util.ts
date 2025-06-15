@@ -6,6 +6,15 @@ import { IUser } from "../models/User.model";
 import { format } from "date-fns";
 
 export async function generateInvoiceEmailTemplateData(invoiceId: string) {
+  const adminConfig = (await AdminConfigurationModel.find())[0];
+
+  if (!adminConfig || !adminConfig.reservations.expireAfter.value) {
+    throw new AppError(
+      "Admin configuration not found",
+      StatusCodes.INTERNAL_SERVER_ERROR
+    );
+  }
+
   const invoice = await InvoiceModel.findById(invoiceId)
     .populate({
       path: "reservation",
@@ -102,11 +111,15 @@ export async function generateInvoiceEmailTemplateData(invoiceId: string) {
       specialRequest: reservation.specialRequest || "None",
       initialDeposit: reservation.depositInCFA.toLocaleString() + " FCFA",
     },
+    time: adminConfig.reservations.expireAfter.value,
   };
 }
 
 import fs from "fs";
 import path from "path";
+import { AdminConfigurationModel } from "../models/AdminConfiguration.model";
+import { AppError } from "./AppError.util";
+import { StatusCodes } from "http-status-codes";
 
 export function renderInvoiceHTMLFromTemplate(data: any): string {
   const templatePath = path.join(
@@ -115,7 +128,7 @@ export function renderInvoiceHTMLFromTemplate(data: any): string {
   );
   const rawHtml = fs.readFileSync(templatePath, "utf-8");
 
-  const { guest, invoice, reservation } = data;
+  const { guest, invoice, reservation, time } = data;
 
   const guestInfo = `
     <ul>
@@ -192,7 +205,8 @@ export function renderInvoiceHTMLFromTemplate(data: any): string {
     .replace(/{{reservationInfo}}/g, reservationInfo)
     .replace(/{{roomSummary}}/g, roomSummary)
     .replace(/{{invoiceSummary}}/g, invoiceSummary)
-    .replace(/{{paymentButton}}/g, paymentButton);
+    .replace(/{{paymentButton}}/g, paymentButton)
+    .replace(/{{expirationTime}}/g, `${time}`);
 
   return finalHtml;
 }

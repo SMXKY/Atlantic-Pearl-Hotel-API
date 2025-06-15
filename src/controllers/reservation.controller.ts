@@ -159,8 +159,11 @@ const depositPaymentRedirect = catchAsync(
         );
       }
 
+      invoice.paymentStatus =
+        data.amount === invoice.amountDue ? "paid" : "partial";
       invoice.amountPaid += data.amount;
       invoice.amountDue -= data.amount;
+
       await invoice.save();
 
       reservation.status = "confirmed";

@@ -4,6 +4,12 @@ import { RoomTypeModel } from "./RoomType.model";
 import { AppError } from "../util/AppError.util";
 import { StatusCodes } from "http-status-codes";
 import { GuestModel } from "./Guest.model";
+import { ReservationModel } from "./Reservation.model";
+
+interface ILockUntil {
+  until: Date | null;
+  reservation: mongoose.Types.ObjectId | null;
+}
 
 export interface IRoom extends mongoose.Document {
   number: string;
@@ -12,7 +18,7 @@ export interface IRoom extends mongoose.Document {
     | "occupied"
     | "free"
     | "reserved"
-    | "unvailable"
+    | "unavailable"
     | "in maintanace"
     | "renovation";
   state: "clean" | "dirty";
@@ -28,6 +34,7 @@ export interface IRoom extends mongoose.Document {
   assignedTo?: mongoose.Types.ObjectId;
   createdAt?: Date;
   updatedAt?: Date;
+  lock?: ILockUntil;
 }
 
 const roomSchema = new mongoose.Schema(
@@ -51,7 +58,7 @@ const roomSchema = new mongoose.Schema(
           "occupied",
           "free",
           "reserved",
-          "unvailable",
+          "unavailable",
           "in maintanace",
           "renovation",
         ],
@@ -59,7 +66,7 @@ const roomSchema = new mongoose.Schema(
           "occupied",
           "free",
           "reserved",
-          "unvailable",
+          "unavailable",
           "in maintanace",
           "renovation",
         ]}`,
@@ -134,6 +141,24 @@ const roomSchema = new mongoose.Schema(
           return exists !== null;
         },
         message: "Invalid guest Id.",
+      },
+    },
+    lock: {
+      until: {
+        type: Date,
+        default: null,
+      },
+      reservation: {
+        type: mongoose.Types.ObjectId,
+        ref: "reservations",
+        validate: {
+          validator: async function (id: mongoose.Types.ObjectId) {
+            const exists = await ReservationModel.exists({ _id: id });
+            return exists !== null;
+          },
+          message: "Invalid reservation Id for room lock.",
+        },
+        default: null,
       },
     },
   },

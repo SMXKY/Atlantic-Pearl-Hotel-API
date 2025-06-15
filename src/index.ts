@@ -4,6 +4,7 @@ import * as mongoose from "mongoose";
 import { app } from "./app";
 import { createDefualtDcouments } from "./defaults/documents.default";
 import { activateUsersCronJob } from "./cron-jobs/activateUsers.cron";
+import { freeRoomsCronJob } from "./cron-jobs/freeRooms.cron";
 
 dotEnv.config();
 
@@ -37,7 +38,9 @@ mongoose
 createDefualtDcouments().catch((err) => {
   console.log("Error: Creating default documents", err);
 });
+
 activateUsersCronJob();
+freeRoomsCronJob();
 
 const port: Number = Number(process.env.PORT) || 3000;
 
