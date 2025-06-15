@@ -4,6 +4,7 @@ import { reservationControllers } from "../controllers/reservation.controller";
 import { authControllers } from "../controllers/auth.controller";
 import { allPermissions } from "../types/Permissions.type";
 import { validateReservationItem } from "../middlewares/roomAvailibility.middleware";
+import { manualReservationControllers } from "../controllers/manualReservation.controller";
 
 export const reservationRouter = express.Router();
 
@@ -145,6 +146,14 @@ reservationRouter
 reservationRouter
   .route("/deposit-redirect")
   .get(reservationControllers.depositPaymentRedirect);
+
+reservationRouter
+  .route("/manual")
+  .post(manualReservationControllers.createManualReservation);
+
+reservationRouter
+  .route("/manual/pay")
+  .patch(manualReservationControllers.payForReservation);
 
 reservationRouter
   .route("/:id")

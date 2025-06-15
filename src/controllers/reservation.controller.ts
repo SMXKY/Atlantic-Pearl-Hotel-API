@@ -26,6 +26,7 @@ const CRUDReservation: CRUD = new CRUD(ReservationModel);
 
 const createReservation = catchAsync(async (req, res, next) => {
   let email = req.body.guestEmail;
+  req.body.status = undefined;
 
   const guest = await GuestModel.findById(req.body.guest).populate("user");
 
@@ -177,10 +178,14 @@ const depositPaymentRedirect = catchAsync(
         );
       }
 
-      invoice.paymentStatus =
-        data.amount === invoice.grandTotal ? "paid" : "partial";
+      invoice.amountPaid = invoice.amountPaid || 0;
+      invoice.amountDue = invoice.amountDue ?? invoice.grandTotal;
+
       invoice.amountPaid += data.amount;
       invoice.amountDue = invoice.grandTotal - invoice.amountPaid;
+
+      invoice.paymentStatus =
+        invoice.amountPaid >= invoice.grandTotal ? "paid" : "partial";
 
       const reservedRooms = await RoomModel.find({
         "lock.reservation": reservation._id,
@@ -192,7 +197,7 @@ const depositPaymentRedirect = catchAsync(
       reservation.status = "confirmed";
 
       await reservation.save();
-      invoice.markModified("amountDue");
+      // invoice.markModified("amountDue");
       await invoice.save();
 
       for (const room of reservedRooms) {

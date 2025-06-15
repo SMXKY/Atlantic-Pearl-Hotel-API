@@ -188,6 +188,8 @@ InvoiceSchema.pre("validate", async function (next) {
   this.grandTotal = priceAndTax.totalBill;
   this.amountDue = priceAndTax.totalBill;
 
+  if (reservation.bookingSource !== "online") return next();
+
   if (!process.env.PROD_BASE_URL || !process.env.DEV_BASE_URL) {
     throw new AppError(
       "Prod or Dev base URL's not set in the enviroment variables.",

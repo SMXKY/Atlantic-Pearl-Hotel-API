@@ -287,6 +287,8 @@ reservationSchema.methods.calculateTotalPriceAndTax = async function (
 };
 
 reservationSchema.pre("save", async function (next) {
+  // if (this.bookingSource !== "online") return next();
+
   const adminConfiguration = await AdminConfigurationModel.findOne();
 
   if (!adminConfiguration) {
@@ -319,6 +321,7 @@ reservationSchema.pre("save", async function (next) {
 });
 
 reservationSchema.post("save", async function (this: IReservation) {
+  if (this.bookingSource !== "online") return;
   if (this.status !== "pending") return;
 
   const adminConfig = await AdminConfigurationModel.findOne();
