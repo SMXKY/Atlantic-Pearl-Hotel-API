@@ -125,6 +125,23 @@ const depositPaymentRedirect = catchAsync(
 
       const guestId = reservation.guest?._id;
 
+      const existingTransaction = await TransactionModel.find({
+        transactionType: "bill payment",
+        reason: "Payment of reservation down payment.",
+        amountInCFA: data.amount,
+        status: "success",
+        reservation: data.reservationId,
+      });
+
+      if (existingTransaction.length > 0) {
+        return next(
+          new AppError(
+            "Transaction has already been executed",
+            StatusCodes.UNAUTHORIZED
+          )
+        );
+      }
+
       const transaction = await TransactionModel.create({
         transactionType: "bill payment",
         reason: "Payment of reservation down payment.",
@@ -145,6 +162,7 @@ const depositPaymentRedirect = catchAsync(
       const invoice = await InvoiceModel.findOne({
         reservation: data.reservationId,
       });
+
       if (!invoice) {
         throw new AppError(
           "No invoice associated with the reservation",
@@ -160,25 +178,42 @@ const depositPaymentRedirect = catchAsync(
       }
 
       invoice.paymentStatus =
-        data.amount === invoice.amountDue ? "paid" : "partial";
+        data.amount === invoice.grandTotal ? "paid" : "partial";
       invoice.amountPaid += data.amount;
-      invoice.amountDue -= data.amount;
+      invoice.amountDue = invoice.grandTotal - invoice.amountPaid;
 
+      const reservedRooms = await RoomModel.find({
+        "lock.reservation": reservation._id,
+      });
+
+      // console.log("ReservedRooms", reservedRooms, reservation._id);
+
+      reservation.markModified("status");
+      reservation.status = "confirmed";
+
+      await reservation.save();
+      invoice.markModified("amountDue");
       await invoice.save();
 
-      reservation.status = "confirmed";
-      await reservation.save();
+      for (const room of reservedRooms) {
+        room.status = "free";
+        room.lock = undefined;
 
-      const expirePaymentLink = await expirePay(invoice.paymentLinkId);
+        // console.log(room);
 
-      if (expirePaymentLink.status !== "EXPIRED") {
-        console.log(expirePaymentLink);
-        console.log("Transaction Id", invoice.paymentLinkId);
-        throw new AppError(
-          "Failed to expire the payment link",
-          StatusCodes.INTERNAL_SERVER_ERROR
-        );
+        await room.save();
       }
+
+      // const expirePaymentLink = await expirePay(invoice.paymentLinkId);
+
+      // if (expirePaymentLink.status !== "EXPIRED") {
+      //   console.log(expirePaymentLink);
+      //   console.log("Transaction Id", invoice.paymentLinkId);
+      //   throw new AppError(
+      //     "Failed to expire the payment link",
+      //     StatusCodes.INTERNAL_SERVER_ERROR
+      //   );
+      // }
 
       const templatePath = path.join(
         __dirname,
@@ -213,7 +248,7 @@ const depositPaymentRedirect = catchAsync(
 
       const finalHtml = rawHtml
         .replace(/{{receiptId}}/g, String(reciept._id))
-        .replace(/{{date}}/g, new Date().toLocaleString())
+        .replace(/{{date}}/g, reciept.createdAt.toLocaleString())
         .replace(/{{method}}/g, "Email")
         .replace(/{{transactionId}}/g, String(transaction._id))
         .replace(/{{transactionType}}/g, String(transaction.transactionType))

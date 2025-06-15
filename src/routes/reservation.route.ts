@@ -1,4 +1,4 @@
-import express from "express";
+import express, { NextFunction, Request, Response } from "express";
 
 import { reservationControllers } from "../controllers/reservation.controller";
 import { authControllers } from "../controllers/auth.controller";
@@ -143,7 +143,7 @@ reservationRouter
   );
 
 reservationRouter
-  .route("/deposit-redirect/")
+  .route("/deposit-redirect")
   .get(reservationControllers.depositPaymentRedirect);
 
 reservationRouter

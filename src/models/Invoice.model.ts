@@ -158,6 +158,8 @@ InvoiceSchema.pre("save", async function (next) {
 
 //Calcualating due price and generating payment link
 InvoiceSchema.pre("validate", async function (next) {
+  if (!this.isNew) return next();
+
   const reservation = await ReservationModel.findById(this.reservation);
 
   if (!reservation?.checkOutDate) {
@@ -214,7 +216,7 @@ InvoiceSchema.pre("validate", async function (next) {
   };
 
   const payment = await initiatePay(payData);
-  // console.log("PAYMENT", payment);
+  console.log("PAYMENT", payment);
   this.paymentLink = payment.link;
   this.paymentLinkId = payment.transId;
 

@@ -13,7 +13,7 @@ export const freeRoomsCronJob = () => {
       "lock.until": { $lte: now },
     });
 
-    const rooms = await RoomModel.find();
+    // console.log(expiredRooms);
 
     for (const room of expiredRooms) {
       try {

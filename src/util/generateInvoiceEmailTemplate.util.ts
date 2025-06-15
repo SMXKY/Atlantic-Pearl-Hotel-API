@@ -130,6 +130,8 @@ export function renderInvoiceHTMLFromTemplate(data: any): string {
 
   const { guest, invoice, reservation, time } = data;
 
+  console.log(time, "TIME");
+
   const guestInfo = `
     <ul>
       <li><strong>Name:</strong> ${guest.name}</li>

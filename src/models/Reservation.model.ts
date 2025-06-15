@@ -319,6 +319,8 @@ reservationSchema.pre("save", async function (next) {
 });
 
 reservationSchema.post("save", async function (this: IReservation) {
+  if (this.status !== "pending") return;
+
   const adminConfig = await AdminConfigurationModel.findOne();
 
   if (!adminConfig || !adminConfig.reservations?.expireAfter.value) {
