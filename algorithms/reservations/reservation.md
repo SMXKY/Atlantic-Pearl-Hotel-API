@@ -4,12 +4,6 @@
 
 Set room updates to work with sockects
 
-Todo after reservation:
-
-- reserve the rooms for 30mins
-- on payment send updated rersevation to confirmedb
-- cron job checks to see if there room has been paid
-
 ---
 
 ## Todo
@@ -24,5 +18,6 @@ Todo after reservation:
 - look rooms for the reaservation period for 30mins ✅
 - expire reservation after admin decided time (with cron job) ✅
 - link should expire after 30mins✅
-- accomodate cash payments for reservation
+- accomodate cash payments for reservation✅
 - user should decide how much they want to deposite, but it should never be less than the minimum set by the admin✅
+- track transactions for manual reservation payments.

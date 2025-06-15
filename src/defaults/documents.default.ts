@@ -116,9 +116,14 @@ export const createDefualtDcouments = async () => {
               "The minimum deposit required (in %) to confirm a reservation.",
           },
           expireAfter: {
-            value: 30,
+            value: 60,
             description:
               "The number of minutes after which an unconfirmed reservation expires.",
+          },
+          cancelationPolicy: {
+            isRefundable: true,
+            refundableUntilInHours: 24,
+            refundablePercentage: 80,
           },
         },
       });

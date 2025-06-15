@@ -34,7 +34,7 @@ interface PriceAndTax {
   totalBill: number;
 }
 
-interface IReservation extends mongoose.Document {
+export interface IReservation extends mongoose.Document {
   bookingReference: string;
   _id: mongoose.Types.ObjectId;
   status:
@@ -61,6 +61,7 @@ interface IReservation extends mongoose.Document {
     | "Credit Card"
     | "Cash Payment";
   createdby?: mongoose.Types.ObjectId;
+  createdAt: Date;
   discount?: string;
   items: IReservationItem[];
   rooms: mongoose.Types.ObjectId[];
@@ -74,6 +75,7 @@ const reservationSchema = new mongoose.Schema<IReservation>(
       type: String,
       required: [true, "Booking reference is required to create reservation"],
       unique: true,
+      immutable: true,
     },
     status: {
       type: String,
@@ -92,9 +94,9 @@ const reservationSchema = new mongoose.Schema<IReservation>(
     guestPhoneNumber: { type: String },
     countryOfResidence: { type: String, trim: true },
     specialRequest: { type: String, trim: true },
-    checkInDate: { type: Date },
-    checkOutDate: { type: Date },
-    numberOfGuest: { type: Number, default: 1, required: true },
+    checkInDate: { type: Date, immutable: true },
+    checkOutDate: { type: Date, immutable: true },
+    numberOfGuest: { type: Number, default: 1, required: true, min: 1 },
     guestNIC: { type: String },
     guest: {
       type: mongoose.Types.ObjectId,
@@ -109,6 +111,7 @@ const reservationSchema = new mongoose.Schema<IReservation>(
     bookingSource: {
       type: String,
       enum: ["online", "onsite", "phone call"],
+      immutable: true,
     },
     paymentMethod: {
       type: String,

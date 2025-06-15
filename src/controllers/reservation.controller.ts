@@ -18,9 +18,11 @@ import {
 import * as mongoose from "mongoose";
 import { RecieptModel } from "../models/Reciept.model";
 import { TransactionModel } from "../models/Transaction.model";
-import { expirePay } from "../external-apis/fapshi.api";
+import { expirePay, payout } from "../external-apis/fapshi.api";
 import path from "path";
 import fs from "fs";
+import { AdminConfigurationModel } from "../models/AdminConfiguration.model";
+import { getGuestDetailsFromReservation } from "../util/getGuestFromReservation.util";
 
 const CRUDReservation: CRUD = new CRUD(ReservationModel);
 
@@ -81,8 +83,10 @@ const readAllReservations = catchAsync(
   }
 );
 
+//use it for updating reservation
 const updateReservation = catchAsync(
   async (req: Request, res: Response, next: NextFunction) => {
+    req.body.status = undefined;
     await CRUDReservation.update(req.params.id, res, req);
   }
 );
@@ -271,6 +275,224 @@ const depositPaymentRedirect = catchAsync(
   }
 );
 
+const cancelReservation = catchAsync(
+  async (req: Request, res: Response, next: NextFunction) => {
+    /*
+    What I have to do:
+    - get resrvation id
+    - ensure that the reservation was first of all confirmed
+    - check if the the cancelation policy is active
+    - check if the reservation is valid with the number of hours allowed in the cancelation policy
+    - get the invoice and find out how much has already been paid
+    - send back the use the cancelation policy percentage amount
+    - update the reservation as cancelled
+     */
+
+    const reservationId = req.params.id;
+    const { orangeMoneyNumber, moMoNumber, isOnline } = req.body;
+
+    if (isOnline && !orangeMoneyNumber && !moMoNumber) {
+      return next(
+        new AppError("Payout number required.", StatusCodes.BAD_REQUEST)
+      );
+    }
+
+    if (!reservationId) {
+      return next(
+        new AppError(
+          "resrvation id parameter is required",
+          StatusCodes.BAD_REQUEST
+        )
+      );
+    }
+
+    const reservation = await ReservationModel.findById(reservationId);
+
+    if (!reservation) {
+      return next(
+        new AppError(
+          "No such reservation id, in the databse",
+          StatusCodes.NOT_FOUND
+        )
+      );
+    }
+    // console.log(reservation.status);
+    if (reservation.status !== "confirmed") {
+      return next(
+        new AppError(
+          "Refunds can only be done for confirmed reservations",
+          StatusCodes.BAD_REQUEST
+        )
+      );
+    }
+
+    const adminConfig = (await AdminConfigurationModel.find())[0];
+
+    if (!adminConfig) {
+      return next(
+        new AppError(
+          "Cannot find admin cofigurations.",
+          StatusCodes.INTERNAL_SERVER_ERROR
+        )
+      );
+    }
+
+    if (!adminConfig.reservations.cancelationPolicy.isRefundable) {
+      return next(
+        new AppError(
+          "Reservation Cancelations are not possible at this moment",
+          StatusCodes.NOT_ACCEPTABLE
+        )
+      );
+    }
+
+    const refundableHours =
+      adminConfig.reservations.cancelationPolicy.refundableUntilInHours;
+    const refundableMs = refundableHours * 60 * 60 * 1000;
+
+    const reservationCreatedAtMs = reservation.createdAt.getTime();
+    const nowMs = Date.now();
+
+    const cutoffMs = reservationCreatedAtMs + refundableMs;
+
+    console.log("Now:", new Date(nowMs).toLocaleString());
+    console.log(
+      "Reservation Created At:",
+      new Date(reservationCreatedAtMs).toLocaleString()
+    );
+    console.log(
+      "Cutoff for Refund Eligibility:",
+      new Date(cutoffMs).toLocaleString()
+    );
+
+    if (nowMs > cutoffMs) {
+      return next(
+        new AppError(
+          `Reservation has passed the allowed cancellation period of ${refundableHours} hours from reservation.`,
+          StatusCodes.NOT_ACCEPTABLE
+        )
+      );
+    }
+
+    const invoice = await InvoiceModel.findOne({
+      reservation: reservation._id,
+    });
+
+    if (!invoice?.amountPaid) {
+      return next(
+        new AppError(
+          "Invoice has never paid for",
+          StatusCodes.INTERNAL_SERVER_ERROR
+        )
+      );
+    }
+
+    const refundAmount =
+      invoice.amountPaid *
+      (adminConfig.reservations.cancelationPolicy.refundablePercentage / 100);
+
+    const guestInfo = await getGuestDetailsFromReservation(
+      String(reservation._id)
+    );
+
+    if (isOnline) {
+      const payOutData = await payout({
+        amount: refundAmount,
+        phone: orangeMoneyNumber || moMoNumber,
+      });
+
+      console.log(guestInfo);
+
+      console.log(payOutData);
+
+      if (`${payOutData.statusCode}`.startsWith("4")) {
+        return next(
+          new AppError(
+            "Error implementing payout",
+            StatusCodes.INTERNAL_SERVER_ERROR
+          )
+        );
+      }
+    }
+
+    reservation.status = "canceled";
+    await reservation.save();
+
+    const transaction = await TransactionModel.create({
+      transactionType: "refund",
+      reason: "Refund, after canceling reservation",
+      amountInCFA: refundAmount,
+      status: "success",
+      reservation: reservation._id,
+    });
+
+    const reciept = await RecieptModel.create({
+      amountInCFA: refundAmount,
+      issued: true,
+      method: isOnline ? "Email" : "Onsite",
+      // guest: "6669f1d34f1f8d5d8e3d91a1",
+      transaction: transaction._id,
+    });
+
+    if (isOnline) {
+      const templatePath = path.join(
+        __dirname,
+        "/../templates/receipt.template.html"
+      );
+      const rawHtml = fs.readFileSync(templatePath, "utf-8");
+
+      if (!rawHtml) {
+        console.log(templatePath);
+        return next(
+          new AppError(
+            "Error finding reciept html template",
+            StatusCodes.INTERNAL_SERVER_ERROR
+          )
+        );
+      }
+
+      const guestEmail =
+        (reservation.guest &&
+          typeof reservation.guest !== "string" &&
+          (reservation.guest as any).user &&
+          typeof (reservation.guest as any).user !== "string" &&
+          (reservation.guest as any).user.email) ||
+        reservation.guestEmail;
+
+      if (!guestEmail) {
+        throw new AppError(
+          "No guest email available to send receipt.",
+          StatusCodes.INTERNAL_SERVER_ERROR
+        );
+      }
+
+      const finalHtml = rawHtml
+        .replace(/{{receiptId}}/g, String(reciept._id))
+        .replace(/{{date}}/g, reciept.createdAt.toLocaleString())
+        .replace(/{{method}}/g, "Email")
+        .replace(/{{transactionId}}/g, String(transaction._id))
+        .replace(/{{transactionType}}/g, String(transaction.transactionType))
+        .replace(/{{reason}}/g, String(transaction.reason))
+        .replace(/{{reservationId}}/g, String(reservation._id))
+        .replace(/{{status}}/g, String(transaction.status))
+        .replace(/{{amount}}/g, refundAmount.toLocaleString());
+
+      await sendEmail(guestEmail, "RESERVATION REFUND RECEIPT", "", finalHtml);
+    }
+
+    appResponder(
+      StatusCodes.OK,
+      {
+        message: "Reservation canceled successfully",
+        refundAmount,
+        status: "success",
+        reciept,
+      },
+      res
+    );
+  }
+);
+
 export const reservationControllers = {
   createReservation,
   readOneReservation,
@@ -278,4 +500,5 @@ export const reservationControllers = {
   updateReservation,
   deleteReservation,
   depositPaymentRedirect,
+  cancelReservation,
 };

@@ -5,10 +5,17 @@ interface ConfigSetting<T> {
   description: string;
 }
 
+interface ICancelationPolicy {
+  isRefundable: boolean;
+  refundableUntilInHours: number;
+  refundablePercentage: number;
+}
+
 export interface IAdminConfiguration extends Document {
   reservations: {
     minimumDepositPercentage: ConfigSetting<number>;
     expireAfter: ConfigSetting<number>;
+    cancelationPolicy: ICancelationPolicy;
   };
 }
 
@@ -38,6 +45,26 @@ const adminConfigurationSchema = new Schema<IAdminConfiguration>(
           type: String,
           default:
             "The number of minutes after which an unconfirmed reservation expires.",
+        },
+      },
+      cancelationPolicy: {
+        isRefundable: {
+          type: Boolean,
+          default: false,
+        },
+        refundableUntilInHours: {
+          type: Number,
+          required: [
+            true,
+            "Please specify how many hours before check-in the cancellation is refundable",
+          ],
+          min: [1, "Hours must be 1 or more"],
+        },
+        refundablePercentage: {
+          type: Number,
+          required: [true, "Please specify the refundable percentage"],
+          min: [1, "Refundable percentage cannot be less than 1"],
+          max: [100, "Refundable percentage cannot exceed 100"],
         },
       },
     },

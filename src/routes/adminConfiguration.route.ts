@@ -8,7 +8,7 @@ export const adminConfigurationRouter = express.Router();
 
 adminConfigurationRouter
   .route("/")
-  //   .post(adminConfigurationControllers.createAdminConfiguration)
+  // .post(adminConfigurationControllers.createAdminConfiguration)
   .get(
     authControllers.protect,
     authControllers.restrictTo(allPermissions.adminConfigurations.read),

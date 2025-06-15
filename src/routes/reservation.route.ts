@@ -156,6 +156,10 @@ reservationRouter
   .patch(manualReservationControllers.payForReservation);
 
 reservationRouter
+  .route("/cancel/:id")
+  .patch(reservationControllers.cancelReservation);
+
+reservationRouter
   .route("/:id")
   .get(
     // authControllers.protect,

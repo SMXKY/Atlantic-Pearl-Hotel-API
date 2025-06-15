@@ -11,12 +11,15 @@ import { sendEmail } from "../util/sendEmail.util";
 import { appResponder } from "../util/appResponder.util";
 import { StatusCodes } from "http-status-codes";
 import { AppError } from "../util/AppError.util";
+import { TransactionModel } from "../models/Transaction.model";
+import { RecieptModel } from "../models/Reciept.model";
 
 //manual reservation the front end has to send status:confirmed,
 // Create Manual Reservation
 const createManualReservation = catchAsync(
   async (req: Request, res: Response, next: NextFunction) => {
     req.body.status = undefined;
+    req.body.createdBy = res.locals.user._id;
 
     let email = req.body.guestEmail;
 
@@ -110,11 +113,28 @@ const payForReservation = catchAsync(
 
     const updatedInvoice = await invoice.save();
 
+    const transaction = await TransactionModel.create({
+      transactionType: "bill payment",
+      reason: "Payment for reservation",
+      amountInCFA: amount,
+      status: "success",
+      reservation: invoice.reservation,
+    });
+
+    const receipt = await RecieptModel.create({
+      amountInCFA: amount,
+      issued: true,
+      method: "Onsite",
+      // guest: "6669f1d34f1f8d5d8e3d91a1",
+      transaction: transaction._id,
+    });
+
     appResponder(
       StatusCodes.OK,
       {
         message: "Payment recorded successfully",
         invoice: updatedInvoice,
+        receipt,
       },
       res
     );
