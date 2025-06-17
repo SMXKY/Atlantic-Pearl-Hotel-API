@@ -29,6 +29,9 @@ import { taxRouter } from "./routes/tax.route";
 import { adminConfigurationRouter } from "./routes/adminConfiguration.route";
 import { amenityRouter } from "./routes/amenity.route";
 import { roomTypeAmenityRouter } from "./routes/roomTypeAmenity.route";
+import { bedTypeRouter } from "./routes/bedType.route";
+import { roomTypeBedTypeRouter } from "./routes/roomTypeBedType.route";
+import { roomTypeReviewRouter } from "./routes/roomTypeReview.route";
 
 export const app = express();
 
@@ -102,6 +105,9 @@ app.use("/api/v1/taxes", taxRouter);
 app.use("/api/v1/admin-configurations", adminConfigurationRouter);
 app.use("/api/v1/amenities", amenityRouter);
 app.use("/api/v1/room-type-amenities", roomTypeAmenityRouter);
+app.use("/api/v1/bed-types", bedTypeRouter);
+app.use("/api/v1/room-type-bed-types", roomTypeBedTypeRouter);
+app.use("/api/v1/room-type-reveiws", roomTypeReviewRouter);
 
 const swaggerSpec = swaggerJSDoc({
   definition: {

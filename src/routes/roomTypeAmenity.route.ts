@@ -9,8 +9,8 @@ export const roomTypeAmenityRouter = express.Router();
 roomTypeAmenityRouter
   .route("/")
   .post(
-    // authControllers.protect,
-    // authControllers.restrictTo(allPermissions.roomTypeAmenities.create),
+    authControllers.protect,
+    authControllers.restrictTo(allPermissions.roomTypeAmenities.create),
     roomTypeAmenityControllers.createRoomTypeAmenity
   )
   .get(

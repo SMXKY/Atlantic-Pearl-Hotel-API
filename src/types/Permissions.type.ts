@@ -158,4 +158,25 @@ export const allPermissions = {
     update: "can_update_room_type_amenity",
     create: "can_create_room_type_amenity",
   },
+  bedTypes: {
+    readOne: "can_read_bed_type",
+    readAll: "can_read_all_bedTypes",
+    delete: "can_delete_bed_type",
+    update: "can_update_bed_type",
+    create: "can_create_bed_type",
+  },
+  roomTypeBedTypes: {
+    readOne: "can_read_room_type_bed_type",
+    readAll: "can_read_all_room_type_bed_types",
+    delete: "can_delete_room_type_bed_type",
+    update: "can_update_room_type_bed_type",
+    create: "can_create_room_type_bed_type",
+  },
+  roomTypeReviews: {
+    readOne: "can_read_room_type_review",
+    readAll: "can_read_all_room_type_reviews",
+    delete: "can_delete_room_type_review",
+    update: "can_update_room_type_review",
+    create: "can_create_room_type_review",
+  },
 };
