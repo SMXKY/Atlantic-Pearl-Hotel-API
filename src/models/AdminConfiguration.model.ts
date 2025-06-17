@@ -11,11 +11,23 @@ interface ICancelationPolicy {
   refundablePercentage: number;
 }
 
+interface IHotelPolicies {
+  smokingAllowed: boolean;
+  petsAllowed: boolean;
+  partyingAllowed: boolean;
+  checkInTime: string; // e.g., "14:00"
+  checkOutTime: string; // e.g., "11:00"
+  description?: string;
+}
+
 export interface IAdminConfiguration extends Document {
   reservations: {
     minimumDepositPercentage: ConfigSetting<number>;
     expireAfter: ConfigSetting<number>;
     cancelationPolicy: ICancelationPolicy;
+  };
+  hotel: {
+    policies: IHotelPolicies;
   };
 }
 
@@ -65,6 +77,34 @@ const adminConfigurationSchema = new Schema<IAdminConfiguration>(
           required: [true, "Please specify the refundable percentage"],
           min: [1, "Refundable percentage cannot be less than 1"],
           max: [100, "Refundable percentage cannot exceed 100"],
+        },
+      },
+    },
+    hotel: {
+      policies: {
+        smokingAllowed: {
+          type: Boolean,
+          default: false,
+        },
+        petsAllowed: {
+          type: Boolean,
+          default: false,
+        },
+        partyingAllowed: {
+          type: Boolean,
+          default: false,
+        },
+        checkInTime: {
+          type: String,
+          default: "14:00",
+        },
+        checkOutTime: {
+          type: String,
+          default: "11:00",
+        },
+        description: {
+          type: String,
+          default: "General hotel policies for guest conduct and expectations.",
         },
       },
     },

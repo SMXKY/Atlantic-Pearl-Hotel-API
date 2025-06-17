@@ -111,7 +111,7 @@ export const createDefualtDcouments = async () => {
       await AdminConfigurationModel.create({
         reservations: {
           minimumDepositPercentage: {
-            value: 30,
+            value: 20,
             description:
               "The minimum deposit required (in %) to confirm a reservation.",
           },
@@ -122,8 +122,18 @@ export const createDefualtDcouments = async () => {
           },
           cancelationPolicy: {
             isRefundable: true,
-            refundableUntilInHours: 24,
+            refundableUntilInHours: 48,
             refundablePercentage: 80,
+          },
+        },
+        hotel: {
+          policies: {
+            smokingAllowed: false,
+            petsAllowed: true,
+            partyingAllowed: false,
+            checkInTime: "15:00",
+            checkOutTime: "11:00",
+            description: "No smoking. Pets allowed. Quiet hours after 10 PM.",
           },
         },
       });
