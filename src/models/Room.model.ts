@@ -35,6 +35,7 @@ export interface IRoom extends mongoose.Document {
   createdAt?: Date;
   updatedAt?: Date;
   lock?: ILockUntil;
+  imageUrl: string;
 }
 
 const roomSchema = new mongoose.Schema(
@@ -147,6 +148,7 @@ const roomSchema = new mongoose.Schema(
       until: {
         type: Date,
         default: null,
+        required: false,
       },
       reservation: {
         type: mongoose.Types.ObjectId,
@@ -158,7 +160,7 @@ const roomSchema = new mongoose.Schema(
           },
           message: "Invalid reservation Id for room lock.",
         },
-        default: null,
+        required: false,
       },
     },
     imageUrl: {
@@ -206,6 +208,44 @@ roomSchema.pre(/^find/, function (this: mongoose.Query<any, IRoom>, next) {
   });
 
   next();
+});
+
+const applySupportDocTransformation = (docOrDocs: any) => {
+  const baseUrl = process.env.FTP_BASE_URL;
+  if (!baseUrl) {
+    throw new AppError(
+      "No ftp base url in config file.",
+      StatusCodes.INTERNAL_SERVER_ERROR
+    );
+  }
+
+  const transform = (doc: any) => {
+    if (doc && doc.imageUrl && !doc.imageUrl.startsWith("https://")) {
+      doc.imageUrl = baseUrl + doc.imageUrl;
+    }
+  };
+
+  if (Array.isArray(docOrDocs)) {
+    docOrDocs.forEach(transform);
+  } else {
+    transform(docOrDocs);
+  }
+};
+
+roomSchema.post("find", function (docs) {
+  applySupportDocTransformation(docs);
+});
+
+roomSchema.post("findOne", function (doc) {
+  applySupportDocTransformation(doc);
+});
+
+roomSchema.post("findOneAndUpdate", function (doc) {
+  applySupportDocTransformation(doc);
+});
+
+roomSchema.post("findOneAndDelete", function (doc) {
+  applySupportDocTransformation(doc);
 });
 
 export const RoomModel = mongoose.model<IRoom>("rooms", roomSchema);
