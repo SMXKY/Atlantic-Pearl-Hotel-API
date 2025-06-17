@@ -13,7 +13,7 @@ const roomTypeAmenitySchema = new mongoose.Schema(
           const exists = await RoomTypeModel.exists({ _id: id });
           return exists !== null;
         },
-        message: "Invalid room Id.",
+        message: "Invalid room type Id.",
       },
     },
     amenity: {
@@ -36,7 +36,7 @@ const roomTypeAmenitySchema = new mongoose.Schema(
   }
 );
 
-export const roomTypeAmenities = mongoose.model(
+export const RoomTypeAmenitiesModel = mongoose.model(
   "roomamenities",
   roomTypeAmenitySchema
 );

@@ -161,6 +161,9 @@ const roomSchema = new mongoose.Schema(
         default: null,
       },
     },
+    imageUrl: {
+      type: String,
+    },
   },
   { timestamps: true, toJSON: { virtuals: true }, toObject: { virtuals: true } }
 );

@@ -144,4 +144,18 @@ export const allPermissions = {
     update: "can_update_admin_configuration",
     read: "can_read_admin_configuration",
   },
+  amenities: {
+    readOne: "can_read_amenity",
+    readAll: "can_read_all_amenities",
+    delete: "can_delete_amenity",
+    update: "can_update_amenity",
+    create: "can_create_amenity",
+  },
+  roomTypeAmenities: {
+    readOne: "can_read_room_type_amenity",
+    readAll: "can_read_all_room_type_amenities",
+    delete: "can_delete_room_type_amenity",
+    update: "can_update_room_type_amenity",
+    create: "can_create_room_type_amenity",
+  },
 };

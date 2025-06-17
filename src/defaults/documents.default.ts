@@ -116,7 +116,7 @@ export const createDefualtDcouments = async () => {
               "The minimum deposit required (in %) to confirm a reservation.",
           },
           expireAfter: {
-            value: 60,
+            value: 30,
             description:
               "The number of minutes after which an unconfirmed reservation expires.",
           },
