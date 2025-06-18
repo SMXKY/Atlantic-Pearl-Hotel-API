@@ -8,6 +8,10 @@ import { AppError } from "../util/AppError.util";
 import { StatusCodes } from "http-status-codes";
 import { RoomMedia } from "../models/RoomImages.model";
 import { appResponder } from "../util/appResponder.util";
+import { AdminConfigurationModel } from "../models/AdminConfiguration.model";
+import { RoomModel } from "../models/Room.model";
+import { RoomTypeAmenitiesModel } from "../models/RoomTypeAmenity.model";
+import { RoomTypeReviewModel } from "../models/RoomTypeReview.model";
 
 const CRUDRoomType: CRUD = new CRUD(RoomTypeModel);
 
@@ -64,7 +68,63 @@ const createRoomType = catchAsync(
 
 const readOneRoomType = catchAsync(
   async (req: Request, res: Response, next: NextFunction) => {
-    await CRUDRoomType.readOne(req.params.id, res, [], req);
+    const id = req.params.id;
+
+    const roomType = await RoomTypeModel.findById(id);
+    if (!roomType) {
+      return next(
+        new AppError("No such room type with this id", StatusCodes.BAD_REQUEST)
+      );
+    }
+
+    const roomTypeImages = await RoomMedia.find({ roomType: roomType._id });
+    const config = await AdminConfigurationModel.findOne();
+    const policies = config?.hotel ?? {};
+    const rooms = await RoomModel.find({ type: roomType._id });
+
+    const amenities = await RoomTypeAmenitiesModel.find({
+      roomType: id,
+    }).populate("amenity");
+
+    const reviews = await RoomTypeReviewModel.find({ roomType: roomType._id });
+
+    const averageRatings = {
+      cleanliness: 0,
+      amenities: 0,
+      location: 0,
+      comfort: 0,
+      wifiConnection: 0,
+    };
+
+    reviews.forEach((review) => {
+      averageRatings.amenities += review.amenities;
+      averageRatings.cleanliness += review.cleanliness;
+      averageRatings.location += review.location;
+      averageRatings.comfort += review.comfort;
+      averageRatings.wifiConnection += review.wifiConnection;
+    });
+
+    if (reviews.length > 0) {
+      averageRatings.amenities /= reviews.length;
+      averageRatings.cleanliness /= reviews.length;
+      averageRatings.location /= reviews.length;
+      averageRatings.comfort /= reviews.length;
+      averageRatings.wifiConnection /= reviews.length;
+    }
+
+    const data = {
+      ...roomType.toObject(),
+      amenities,
+      images: roomTypeImages,
+      rooms,
+      policies,
+      reviews: {
+        allReviews: reviews,
+        averageRatings,
+      },
+    };
+
+    appResponder(StatusCodes.OK, data, res);
   }
 );
 
