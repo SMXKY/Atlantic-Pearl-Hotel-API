@@ -212,7 +212,9 @@ const login = catchAsync(
       );
     }
 
-    const user = await UserModel.findOne({ email }).select("+password");
+    const user = await UserModel.findOne({ email })
+      .select("+password")
+      .populate("role");
 
     if (!user) {
       return next(
@@ -275,10 +277,20 @@ const login = catchAsync(
     user.lockUntil = undefined;
     await user.save();
 
-    const employee = await EmployeeModel.findOne({ user: user._id }).populate(
-      "user"
-    );
-    const guest = await GuestModel.findOne({ user: user._id }).populate("user");
+    const employee = await EmployeeModel.findOne({ user: user._id }).populate({
+      path: "user",
+      populate: {
+        path: "role",
+      },
+    });
+
+    const guest = await GuestModel.findOne({ user: user._id }).populate({
+      path: "user",
+      populate: {
+        path: "role",
+      },
+    });
+
     const data = employee || guest;
 
     if (!data) {

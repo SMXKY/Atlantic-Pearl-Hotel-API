@@ -39,18 +39,25 @@ const guestSchema = new mongoose.Schema(
       ref: "users",
       required: [true, "User Id is required"],
     },
+    username: {
+      type: String,
+      unique: true,
+      required: [true, "Guest username is required."],
+    },
     countryOfResidence: {
       type: String,
       trim: true,
     },
-    preferedCurrency: {
-      type: String,
-      validate: {
-        validator: function (code: string) {
-          return !!currencyCodes.code(code);
+    preferences: {
+      currentcy: {
+        type: String,
+        validate: {
+          validator: function (code: string) {
+            return !!currencyCodes.code(code);
+          },
+          message: "Invalid Currency Code",
+          default: "XAF",
         },
-        message: "Invalid Currency Code",
-        default: "XAF",
       },
       preferedLanguage: {
         type: String,
