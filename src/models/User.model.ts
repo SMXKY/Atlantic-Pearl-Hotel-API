@@ -35,6 +35,10 @@ const userSchema = new mongoose.Schema(
       required: [true, "User name is required."],
       trim: true,
     },
+    username: {
+      type: String,
+      unique: true,
+    },
     email: {
       type: String,
       required: [true, "User email is required."],
@@ -69,7 +73,7 @@ const userSchema = new mongoose.Schema(
     },
     dateOfBirth: {
       type: Date,
-      required: [true, "User date of birth is required"],
+      // required: [true, "User date of birth is required"],
       validate: {
         validator: function (dob: Date) {
           const age = new Date().getFullYear() - dob.getFullYear();
@@ -85,7 +89,7 @@ const userSchema = new mongoose.Schema(
     },
     emergencyContact: {
       type: String,
-      required: [true, "Emergency contact phone number is required."],
+      // required: [true, "Emergency contact phone number is required."],
       max: [12, "Phone number cannot be more than 12 characters"],
       min: [8, "Phone number cannot be less that 8 characters"],
       validate: {

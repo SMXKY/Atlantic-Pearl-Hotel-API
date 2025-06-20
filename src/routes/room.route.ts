@@ -19,8 +19,8 @@ roomRouter
     roomControllers.createRoom
   )
   .get(
-    authControllers.protect,
-    authControllers.restrictTo(allPermissions.rooms.readAll),
+    // authControllers.protect,
+    // authControllers.restrictTo(allPermissions.rooms.readAll),
     roomControllers.readAllRooms
   );
 
