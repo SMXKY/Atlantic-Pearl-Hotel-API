@@ -15,6 +15,7 @@ import { RoleModel } from "../models/Role.model";
 import { GoogleUserPayload } from "../types/googleUserPayload";
 import { getUserPermissions } from "../util/getUserPermissions";
 import crypto from "crypto";
+import { Delete } from "tsoa";
 
 const signToken = (userId: string) => {
   const jwtSecret = process.env.JWT_SECRETE;
@@ -222,15 +223,16 @@ const login = catchAsync(
       );
     }
 
+    // Check if account is locked
     if (user.lockUntil && user.lockUntil.getTime() >= Date.now()) {
-      const remainingTime = (user.lockUntil.getTime() - Date.now()) / 60 / 1000;
+      const remainingTime = Math.ceil(
+        (user.lockUntil.getTime() - Date.now()) / (60 * 1000)
+      );
 
       return next(
         new AppError(
-          `Your account is locked for too many failed attempts, please try again in ${Math.ceil(
-            remainingTime
-          )} minutes.`,
-          StatusCodes.BAD_REQUEST
+          `Your account is locked due to multiple failed login attempts. Please try again in ${remainingTime} minutes.`,
+          StatusCodes.FORBIDDEN
         )
       );
     }
@@ -240,27 +242,26 @@ const login = catchAsync(
     if (!process.env.ACCOUNT_LOGIN_WAIT_TIME) {
       return next(
         new AppError(
-          "No account lock time set in enviroment variables.",
+          "Server error: ACCOUNT_LOGIN_WAIT_TIME is not configured.",
           StatusCodes.INTERNAL_SERVER_ERROR
         )
       );
     }
 
+    // Handle incorrect password
     if (!isPasswordCorrect) {
-      user.failedLoginAttempts = user.failedLoginAttempts + 1;
+      user.failedLoginAttempts += 1;
 
       if (user.failedLoginAttempts >= 5) {
         user.lockUntil = new Date(
           Date.now() + Number(process.env.ACCOUNT_LOGIN_WAIT_TIME) * 60 * 1000
         );
 
-        user.save();
+        await user.save();
 
         return next(
           new AppError(
-            `Too many failed login attempts your account has been locked for ${Number(
-              process.env.ACCOUNT_LOGIN_WAIT_TIME
-            )} minutes.`,
+            `Too many failed login attempts. Account locked for ${process.env.ACCOUNT_LOGIN_WAIT_TIME} minutes.`,
             StatusCodes.UNAUTHORIZED
           )
         );
@@ -273,23 +274,25 @@ const login = catchAsync(
       );
     }
 
+    // Reset login attempts on successful login
     user.failedLoginAttempts = 0;
     user.lockUntil = undefined;
     await user.save();
 
-    const employee = await EmployeeModel.findOne({ user: user._id }).populate({
-      path: "user",
-      populate: {
-        path: "role",
-      },
-    });
+    // Check if user is an employee or guest
+    const employee = await EmployeeModel.findOne({ user: user._id })
+      .populate({
+        path: "user",
+        populate: { path: "role" },
+      })
+      .lean();
 
-    const guest = await GuestModel.findOne({ user: user._id }).populate({
-      path: "user",
-      populate: {
-        path: "role",
-      },
-    });
+    const guest = await GuestModel.findOne({ user: user._id })
+      .populate({
+        path: "user",
+        populate: { path: "role" },
+      })
+      .lean();
 
     const data = employee || guest;
 
@@ -302,16 +305,26 @@ const login = catchAsync(
       );
     }
 
+    const flatenUserData = async () => {
+      const { user, ...cleanData } = data;
+      const userObj = user as any;
+      const role = userObj?.role?.name || null;
+
+      const flatUserData = {
+        ...cleanData,
+        ...userObj,
+        role,
+        permissions: await getUserPermissions(userObj as IUser),
+      };
+
+      return flatUserData;
+    };
+
     appResponder(
       StatusCodes.OK,
       {
         token: signToken(user._id.toString()),
-        data: {
-          ...data.toObject(),
-          permissions: await getUserPermissions(
-            user.toObject() as unknown as IUser
-          ),
-        },
+        ...(await flatenUserData()),
       },
       res
     );

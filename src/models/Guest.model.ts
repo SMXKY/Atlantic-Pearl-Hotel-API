@@ -65,16 +65,17 @@ const guestSchema = new mongoose.Schema(
           values: ["English", "French"],
           message: "Not a supported language",
         },
+        default: "English",
       },
       isLoyaltyProgramMember: {
         type: Boolean,
         default: false,
         select: false,
       },
-      guestTag: {
-        type: String,
-        trim: true,
-      },
+    },
+    guestTag: {
+      type: String,
+      trim: true,
     },
     guestType: {
       type: String,
