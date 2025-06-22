@@ -1006,6 +1006,13 @@ const changeUserRole = catchAsync(
   }
 );
 
+const logOut = catchAsync(
+  async (req: Request, res: Response, next: NextFunction) => {
+    res.clearCookie("session_token", { path: "/" });
+    res.status(200).send({ message: "Logged out" });
+  }
+);
+
 export const authControllers = {
   createEmployeeAccount,
   signIn,
@@ -1021,4 +1028,5 @@ export const authControllers = {
   activateAndDeactivateUserAccounts,
   changeUserRole,
   verifyGoogleAuthCookie,
+  logOut,
 };

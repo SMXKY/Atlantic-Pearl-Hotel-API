@@ -129,6 +129,271 @@ export const reservationRouter = express.Router();
  *         description: Internal Server Error – Unable to create reservation or send invoice
  */
 
+/**
+ * @swagger
+ * /api/v1/reservations:
+ *   get:
+ *     summary: Get list of all reservations
+ *     description: |
+ *       Retrieve an array of reservation objects including guest details, booking info, rooms, rates, and dates.
+ *     tags: [Reservations]
+ *     responses:
+ *       200:
+ *         description: List of reservations retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 type: object
+ *                 properties:
+ *                   guestName:
+ *                     type: string
+ *                     example: John Doe
+ *                   guestEmail:
+ *                     type: string
+ *                     example: john.doe@example.com
+ *                   guestPhoneNumber:
+ *                     type: string
+ *                     example: "+237650000000"
+ *                   countryOfResidence:
+ *                     type: string
+ *                     example: Cameroon
+ *                   specialRequest:
+ *                     type: string
+ *                     example: Need early check-in if possible.
+ *                   checkInDate:
+ *                     type: string
+ *                     format: date-time
+ *                     example: 2025-06-15T14:00:00Z
+ *                   checkOutDate:
+ *                     type: string
+ *                     format: date-time
+ *                     example: 2025-06-20T11:00:00Z
+ *                   numberOfGuest:
+ *                     type: integer
+ *                     example: 4
+ *                   bookingSource:
+ *                     type: string
+ *                     example: online
+ *                   paymentMethod:
+ *                     type: string
+ *                     example: Mobile Money
+ *                   items:
+ *                     type: array
+ *                     items:
+ *                       type: object
+ *                       properties:
+ *                         roomType:
+ *                           type: string
+ *                           example: 6847fb6971971ba932d254c3
+ *                         rate:
+ *                           type: string
+ *                           example: 6848036a194173b47027815c
+ *                         rooms:
+ *                           type: array
+ *                           items:
+ *                             type: object
+ *                             properties:
+ *                               room:
+ *                                 type: string
+ *                                 example: 6847fd406656e912d7a76b91
+ *                               checkIn:
+ *                                 type: string
+ *                                 format: date-time
+ *                                 example: 2025-06-15T14:00:00Z
+ *                               checkOut:
+ *                                 type: string
+ *                                 format: date-time
+ *                                 example: 2025-06-20T11:00:00Z
+ *
+ * /api/v1/reservations/{id}:
+ *   get:
+ *     summary: Get a single reservation by ID
+ *     description: Retrieve details of a specific reservation including guest info and booked rooms.
+ *     tags: [Reservations]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         description: Reservation ID
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Reservation found and returned successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 guestName:
+ *                   type: string
+ *                   example: John Doe
+ *                 guestEmail:
+ *                   type: string
+ *                   example: john.doe@example.com
+ *                 guestPhoneNumber:
+ *                   type: string
+ *                   example: "+237650000000"
+ *                 countryOfResidence:
+ *                   type: string
+ *                   example: Cameroon
+ *                 specialRequest:
+ *                   type: string
+ *                   example: Need early check-in if possible.
+ *                 checkInDate:
+ *                   type: string
+ *                   format: date-time
+ *                   example: 2025-06-15T14:00:00Z
+ *                 checkOutDate:
+ *                   type: string
+ *                   format: date-time
+ *                   example: 2025-06-20T11:00:00Z
+ *                 numberOfGuest:
+ *                   type: integer
+ *                   example: 4
+ *                 bookingSource:
+ *                   type: string
+ *                   example: online
+ *                 paymentMethod:
+ *                   type: string
+ *                   example: Mobile Money
+ *                 items:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       roomType:
+ *                         type: string
+ *                         example: 6847fb6971971ba932d254c3
+ *                       rate:
+ *                         type: string
+ *                         example: 6848036a194173b47027815c
+ *                       rooms:
+ *                         type: array
+ *                         items:
+ *                           type: object
+ *                           properties:
+ *                             room:
+ *                               type: string
+ *                               example: 6847fd406656e912d7a76b91
+ *                             checkIn:
+ *                               type: string
+ *                               format: date-time
+ *                               example: 2025-06-15T14:00:00Z
+ *                             checkOut:
+ *                               type: string
+ *                               format: date-time
+ *                               example: 2025-06-20T11:00:00Z
+ *       404:
+ *         description: Reservation not found
+ *
+ *   patch:
+ *     summary: Update a reservation by ID
+ *     description: Update one or more fields of a reservation. Provide only the fields to update in the request body.
+ *     tags: [Reservations]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         description: Reservation ID to update
+ *         schema:
+ *           type: string
+ *     requestBody:
+ *       description: Fields to update for the reservation
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               guestName:
+ *                 type: string
+ *                 example: John Doe Updated
+ *               specialRequest:
+ *                 type: string
+ *                 example: Need late checkout
+ *               numberOfGuest:
+ *                 type: integer
+ *                 example: 3
+ *               items:
+ *                 type: array
+ *                 items:
+ *                   type: object
+ *                   properties:
+ *                     roomType:
+ *                       type: string
+ *                       example: 6847fb6971971ba932d254c3
+ *                     rate:
+ *                       type: string
+ *                       example: 6848036a194173b47027815c
+ *                     rooms:
+ *                       type: array
+ *                       items:
+ *                         type: object
+ *                         properties:
+ *                           room:
+ *                             type: string
+ *                             example: 6847fd406656e912d7a76b91
+ *                           checkIn:
+ *                             type: string
+ *                             format: date-time
+ *                             example: 2025-06-15T14:00:00Z
+ *                           checkOut:
+ *                             type: string
+ *                             format: date-time
+ *                             example: 2025-06-20T11:00:00Z
+ *     responses:
+ *       200:
+ *         description: Reservation updated successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 ok:
+ *                   type: boolean
+ *                   example: true
+ *                 status:
+ *                   type: string
+ *                   example: success
+ *                 data:
+ *                   $ref: '#/components/schemas/Reservation'
+ *       400:
+ *         description: Invalid update data
+ *       404:
+ *         description: Reservation not found
+ *
+ *   delete:
+ *     summary: Delete a reservation by ID
+ *     description: Deletes the specified reservation.
+ *     tags: [Reservations]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         description: Reservation ID to delete
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Reservation successfully deleted
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: string
+ *                   example: ok
+ *                 message:
+ *                   type: string
+ *                   example: resource successfully deleted
+ *       404:
+ *         description: Reservation not found
+ */
+
 reservationRouter
   .route("/")
   .post(
