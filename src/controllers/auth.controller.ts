@@ -336,9 +336,13 @@ const googleRedirect = catchAsync(
     // Verify environment variables
     const clientId = process.env.GOOGLE_CLIENT_ID;
     const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
-    const redirectUri = process.env.GOOGLE_REDIRECT_URI;
 
-    if (!clientId || !clientSecret || !redirectUri) {
+    const googleUri =
+      process.env.NODE_ENV === "production"
+        ? process.env.GOOGLE_REDIRECT_URI_PROD
+        : process.env.GOOGLE_REDIRECT_URI_DEV;
+
+    if (!clientId || !clientSecret || !googleUri) {
       return next(
         new AppError(
           "Google OAuth configuration missing in environment variables.",
@@ -347,11 +351,7 @@ const googleRedirect = catchAsync(
       );
     }
 
-    const client = new Oauth.OAuth2Client({
-      clientId,
-      clientSecret,
-      redirectUri,
-    });
+    const client = new Oauth.OAuth2Client(clientId, clientSecret, googleUri);
 
     const { code } = req.query;
 
@@ -400,7 +400,21 @@ const googleRedirect = catchAsync(
       );
     }
 
-    let user = await UserModel.findOne({ googleId }).populate("role");
+    let user = await UserModel.findOne({
+      $or: [{ googleId }, { email }],
+    }).populate("role");
+
+    console.log("Found User", user);
+
+    if (user && user.googleId && user.googleId !== googleId) {
+      return next(
+        new AppError(
+          "Email already linked to a different Google account.",
+          StatusCodes.BAD_REQUEST
+        )
+      );
+    }
+
     let guest = user ? await GuestModel.findOne({ user: user._id }) : null;
     const permissions = user
       ? await getUserPermissions(user.toObject() as unknown as IUser)
@@ -423,21 +437,157 @@ const googleRedirect = catchAsync(
       });
     }
 
-    const data = {
-      token: signToken(user._id.toString()),
-      data: { ...guest?.toObject(), user, permissions },
-    };
+    // const data = {
+    //   token: signToken(user._id.toString()),
+    //   data: { ...guest?.toObject(), user, permissions },
+    // };
 
-    appResponder(StatusCodes.OK, data, res);
+    // appResponder(StatusCodes.OK, data, res);
+
+    if (!process.env.JWT_SECRETE) {
+      return next(
+        new AppError(
+          "Cannot find jwt token in enviroment variables",
+          StatusCodes.INTERNAL_SERVER_ERROR
+        )
+      );
+    }
+
+    const token = jwt.sign(
+      {
+        id: user._id,
+        email: user.email,
+      },
+      process.env.JWT_SECRETE,
+      { expiresIn: "1h" }
+    );
+
+    res.cookie("session_token", token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+      maxAge: 60 * 60 * 1000,
+      path: "/",
+    });
+
+    if (!process.env.FRONT_END_DASHBOARD_REDIRECT) {
+      return next(
+        new AppError(
+          "Cannot find front end dashboard redirect in enviroment variables",
+          StatusCodes.INTERNAL_SERVER_ERROR
+        )
+      );
+    }
+
+    res.redirect(`${process.env.FRONT_END_DASHBOARD_REDIRECT}`);
+  }
+);
+
+const verifyGoogleAuthCookie = catchAsync(
+  async (req: Request, res: Response, next: NextFunction) => {
+    const token = req.cookies.session_token;
+
+    if (!token) {
+      return next(
+        new AppError(
+          "Missing Google auth session token. Please log in.",
+          StatusCodes.UNAUTHORIZED
+        )
+      );
+    }
+
+    if (!process.env.JWT_SECRETE) {
+      return next(
+        new AppError(
+          "JWT_SECRET is not defined in environment variables.",
+          StatusCodes.INTERNAL_SERVER_ERROR
+        )
+      );
+    }
+
+    let decoded;
+    try {
+      decoded = jwt.verify(token, process.env.JWT_SECRETE);
+    } catch (err) {
+      return next(
+        new AppError(
+          "Invalid or expired session token.",
+          StatusCodes.UNAUTHORIZED
+        )
+      );
+    }
+
+    const { id, email } = decoded as { id: string; email: string };
+    const user = await UserModel.findById(id);
+
+    if (!user) {
+      return next(
+        new AppError(
+          "User not found for the provided session token.",
+          StatusCodes.UNAUTHORIZED
+        )
+      );
+    }
+
+    const guest = await GuestModel.findOne({ user: user._id });
+
+    if (!guest) {
+      return next(
+        new AppError(
+          "Cannot find corresponding guest",
+          StatusCodes.INTERNAL_SERVER_ERROR
+        )
+      );
+    }
+
+    const role = await RoleModel.findById(user.role);
+
+    if (!role) {
+      return next(
+        new AppError("No such user role Id.", StatusCodes.INTERNAL_SERVER_ERROR)
+      );
+    }
+
+    const permissions = await getUserPermissions(
+      user.toObject() as unknown as IUser
+    );
+
+    const data = {
+      ...user.toObject(),
+      ...guest.toObject(),
+      permissions,
+      token: signToken(user._id.toString()),
+    } as any;
+
+    data.role = role.name;
+
+    return appResponder(StatusCodes.OK, data, res);
   }
 );
 
 const authWithGoogle = catchAsync(
   async (req: Request, res: Response, next: NextFunction) => {
+    if (
+      !process.env.GOOGLE_REDIRECT_URI_DEV ||
+      !process.env.GOOGLE_REDIRECT_URI_PROD
+    ) {
+      return next(
+        new AppError(
+          "Google auth enviroment variables not well set",
+          StatusCodes.INTERNAL_SERVER_ERROR
+        )
+      );
+    }
+
+    const googleUri =
+      process.env.NODE_ENV === "production"
+        ? process.env.GOOGLE_REDIRECT_URI_PROD
+        : process.env.GOOGLE_REDIRECT_URI_DEV;
+
     const client = new Oauth.OAuth2Client({
       clientId: process.env.GOOGLE_CLIENT_ID,
       clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-      redirectUri: process.env.GOOGLE_REDIRECT_URI,
+      redirectUri: googleUri,
     });
 
     // console.log(process.env.GOOGLE_CLIENT_ID);
@@ -445,7 +595,7 @@ const authWithGoogle = catchAsync(
       access_type: "offline",
       prompt: "consent",
       scope: ["profile", "email"],
-      redirect_uri: process.env.GOOGLE_REDIRECT_URI,
+      redirect_uri: googleUri,
       client_id: process.env.GOOGLE_CLIENT_ID,
     });
 
@@ -870,4 +1020,5 @@ export const authControllers = {
   resetPassword,
   activateAndDeactivateUserAccounts,
   changeUserRole,
+  verifyGoogleAuthCookie,
 };

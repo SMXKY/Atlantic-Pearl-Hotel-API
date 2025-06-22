@@ -2,6 +2,7 @@ import express, { NextFunction, Request, Response } from "express";
 import swaggerUi from "swagger-ui-express";
 import swaggerJSDoc from "swagger-jsdoc";
 import { StatusCodes } from "http-status-codes";
+import cookieParser from "cookie-parser";
 
 import { departmentRouter } from "./routes/department.route";
 import { employeeRouter } from "./routes/employee.route";
@@ -16,7 +17,7 @@ import { AppError } from "./util/AppError.util";
 import { globalErrorController } from "./controllers/error.controller";
 import { authRouter } from "./routes/auth.route";
 import { authControllers } from "./controllers/auth.controller";
-import cors from "cors";
+import cors, { CorsOptions } from "cors";
 import { activityLogRouter } from "./routes/activityLogs.route";
 import { roleOverideRouter } from "./routes/roleOveride.route";
 import { reservationRouter } from "./routes/reservation.route";
@@ -61,8 +62,15 @@ app.use((req, res, next) => {
   next();
 });
 
-const corsOptions = {
-  origin: "*", // Allow all origins
+const corsOptions: CorsOptions = {
+  origin: (
+    origin: string | undefined,
+    callback: (err: Error | null, allow?: boolean | string) => void
+  ) => {
+    if (!origin) return callback(null, true);
+    callback(null, origin);
+  },
+  credentials: true,
   methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
   allowedHeaders: [
     "Origin",
@@ -73,14 +81,14 @@ const corsOptions = {
   ],
 };
 
+app.use(express.json());
+app.use(cookieParser());
 app.use(cors(corsOptions));
 app.set("trust proxy", true);
 
 app.get("/", (req: Request, res: Response) => {
   res.send("Hello from the Atlantic Pearl Hotel and Resort API...");
 });
-
-app.use(express.json());
 
 app.get("/api/v1/verify-email/:token", authControllers.verifyEmail);
 app.use("/api/v1/departments", departmentRouter);

@@ -42,7 +42,7 @@ const guestSchema = new mongoose.Schema(
     username: {
       type: String,
       unique: true,
-      required: [true, "Guest username is required."],
+      // required: [true, "Guest username is required."],
     },
     countryOfResidence: {
       type: String,
