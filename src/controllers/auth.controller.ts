@@ -99,9 +99,21 @@ const signIn = catchAsync(
 
     req.body.userType = "Guest";
 
+    const userExist = await UserModel.exists({ email: req.body.email });
+    if (userExist) {
+      return next(
+        new AppError("Email already in use.", StatusCodes.BAD_REQUEST)
+      );
+    }
+
     const user = await UserModel.create({ ...req.body, role: role._id });
 
-    await GuestModel.create({ ...req.body, user: user._id });
+    try {
+      await GuestModel.create({ ...req.body, user: user._id });
+    } catch (err) {
+      await UserModel.findByIdAndDelete(user._id);
+      return next(err);
+    }
 
     if (!process.env.JWT_SECRETE) {
       throw new Error("JWT_SECRET is not defined in environment variables.");
@@ -113,12 +125,16 @@ const signIn = catchAsync(
       { expiresIn: "3h" }
     );
 
-    await sendEmail(
-      user.email,
-      "Account created successfully",
-      `Please verify your Email.`,
-      `<b>Please Click on link bellow to Verify you email</b><br/><p>${`${process.env.HOME}/api/v1/verify-email/${emailVerificationToken}`}</p>`
-    );
+    try {
+      await sendEmail(
+        user.email,
+        "Account created successfully",
+        `Please verify your Email.`,
+        `<b>Please Click on link bellow to Verify you email</b><br/><p>${`${process.env.HOME}/api/v1/verify-email/${emailVerificationToken}`}</p>`
+      );
+    } catch (err) {
+      console.log("Error sending emil verificaiton email", err);
+    }
 
     appResponder(
       StatusCodes.OK,
