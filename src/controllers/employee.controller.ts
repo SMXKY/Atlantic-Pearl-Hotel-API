@@ -3,6 +3,9 @@ import { NextFunction, Request, Response } from "express";
 import { catchAsync } from "../util/catchAsync";
 import { CRUD } from "../util/Crud.util";
 import { EmployeeModel } from "../models/Employee.model";
+import { UserModel } from "../models/User.model";
+import { AppError } from "../util/AppError.util";
+import { StatusCodes } from "http-status-codes";
 
 const CRUDEmployee: CRUD = new CRUD(EmployeeModel);
 
@@ -32,6 +35,27 @@ const updateEmployee = catchAsync(
 
 const deleteEmployee = catchAsync(
   async (req: Request, res: Response, next: NextFunction) => {
+    if (!req.params.id) {
+      return next(
+        new AppError(
+          "Employee Id is required in request parameters",
+          StatusCodes.BAD_REQUEST
+        )
+      );
+    }
+
+    const employee = await EmployeeModel.findById(req.params.id);
+
+    if (!employee) {
+      return next(
+        new AppError(
+          "Employee does not exist in the database",
+          StatusCodes.NOT_FOUND
+        )
+      );
+    }
+
+    await UserModel.findByIdAndDelete(employee?.user);
     await CRUDEmployee.delete(req.params.id, res, req);
   }
 );
