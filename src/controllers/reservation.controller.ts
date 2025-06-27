@@ -493,6 +493,70 @@ const cancelReservation = catchAsync(
   }
 );
 
+const updatingGuestRooms = catchAsync(
+  async (req: Request, res: Response, next: NextFunction) => {
+    /*
+
+    what do I  want to do:
+    * Get reservation Id
+    * check if reservation exist
+    * Ensure that only reseavtion that are marked reserved can be updated
+    * the itesm array canot be 
+    * Get new Items
+    * Update the items in the reservation
+    * Send guest the new Invoice
+    * 
+     */
+
+    if (!req.params.id || !req.body) {
+      return next(
+        new AppError(
+          "Invalid update reservation request, please ensure there resevation Id in the request parameters, and a body containign the new reservation items is in the req body",
+          StatusCodes.BAD_REQUEST
+        )
+      );
+    }
+
+    const reservationId = req.params.id;
+    const { reservationItems } = req.body;
+
+    const reservation = await ReservationModel.findById(reservationId);
+
+    if (!reservation) {
+      return next(
+        new AppError(
+          "Reservation Id, not found in the database",
+          StatusCodes.NOT_FOUND
+        )
+      );
+    }
+
+    if (reservation.status !== "confirmed") {
+      return next(
+        new AppError(
+          "Only rooms for a confirmed reservation can be updated",
+          StatusCodes.BAD_REQUEST
+        )
+      );
+    }
+
+    await ReservationModel.findByIdAndUpdate(reservationId, {
+      items: reservationItems,
+    });
+
+    const invoice = await InvoiceModel.findOne({ reservation: reservationId });
+
+    if (!invoice) {
+      return next(
+        new AppError(
+          "Error finding corresponding existing reservation invoice",
+          StatusCodes.INTERNAL_SERVER_ERROR
+        )
+      );
+    }
+  }
+);
+
 export const reservationControllers = {
   createReservation,
   readOneReservation,

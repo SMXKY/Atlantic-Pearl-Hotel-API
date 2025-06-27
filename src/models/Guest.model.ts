@@ -39,11 +39,6 @@ const guestSchema = new mongoose.Schema(
       ref: "users",
       required: [true, "User Id is required"],
     },
-    username: {
-      type: String,
-      unique: true,
-      // required: [true, "Guest username is required."],
-    },
     countryOfResidence: {
       type: String,
       trim: true,
