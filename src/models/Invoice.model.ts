@@ -41,6 +41,7 @@ interface IInvoice extends Document {
   dueDate: Date;
   discount: Types.ObjectId;
   paymentLinkId: string;
+  isRoomUpdate: boolean;
 }
 
 const InvoiceSchema = new Schema<IInvoice>(
@@ -127,6 +128,10 @@ const InvoiceSchema = new Schema<IInvoice>(
     },
     dueDate: {
       type: Date,
+    },
+    isRoomUpdate: {
+      type: Boolean,
+      default: false,
     },
   },
   { timestamps: true }
@@ -225,8 +230,40 @@ InvoiceSchema.pre("validate", async function (next) {
   next();
 });
 
-/*
-To calculate tax I'll need to see if the rates include tax or not 
- */
+//Updating invoice when reservation rooms are updated
+InvoiceSchema.pre("save", async function (next) {
+  if (!this.isRoomUpdate) return next();
+
+  const reservation = await ReservationModel.findById(this.reservation);
+
+  if (!reservation?.checkOutDate) {
+    return next(
+      new AppError(
+        "Error determining reservation check-out date.",
+        StatusCodes.INTERNAL_SERVER_ERROR
+      )
+    );
+  }
+
+  this.dueDate = reservation?.checkOutDate;
+  const priceAndTax = await reservation.calculateTotalPriceAndTax();
+
+  if (!priceAndTax) {
+    return next(
+      new AppError(
+        "Cant find the tax and bill calculation virtual prop on the reservation object",
+        StatusCodes.INTERNAL_SERVER_ERROR
+      )
+    );
+  }
+
+  this.netAmount = priceAndTax.subTotal;
+  this.taxAmount = priceAndTax.totalTaxes;
+  this.grandTotal = priceAndTax.totalBill;
+  this.amountDue = priceAndTax.totalBill;
+
+  this.isRoomUpdate = false;
+  next();
+});
 
 export const InvoiceModel = model<IInvoice>("invoices", InvoiceSchema);

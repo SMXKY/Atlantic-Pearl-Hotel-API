@@ -36,6 +36,13 @@ const signToken = (userId: string) => {
 
 const createEmployeeAccount = catchAsync(
   async (req: Request, res: Response, next: NextFunction) => {
+    const userExist = await UserModel.exists({ email: req.body.email });
+    if (userExist) {
+      return next(
+        new AppError("Email already in use.", StatusCodes.BAD_REQUEST)
+      );
+    }
+
     const employeePassword = generatePassword.generate({
       length: 8,
       numbers: true,
@@ -416,9 +423,15 @@ const googleRedirect = catchAsync(
       );
     }
 
-    let user = await UserModel.findOne({
-      $or: [{ googleId }, { email }],
-    }).populate("role");
+    console.log("Email", email);
+
+    const userExist = await UserModel.exists({ email: email });
+
+    let user = userExist
+      ? await UserModel.findOne({
+          email: email,
+        }).populate("role")
+      : null;
 
     console.log("Found User", user);
 
@@ -972,7 +985,7 @@ const activateAndDeactivateUserAccounts = catchAsync(
       }
 
       if (parsedDate.getTime() <= Date.now()) {
-        console.log("");
+        // console.log("");
         return next(
           new AppError(
             "Deactivated account, dates must be in the future",
