@@ -6,6 +6,8 @@ import { RoomModel } from "../models/Room.model";
 import { handleFileUploads } from "../external-apis/ftpServer";
 import { appResponder } from "../util/appResponder.util";
 import { StatusCodes } from "http-status-codes";
+import { AppError } from "../util/AppError.util";
+import { deleteFileFromFTP } from "../external-apis/ftpServer";
 
 const CRUDRoom: CRUD = new CRUD(RoomModel);
 
@@ -51,6 +53,25 @@ const updateRoom = catchAsync(
 
 const deleteRoom = catchAsync(
   async (req: Request, res: Response, next: NextFunction) => {
+    if (!req.params.id) {
+      return next(
+        new AppError(
+          "Room Id is required, as url parameter",
+          StatusCodes.BAD_REQUEST
+        )
+      );
+    }
+
+    const room = await RoomModel.findById(req.params.id);
+
+    if (!room) {
+      return next(
+        new AppError("No such room Id in the database", StatusCodes.NOT_FOUND)
+      );
+    }
+
+    return appResponder(StatusCodes.OK, {}, res);
+
     await CRUDRoom.delete(req.params.id, res, req);
   }
 );

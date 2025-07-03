@@ -23,6 +23,7 @@ import path from "path";
 import fs from "fs";
 import { AdminConfigurationModel } from "../models/AdminConfiguration.model";
 import { getGuestDetailsFromReservation } from "../util/getGuestFromReservation.util";
+import { validateReservationItemsAvailability } from "../util/validateReservationItems.util";
 
 const CRUDReservation: CRUD = new CRUD(ReservationModel);
 
@@ -495,23 +496,10 @@ const cancelReservation = catchAsync(
 
 const updatingGuestRooms = catchAsync(
   async (req: Request, res: Response, next: NextFunction) => {
-    /*
-
-    what do I  want to do:
-    * Get reservation Id
-    * check if reservation exist
-    * Ensure that only reseavtion that are marked reserved can be updated
-    * the itesm array canot be 
-    * Get new Items
-    * Update the items in the reservation
-    * Send guest the new Invoice
-    * 
-     */
-
-    if (!req.params.id || !req.body) {
+    if (!req.params.id || !req.body?.reservationItems) {
       return next(
         new AppError(
-          "Invalid update reservation request, please ensure there resevation Id in the request parameters, and a body containign the new reservation items is in the req body",
+          "Invalid request. Reservation ID and new reservation items are required.",
           StatusCodes.BAD_REQUEST
         )
       );
@@ -523,36 +511,149 @@ const updatingGuestRooms = catchAsync(
     const reservation = await ReservationModel.findById(reservationId);
 
     if (!reservation) {
-      return next(
-        new AppError(
-          "Reservation Id, not found in the database",
-          StatusCodes.NOT_FOUND
-        )
-      );
+      return next(new AppError("Reservation not found", StatusCodes.NOT_FOUND));
     }
 
     if (reservation.status !== "confirmed") {
       return next(
         new AppError(
-          "Only rooms for a confirmed reservation can be updated",
+          "Only confirmed reservations can be updated",
           StatusCodes.BAD_REQUEST
         )
       );
     }
 
-    await ReservationModel.findByIdAndUpdate(reservationId, {
-      items: reservationItems,
-    });
-
-    const invoice = await InvoiceModel.findOne({ reservation: reservationId });
-
-    if (!invoice) {
+    if (!reservation.checkInDate || !reservation.checkOutDate) {
       return next(
         new AppError(
-          "Error finding corresponding existing reservation invoice",
+          "Cannot find reservaton check in or check out date.",
           StatusCodes.INTERNAL_SERVER_ERROR
         )
       );
+    }
+
+    reservationItems.forEach((item: any) => {
+      item.rooms.forEach((room: any) => {
+        const roomCheckIn = new Date(room.checkIn);
+        const roomCheckOut = new Date(room.checkOut);
+        const resCheckIn = reservation.checkInDate as Date;
+        const resCheckOut = reservation.checkOutDate as Date;
+
+        // 1. Room check-in must be on or after reservation check-in
+        if (roomCheckIn < resCheckIn) {
+          return next(
+            new AppError(
+              "Room check-in date cannot be before the reservation check-in date.",
+              StatusCodes.BAD_REQUEST
+            )
+          );
+        }
+
+        // 2. Room check-out must be on or before reservation check-out
+        if (roomCheckOut > resCheckOut) {
+          return next(
+            new AppError(
+              "Room check-out date cannot be after the reservation check-out date.",
+              StatusCodes.BAD_REQUEST
+            )
+          );
+        }
+
+        // 3. Room check-out must be after check-in
+        if (roomCheckOut <= roomCheckIn) {
+          return next(
+            new AppError(
+              "Room check-out date must be after its check-in date.",
+              StatusCodes.BAD_REQUEST
+            )
+          );
+        }
+      });
+    });
+
+    const validateRooms = await validateReservationItemsAvailability(
+      reservationItems
+    );
+
+    console.log(validateRooms);
+
+    if (!validateRooms.ok) {
+      console.log(validateRooms);
+      return next(
+        new AppError(
+          validateRooms.invalidItems[0].reason,
+          StatusCodes.BAD_REQUEST
+        )
+      );
+    }
+
+    const previousItems = reservation.items;
+
+    try {
+      reservation.items = reservationItems;
+      await reservation.save();
+
+      const invoice = await InvoiceModel.findOne({
+        reservation: reservationId,
+      });
+
+      if (!invoice) {
+        reservation.items = previousItems;
+        await reservation.save();
+
+        return next(
+          new AppError("Associated invoice not found", StatusCodes.NOT_FOUND)
+        );
+      }
+
+      invoice.isRoomUpdate = true;
+      await invoice.save();
+
+      const guest = await getGuestDetailsFromReservation(
+        reservation._id.toString()
+      );
+
+      if (!guest || !guest.email) {
+        reservation.items = previousItems;
+        await reservation.save();
+
+        invoice.isRoomUpdate = false;
+        await invoice.save();
+
+        return next(
+          new AppError(
+            "Guest email not found",
+            StatusCodes.INTERNAL_SERVER_ERROR
+          )
+        );
+      }
+
+      const emailHtml = await renderInvoiceHTMLFromTemplate(
+        invoice._id.toString()
+      );
+
+      await sendEmail(
+        guest.email,
+        "Updated Invoice for Your Reservation",
+        "",
+        emailHtml
+      );
+
+      return appResponder(
+        StatusCodes.OK,
+        {
+          message: "Reservation and invoice updated, email sent.",
+          reservation,
+          invoice,
+        },
+        res
+      );
+    } catch (err) {
+      // Manual rollback of reservation items if anything fails
+      reservation.items = previousItems;
+      await reservation.save();
+
+      return next(err);
     }
   }
 );
@@ -565,4 +666,5 @@ export const reservationControllers = {
   deleteReservation,
   depositPaymentRedirect,
   cancelReservation,
+  updatingGuestRooms,
 };

@@ -480,8 +480,8 @@ roomTypeRouter
     roomTypeControllers.createRoomType
   )
   .get(
-    authControllers.protect,
-    authControllers.restrictTo(allPermissions.roomTypes.readAll),
+    // authControllers.protect,
+    // authControllers.restrictTo(allPermissions.roomTypes.readAll),
     roomTypeControllers.readAllRoomTypes
   );
 

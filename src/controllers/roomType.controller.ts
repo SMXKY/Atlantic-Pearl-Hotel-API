@@ -130,7 +130,15 @@ const readOneRoomType = catchAsync(
 
 const readAllRoomTypes = catchAsync(
   async (req: Request, res: Response, next: NextFunction) => {
-    await CRUDRoomType.readAll(res, req, 1, 100, []);
+    const data = await RoomTypeModel.find();
+
+    const mutatedData = [];
+    for (const roomType of data) {
+      const enriched = await roomType.mutate();
+      mutatedData.push(enriched);
+    }
+
+    appResponder(StatusCodes.OK, mutatedData, res);
   }
 );
 

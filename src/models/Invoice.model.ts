@@ -27,6 +27,7 @@ interface IInvoiceLine {
 
 // Invoice interface
 interface IInvoice extends Document {
+  _id: Types.ObjectId;
   reservation: Types.ObjectId;
   issuedAt: Date;
   lineItems: IInvoiceLine[];
@@ -205,7 +206,9 @@ InvoiceSchema.pre("validate", async function (next) {
   const baseUrl =
     process.env.NODE_ENV === "production"
       ? process.env.PROD_BASE_URL
-      : process.env.DEV_BASE_URL;
+      : process.env.BASE_URL;
+
+  console.log(baseUrl);
 
   const data = {
     amount: reservation.depositInCFA,
@@ -214,6 +217,8 @@ InvoiceSchema.pre("validate", async function (next) {
 
   const dataString = encodeURIComponent(JSON.stringify(data));
   const redirectUrl = `${baseUrl}/api/v1/reservations/deposit-redirect?data=${dataString}`;
+
+  // throw new AppError(redirectUrl, StatusCodes.CREATED);
 
   const payData: InitiatePayData = {
     amount: reservation.depositInCFA,

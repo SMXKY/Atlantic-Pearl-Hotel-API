@@ -94,8 +94,35 @@ const reservationSchema = new mongoose.Schema<IReservation>(
     guestPhoneNumber: { type: String },
     countryOfResidence: { type: String, trim: true },
     specialRequest: { type: String, trim: true },
-    checkInDate: { type: Date, immutable: true },
-    checkOutDate: { type: Date, immutable: true },
+    checkInDate: {
+      type: Date,
+      required: true,
+      immutable: true,
+      validate: {
+        validator: function (value: Date) {
+          // Must be in the future (compared to now)
+          return value > new Date();
+        },
+        message: "Check-in date must be in the future.",
+      },
+    },
+    checkOutDate: {
+      type: Date,
+      required: true,
+      immutable: true,
+      validate: {
+        validator: function (value: Date) {
+          if (!this.checkInDate) return false; // If checkInDate is not set, this is invalid
+
+          // Must be at least one full day after check-in
+          const oneDayLater = new Date(this.checkInDate);
+          oneDayLater.setDate(oneDayLater.getDate() + 1);
+
+          return value >= oneDayLater;
+        },
+        message: "Check-out date must be at least one day after check-in date.",
+      },
+    },
     numberOfGuest: { type: Number, default: 1, required: true, min: 1 },
     guestNIC: { type: String },
     guest: {

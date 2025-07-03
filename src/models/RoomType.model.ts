@@ -1,11 +1,57 @@
 import * as mongoose from "mongoose";
 import { RateModel } from "./Rate.model";
+import { RoomModel } from "./Room.model";
+import { RoomMedia } from "./RoomImages.model";
 
-const roomTypeSchema = new mongoose.Schema(
+// ----------------------------------------
+// Interfaces
+// ----------------------------------------
+
+export interface IRoomType {
+  name: string;
+  description?: string;
+  minimumPriceInCFA: number;
+  maxNumberOfGuest: number;
+  maxNumberOfAdultGuests: number;
+  createdAt?: Date;
+  updatedAt?: Date;
+}
+
+// Optional: define Room and RoomMedia types properly
+interface IRoom {
+  _id: mongoose.Types.ObjectId;
+  name: string;
+  type: mongoose.Types.ObjectId;
+  status: string;
+  // ... other fields
+}
+
+interface IRoomMedia {
+  _id: mongoose.Types.ObjectId;
+  roomType: mongoose.Types.ObjectId;
+  imageUrl: string;
+  // ... other fields
+}
+
+export interface IRoomTypeEnriched extends IRoomType {
+  numberOfRooms: number;
+  images: IRoomMedia[];
+  rooms: IRoom[];
+}
+
+export interface IRoomTypeDocument extends mongoose.Document, IRoomType {
+  mutate(): Promise<IRoomTypeEnriched>;
+}
+
+// ----------------------------------------
+// Schema
+// ----------------------------------------
+
+const roomTypeSchema = new mongoose.Schema<IRoomTypeDocument>(
   {
     name: {
       type: String,
-      required: [true, "Room type name, is required"],
+      required: [true, "Room type name is required"],
       trim: true,
       unique: true,
     },
@@ -15,18 +61,22 @@ const roomTypeSchema = new mongoose.Schema(
     },
     minimumPriceInCFA: {
       type: Number,
-      required: [true, "Minum price for a room type must be set."],
+      required: [true, "Minimum price for a room type must be set."],
     },
     maxNumberOfGuest: {
       type: Number,
-      required: [true, "Room maximum number of guests is required."],
+      required: [true, "Maximum number of guests is required."],
     },
     maxNumberOfAdultGuests: {
       type: Number,
-      required: [true, "Maxum number of adult occupants is required."],
+      required: [true, "Maximum number of adult guests is required."],
     },
   },
-  { timestamps: true, toJSON: { virtuals: true }, toObject: { virtuals: true } }
+  {
+    timestamps: true,
+    toJSON: { virtuals: true },
+    toObject: { virtuals: true },
+  }
 );
 
 roomTypeSchema.post("save", async function (doc, next) {
@@ -53,6 +103,7 @@ roomTypeSchema.post("save", async function (doc, next) {
         cancelationPolicy: null,
       });
     }
+
     next();
   } catch (error) {
     console.error("Error creating default rate:", error);
@@ -60,4 +111,21 @@ roomTypeSchema.post("save", async function (doc, next) {
   }
 });
 
-export const RoomTypeModel = mongoose.model("roomtypes", roomTypeSchema);
+roomTypeSchema.methods.mutate = async function () {
+  const obj = this.toObject();
+
+  const rooms = await RoomModel.find({ type: this._id, status: "free" });
+  const images = await RoomMedia.find({ roomType: this._id });
+
+  return {
+    ...obj,
+    numberOfRooms: rooms.length,
+    images,
+    rooms,
+  };
+};
+
+export const RoomTypeModel = mongoose.model<IRoomTypeDocument>(
+  "roomtypes",
+  roomTypeSchema
+);

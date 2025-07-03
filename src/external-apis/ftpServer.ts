@@ -330,3 +330,44 @@ function verifyFile(
     });
   });
 }
+
+export function deleteFileFromFTP(fileUrl: string): Promise<void> {
+  return new Promise((resolve, reject) => {
+    // 1) Validate and extract the remote path:
+    if (!fileUrl.startsWith(config.remoteUrlBase)) {
+      return reject(
+        new Error(`URL does not match FTP base URL: ${config.remoteUrlBase}`)
+      );
+    }
+    // Remove the base URL prefix to get the remote filename + any sub‑paths
+    const relativePath = fileUrl.slice(config.remoteUrlBase.length);
+    // Build the full remote path in posix format
+    const remotePath = path.posix.join(config.remoteDir, relativePath);
+
+    // 2) Create and connect FTP client
+    const client = new Client();
+    client.on("ready", () => {
+      // 3) Delete the file
+      client.delete(remotePath, (err) => {
+        client.end(); // always close connection
+        if (err) {
+          return reject(
+            new Error(`Failed to delete ${remotePath}: ${err.message}`)
+          );
+        }
+        resolve();
+      });
+    });
+
+    client.on("error", (err) => {
+      reject(new Error(`FTP client error: ${err.message}`));
+    });
+
+    client.connect({
+      host: config.host,
+      port: config.port,
+      user: config.user,
+      password: config.password,
+    });
+  });
+}

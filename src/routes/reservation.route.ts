@@ -414,15 +414,36 @@ reservationRouter
 
 reservationRouter
   .route("/manual")
-  .post(manualReservationControllers.createManualReservation);
+  .post(
+    authControllers.protect,
+    authControllers.restrictTo(
+      allPermissions.reservations.createManualReservation
+    ),
+    manualReservationControllers.createManualReservation
+  );
 
 reservationRouter
   .route("/manual/pay")
-  .patch(manualReservationControllers.payForReservation);
+  .patch(
+    authControllers.protect,
+    authControllers.restrictTo(
+      allPermissions.reservations.updateManualReservationPay
+    ),
+    manualReservationControllers.payForReservation
+  );
 
 reservationRouter
   .route("/cancel/:id")
-  .patch(reservationControllers.cancelReservation);
+  .patch(
+    authControllers.protect,
+    authControllers.restrictTo(allPermissions.reservations.cancel),
+    reservationControllers.cancelReservation
+  );
+reservationRouter.route("/update-rooms/:id").patch(
+  // authControllers.protect,
+  // authControllers.restrictTo(allPermissions.reservations.updateRooms),
+  reservationControllers.updatingGuestRooms
+);
 
 reservationRouter
   .route("/:id")

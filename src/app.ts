@@ -81,15 +81,16 @@ const corsOptions: CorsOptions = {
   ],
 };
 
-app.use(express.json());
 app.use(cookieParser());
 app.use(cors(corsOptions));
 app.set("trust proxy", true);
 
 app.get("/", (req: Request, res: Response) => {
+  // console.log("lajfdlasflsajflsajflsajflsajlfjsalfjlsadjflasdjfkdaj");
   res.send("Hello from the Atlantic Pearl Hotel and Resort API...");
 });
 
+app.use(express.json());
 app.get("/api/v1/verify-email/:token", authControllers.verifyEmail);
 app.use("/api/v1/departments", departmentRouter);
 app.use("/api/v1/employees", employeeRouter);
