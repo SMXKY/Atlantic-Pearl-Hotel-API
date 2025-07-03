@@ -658,6 +658,27 @@ const updatingGuestRooms = catchAsync(
   }
 );
 
+const reservationCalendar = catchAsync(
+  async (req: Request, res: Response, next: NextFunction) => {
+    const reservations = await ReservationModel.find({
+      $or: [
+        { status: "confirmed" },
+        { status: "checked in" },
+        { status: "checked out" },
+      ],
+    });
+
+    const data = [];
+
+    for (const mutant of reservations) {
+      const unwinded = await mutant.mutateForCalendar();
+      data.push(...unwinded);
+    }
+
+    appResponder(StatusCodes.OK, data, res);
+  }
+);
+
 export const reservationControllers = {
   createReservation,
   readOneReservation,
@@ -667,4 +688,5 @@ export const reservationControllers = {
   depositPaymentRedirect,
   cancelReservation,
   updatingGuestRooms,
+  reservationCalendar,
 };

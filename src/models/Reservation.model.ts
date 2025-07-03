@@ -11,6 +11,7 @@ import { RoomTypeModel } from "./RoomType.model";
 import { RoomModel } from "./Room.model";
 import { TaxModel } from "./Tax.model";
 import { AdminConfigurationModel } from "./AdminConfiguration.model";
+import { UserModel } from "./User.model";
 const { v4: uuidv4 } = require("uuid");
 
 interface IRoomEntry {
@@ -43,7 +44,8 @@ export interface IReservation extends mongoose.Document {
     | "canceled"
     | "pending"
     | "expired"
-    | "confirmed";
+    | "confirmed"
+    | "checked out";
   guestName?: string;
   guestEmail?: string;
   guestPhoneNumber?: string;
@@ -67,6 +69,7 @@ export interface IReservation extends mongoose.Document {
   rooms: mongoose.Types.ObjectId[];
   depositInCFA: number;
   calculateTotalPriceAndTax(): Promise<PriceAndTax>;
+  mutateForCalendar(): Promise<any>[];
 }
 
 const reservationSchema = new mongoose.Schema<IReservation>(
@@ -86,6 +89,7 @@ const reservationSchema = new mongoose.Schema<IReservation>(
         "pending",
         "expired",
         "confirmed",
+        "checked out",
       ],
       default: "pending",
     },
@@ -393,6 +397,59 @@ reservationSchema.post("save", async function (this: IReservation) {
 
   await Promise.all(savePromises);
 });
+
+reservationSchema.methods.mutateForCalendar = async function () {
+  const reservation = this.toObject() as IReservation;
+
+  if (!reservation.guestName) {
+    const guest = await GuestModel.findById(reservation.guest);
+    const user = await UserModel.findById(guest?.user);
+    reservation.guestName = user?.name;
+  }
+
+  const unwindedItems = [];
+
+  for (const item of reservation.items) {
+    const rate = await RateModel.findById(item.rate);
+
+    for (const roomItem of item.rooms) {
+      const { items, ...mutant } = reservation;
+
+      const newItem = mutant as any;
+
+      const roomObj = await RoomModel.findById(roomItem.room);
+
+      newItem.roomName = roomObj?.number;
+      newItem.startDate = roomItem.checkIn;
+      newItem.endDate = roomItem.checkOut;
+      newItem.meal = rate?.mealPlan;
+      newItem.rate = rate?.totalPriceInCFA;
+      newItem.image = roomObj?.imageUrl;
+
+      switch (newItem.meal) {
+        case "RO":
+          newItem.meal = "None";
+          break;
+        case "B&B":
+          newItem.meal = "Breakfast";
+          break;
+        case "HB":
+          newItem.meal = "Breakfast and Dinner";
+          break;
+        case "FB":
+          newItem.meal = "Breakfast, Lunch, and Dinner";
+          break;
+        case "AI":
+          newItem.meal = "Breakfast, Lunch, Dinner, and Drinks";
+          break;
+      }
+
+      unwindedItems.push(newItem);
+    }
+  }
+
+  return unwindedItems;
+};
 
 export const ReservationModel = mongoose.model<IReservation>(
   "reservations",

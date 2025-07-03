@@ -394,6 +394,117 @@ export const reservationRouter = express.Router();
  *         description: Reservation not found
  */
 
+/**
+ * @swagger
+ * /reservations/api/v1/reservations/calendar:
+ *   get:
+ *     tags:
+ *       - Reservations
+ *     summary: Get calendar reservations
+ *     description: Retrieve all reservations formatted for calendar display.
+ *     operationId: getCalendarReservations
+ *     responses:
+ *       200:
+ *         description: Successfully fetched calendar reservations
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 ok:
+ *                   type: boolean
+ *                   example: true
+ *                 status:
+ *                   type: string
+ *                   example: success
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       _id:
+ *                         type: string
+ *                         example: 686247e2007187ee441b4064
+ *                       status:
+ *                         type: string
+ *                         example: confirmed
+ *                       guestName:
+ *                         type: string
+ *                         example: John Doe
+ *                       guestEmail:
+ *                         type: string
+ *                         format: email
+ *                         example: johafdadfn.doe@example.com
+ *                       guestPhoneNumber:
+ *                         type: string
+ *                         example: "+237670000000"
+ *                       countryOfResidence:
+ *                         type: string
+ *                         example: Cameroon
+ *                       specialRequest:
+ *                         type: string
+ *                         example: Need early check-in if possible.
+ *                       checkInDate:
+ *                         type: string
+ *                         format: date-time
+ *                         example: 2025-07-15T14:00:00.000Z
+ *                       checkOutDate:
+ *                         type: string
+ *                         format: date-time
+ *                         example: 2025-07-20T11:00:00.000Z
+ *                       numberOfGuest:
+ *                         type: integer
+ *                         example: 4
+ *                       bookingSource:
+ *                         type: string
+ *                         example: online
+ *                       paymentMethod:
+ *                         type: string
+ *                         example: Mobile Money
+ *                       depositInCFA:
+ *                         type: integer
+ *                         example: 370000
+ *                       bookingReference:
+ *                         type: string
+ *                         example: RES-07B266FA
+ *                       createdAt:
+ *                         type: string
+ *                         format: date-time
+ *                         example: 2025-06-30T08:16:34.609Z
+ *                       updatedAt:
+ *                         type: string
+ *                         format: date-time
+ *                         example: 2025-06-30T10:54:54.972Z
+ *                       numberOfNights:
+ *                         type: integer
+ *                         example: 5
+ *                       totalNightsFromItems:
+ *                         type: integer
+ *                         example: 5
+ *                       id:
+ *                         type: string
+ *                         example: 686247e2007187ee441b4064
+ *                       roomName:
+ *                         type: string
+ *                         example: A101
+ *                       startDate:
+ *                         type: string
+ *                         format: date-time
+ *                         example: 2025-06-15T14:00:00.000Z
+ *                       endDate:
+ *                         type: string
+ *                         format: date-time
+ *                         example: 2025-06-20T11:00:00.000Z
+ *                       meal:
+ *                         type: string
+ *                         example: None
+ *                       rate:
+ *                         type: number
+ *                         example: 200000
+ *       500:
+ *         description: Server error
+ */
+
 reservationRouter
   .route("/")
   .post(
@@ -412,25 +523,27 @@ reservationRouter
   .route("/deposit-redirect")
   .get(reservationControllers.depositPaymentRedirect);
 
-reservationRouter
-  .route("/manual")
-  .post(
-    authControllers.protect,
-    authControllers.restrictTo(
-      allPermissions.reservations.createManualReservation
-    ),
-    manualReservationControllers.createManualReservation
-  );
+reservationRouter.route("/calendar").get(
+  // authControllers.protect,
+  // authControllers.restrictTo(allPermissions.reservations.calendar),
+  reservationControllers.reservationCalendar
+);
 
-reservationRouter
-  .route("/manual/pay")
-  .patch(
-    authControllers.protect,
-    authControllers.restrictTo(
-      allPermissions.reservations.updateManualReservationPay
-    ),
-    manualReservationControllers.payForReservation
-  );
+reservationRouter.route("/manual").post(
+  // authControllers.protect,
+  // authControllers.restrictTo(
+  //   allPermissions.reservations.createManualReservation
+  // ),
+  manualReservationControllers.createManualReservation
+);
+
+reservationRouter.route("/manual/pay").patch(
+  // authControllers.protect,
+  // authControllers.restrictTo(
+  //   allPermissions.reservations.updateManualReservationPay
+  // ),
+  manualReservationControllers.payForReservation
+);
 
 reservationRouter
   .route("/cancel/:id")

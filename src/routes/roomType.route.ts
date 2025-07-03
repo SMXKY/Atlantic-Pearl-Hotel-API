@@ -19,8 +19,8 @@ const upload = multer({ dest: "../upload" });
  *   get:
  *     summary: Get all room types
  *     description: >
- *       Retrieve a list of all room types. This endpoint returns an array of room types,
- *       each containing details such as name, description, pricing, and guest limits.
+ *       Retrieve a list of all room types. Each item includes basic details,
+ *       room count, associated images, and room details.
  *     tags: [RoomTypes]
  *     responses:
  *       200:
@@ -39,7 +39,21 @@ const upload = multer({ dest: "../upload" });
  *                 data:
  *                   type: array
  *                   items:
- *                     $ref: '#/components/schemas/RoomType'
+ *                     allOf:
+ *                       - $ref: '#/components/schemas/RoomType'
+ *                       - type: object
+ *                         properties:
+ *                           numberOfRooms:
+ *                             type: number
+ *                             example: 2
+ *                           images:
+ *                             type: array
+ *                             items:
+ *                               $ref: '#/components/schemas/RoomTypeImage'
+ *                           rooms:
+ *                             type: array
+ *                             items:
+ *                               $ref: '#/components/schemas/Room'
  *
  *   post:
  *     summary: Create a new room type
@@ -224,250 +238,6 @@ const upload = multer({ dest: "../upload" });
  *                 message:
  *                   type: string
  *                   example: Room type not found
- *
- * components:
- *   schemas:
- *     Amenity:
- *       type: object
- *       properties:
- *         _id:
- *           type: string
- *         name:
- *           type: string
- *         description:
- *           type: string
- *         isActive:
- *           type: boolean
- *         createdAt:
- *           type: string
- *           format: date-time
- *         updatedAt:
- *           type: string
- *           format: date-time
- *         id:
- *           type: string
- *
- *     RoomTypeAmenity:
- *       type: object
- *       properties:
- *         _id:
- *           type: string
- *         roomType:
- *           type: string
- *         amenity:
- *           $ref: '#/components/schemas/Amenity'
- *         createdAt:
- *           type: string
- *           format: date-time
- *         updatedAt:
- *           type: string
- *           format: date-time
- *         id:
- *           type: string
- *
- *     RoomTypeImage:
- *       type: object
- *       properties:
- *         _id:
- *           type: string
- *         url:
- *           type: string
- *         mediaType:
- *           type: string
- *         roomType:
- *           type: string
- *         createdAt:
- *           type: string
- *           format: date-time
- *         updatedAt:
- *           type: string
- *           format: date-time
- *         id:
- *           type: string
- *
- *     Room:
- *       type: object
- *       properties:
- *         _id:
- *           type: string
- *         number:
- *           type: string
- *         floorNumber:
- *           type: integer
- *         status:
- *           type: string
- *         state:
- *           type: string
- *         viewType:
- *           type: string
- *         isSmokingAllowed:
- *           type: boolean
- *         isActive:
- *           type: boolean
- *         description:
- *           type: string
- *         accessType:
- *           type: string
- *         building:
- *           type: string
- *         type:
- *           type: string
- *         imageUrl:
- *           type: string
- *         createdAt:
- *           type: string
- *           format: date-time
- *         updatedAt:
- *           type: string
- *           format: date-time
- *         size:
- *           type: string
- *         id:
- *           type: string
- *         lock:
- *           type: object
- *           properties:
- *             until:
- *               type: string
- *               nullable: true
- *
- *     RoomTypePolicy:
- *       type: object
- *       properties:
- *         policies:
- *           type: object
- *           properties:
- *             smokingAllowed:
- *               type: boolean
- *             petsAllowed:
- *               type: boolean
- *             partyingAllowed:
- *               type: boolean
- *             checkInTime:
- *               type: string
- *             checkOutTime:
- *               type: string
- *             description:
- *               type: string
- *
- *     ReviewFinalRating:
- *       type: object
- *       properties:
- *         rating:
- *           type: number
- *         remark:
- *           type: string
- *
- *     RoomTypeReview:
- *       type: object
- *       properties:
- *         _id:
- *           type: string
- *         roomType:
- *           type: string
- *         cleanliness:
- *           type: number
- *         amenities:
- *           type: number
- *         comfort:
- *           type: number
- *         location:
- *           type: number
- *         wifiConnection:
- *           type: number
- *         review:
- *           type: string
- *         reviewTitle:
- *           type: string
- *         createdAt:
- *           type: string
- *           format: date-time
- *         updatedAt:
- *           type: string
- *           format: date-time
- *         finalRating:
- *           $ref: '#/components/schemas/ReviewFinalRating'
- *         id:
- *           type: string
- *
- *     RoomTypeReviews:
- *       type: object
- *       properties:
- *         allReviews:
- *           type: array
- *           items:
- *             $ref: '#/components/schemas/RoomTypeReview'
- *         averageRatings:
- *           type: object
- *           properties:
- *             cleanliness:
- *               type: number
- *             amenities:
- *               type: number
- *             location:
- *               type: number
- *             comfort:
- *               type: number
- *             wifiConnection:
- *               type: number
- *
- *     RoomTypeExtended:
- *       allOf:
- *         - $ref: '#/components/schemas/RoomType'
- *         - type: object
- *           properties:
- *             amenities:
- *               type: array
- *               items:
- *                 $ref: '#/components/schemas/RoomTypeAmenity'
- *             images:
- *               type: array
- *               items:
- *                 $ref: '#/components/schemas/RoomTypeImage'
- *             rooms:
- *               type: array
- *               items:
- *                 $ref: '#/components/schemas/Room'
- *             policies:
- *               $ref: '#/components/schemas/RoomTypePolicy'
- *             reviews:
- *               $ref: '#/components/schemas/RoomTypeReviews'
- *
- *     RoomType:
- *       type: object
- *       properties:
- *         _id:
- *           type: string
- *           example: "64f4a9b7e6b0f8f9d8a9b7e6"
- *         name:
- *           type: string
- *           example: "Deluxe Suite"
- *         description:
- *           type: string
- *           example: "Spacious suite with ocean view and luxury amenities."
- *         minimumPriceInCFA:
- *           type: number
- *           example: 50000
- *         maxNumberOfGuest:
- *           type: number
- *           example: 4
- *         maxNumberOfAdultGuests:
- *           type: number
- *           example: 2
- *         createdAt:
- *           type: string
- *           format: date-time
- *           example: "2025-06-10T09:39:12.732Z"
- *         updatedAt:
- *           type: string
- *           format: date-time
- *           example: "2025-06-15T13:49:11.400Z"
- *         __v:
- *           type: number
- *           example: 0
- *         id:
- *           type: string
- *           example: "64f4a9b7e6b0f8f9d8a9b7e6"
  */
 
 roomTypeRouter

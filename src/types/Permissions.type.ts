@@ -101,6 +101,7 @@ export const allPermissions = {
     updateManualReservationPay: "can_update_manual_reservation_pay",
     cancel: "can_cancel_reservation",
     updateRooms: "can_update_reservation_rooms",
+    calendar: "can_read_calendar",
   },
   buildings: {
     readOne: "can_read_building",
