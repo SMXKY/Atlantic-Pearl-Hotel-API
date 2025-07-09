@@ -115,12 +115,14 @@ roomTypeSchema.methods.mutate = async function () {
   const obj = this.toObject();
 
   const rooms = await RoomModel.find({ type: this._id, status: "free" });
-  const images = await RoomMedia.find({ roomType: this._id });
+  const allRooms = await RoomModel.find({ type: this._id });
+  const images = (await RoomMedia.find({ roomType: this._id }))[0];
 
   return {
     ...obj,
-    numberOfRooms: rooms.length,
-    images,
+    numberOfFreeRooms: rooms.length,
+    numberOfRooms: allRooms.length,
+    image: images,
     rooms,
   };
 };
