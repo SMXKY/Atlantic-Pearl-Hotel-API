@@ -6,6 +6,37 @@ import { allPermissions } from "../types/Permissions.type";
 
 export const roomTypeBedTypeRouter = express.Router();
 
+roomTypeBedTypeRouter
+  .route("/")
+  .post(
+    authControllers.protect,
+    authControllers.restrictTo(allPermissions.roomTypeBedTypes.create),
+    roomTypeBedTypeControllers.createRoomTypeBedType
+  )
+  .get(
+    authControllers.protect,
+    authControllers.restrictTo(allPermissions.roomTypeBedTypes.readAll),
+    roomTypeBedTypeControllers.readAllRoomTypeBedTypes
+  );
+
+roomTypeBedTypeRouter
+  .route("/:id")
+  .get(
+    authControllers.protect,
+    authControllers.restrictTo(allPermissions.roomTypeBedTypes.readOne),
+    roomTypeBedTypeControllers.readOneRoomTypeBedType
+  )
+  .patch(
+    authControllers.protect,
+    authControllers.restrictTo(allPermissions.roomTypeBedTypes.update),
+    roomTypeBedTypeControllers.updateRoomTypeBedType
+  )
+  .delete(
+    authControllers.protect,
+    authControllers.restrictTo(allPermissions.roomTypeBedTypes.delete),
+    roomTypeBedTypeControllers.deleteRoomTypeBedType
+  );
+
 /**
  * @swagger
  * /api/v1/room-type-bed-types:
@@ -169,34 +200,3 @@ export const roomTypeBedTypeRouter = express.Router();
  *           type: integer
  *           example: 0
  */
-
-roomTypeBedTypeRouter
-  .route("/")
-  .post(
-    // authControllers.protect,
-    // authControllers.restrictTo(allPermissions.roomTypeBedTypes.create),
-    roomTypeBedTypeControllers.createRoomTypeBedType
-  )
-  .get(
-    authControllers.protect,
-    authControllers.restrictTo(allPermissions.roomTypeBedTypes.readAll),
-    roomTypeBedTypeControllers.readAllRoomTypeBedTypes
-  );
-
-roomTypeBedTypeRouter
-  .route("/:id")
-  .get(
-    authControllers.protect,
-    authControllers.restrictTo(allPermissions.roomTypeBedTypes.readOne),
-    roomTypeBedTypeControllers.readOneRoomTypeBedType
-  )
-  .patch(
-    authControllers.protect,
-    authControllers.restrictTo(allPermissions.roomTypeBedTypes.update),
-    roomTypeBedTypeControllers.updateRoomTypeBedType
-  )
-  .delete(
-    authControllers.protect,
-    authControllers.restrictTo(allPermissions.roomTypeBedTypes.delete),
-    roomTypeBedTypeControllers.deleteRoomTypeBedType
-  );

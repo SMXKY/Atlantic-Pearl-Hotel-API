@@ -6,6 +6,37 @@ import { allPermissions } from "../types/Permissions.type";
 
 export const taxRouter = express.Router();
 
+taxRouter
+  .route("/")
+  .post(
+    authControllers.protect,
+    authControllers.restrictTo(allPermissions.taxes.create),
+    taxControllers.createTax
+  )
+  .get(
+    authControllers.protect,
+    authControllers.restrictTo(allPermissions.taxes.readAll),
+    taxControllers.readAllTaxes
+  );
+
+taxRouter
+  .route("/:id")
+  .get(
+    authControllers.protect,
+    authControllers.restrictTo(allPermissions.taxes.readOne),
+    taxControllers.readOneTax
+  )
+  .patch(
+    authControllers.protect,
+    authControllers.restrictTo(allPermissions.taxes.update),
+    taxControllers.updateTax
+  )
+  .delete(
+    authControllers.protect,
+    authControllers.restrictTo(allPermissions.taxes.delete),
+    taxControllers.deleteTax
+  );
+
 /**
  * @swagger
  * /api/v1/taxes:
@@ -166,34 +197,3 @@ export const taxRouter = express.Router();
  *       404:
  *         description: Tax not found
  */
-
-taxRouter
-  .route("/")
-  .post(
-    // authControllers.protect,
-    // authControllers.restrictTo(allPermissions.taxes.create),
-    taxControllers.createTax
-  )
-  .get(
-    authControllers.protect,
-    authControllers.restrictTo(allPermissions.taxes.readAll),
-    taxControllers.readAllTaxes
-  );
-
-taxRouter
-  .route("/:id")
-  .get(
-    authControllers.protect,
-    authControllers.restrictTo(allPermissions.taxes.readOne),
-    taxControllers.readOneTax
-  )
-  .patch(
-    authControllers.protect,
-    authControllers.restrictTo(allPermissions.taxes.update),
-    taxControllers.updateTax
-  )
-  .delete(
-    authControllers.protect,
-    authControllers.restrictTo(allPermissions.taxes.delete),
-    taxControllers.deleteTax
-  );

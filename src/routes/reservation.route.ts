@@ -8,6 +8,85 @@ import { manualReservationControllers } from "../controllers/manualReservation.c
 
 export const reservationRouter = express.Router();
 
+reservationRouter
+  .route("/")
+  .post(
+    // authControllers.protect,
+    // authControllers.restrictTo(allPermissions.reservations.create),
+    validateReservationItem,
+    reservationControllers.createReservation
+  )
+  .get(
+    authControllers.protect,
+    authControllers.restrictTo(allPermissions.reservations.readAll),
+    reservationControllers.readAllReservations
+  );
+
+reservationRouter
+  .route("/deposit-redirect")
+  .get(reservationControllers.depositPaymentRedirect);
+
+reservationRouter
+  .route("/calendar")
+  .get(
+    authControllers.protect,
+    authControllers.restrictTo(allPermissions.reservations.calendar),
+    reservationControllers.reservationCalendar
+  );
+
+reservationRouter
+  .route("/manual")
+  .post(
+    authControllers.protect,
+    authControllers.restrictTo(
+      allPermissions.reservations.createManualReservation
+    ),
+    manualReservationControllers.createManualReservation
+  );
+
+reservationRouter
+  .route("/manual/pay")
+  .patch(
+    authControllers.protect,
+    authControllers.restrictTo(
+      allPermissions.reservations.updateManualReservationPay
+    ),
+    manualReservationControllers.payForReservation
+  );
+
+reservationRouter
+  .route("/cancel/:id")
+  .patch(
+    authControllers.protect,
+    authControllers.restrictTo(allPermissions.reservations.cancel),
+    reservationControllers.cancelReservation
+  );
+reservationRouter
+  .route("/update-rooms/:id")
+  .patch(
+    authControllers.protect,
+    authControllers.restrictTo(allPermissions.reservations.updateRooms),
+    reservationControllers.updatingGuestRooms
+  );
+
+reservationRouter
+  .route("/:id")
+  .get(
+    authControllers.protect,
+    authControllers.restrictTo(allPermissions.reservations.readOne),
+    reservationControllers.readOneReservation
+  )
+  .patch(
+    authControllers.protect,
+    authControllers.restrictTo(allPermissions.reservations.update),
+    reservationControllers.updateReservation
+  )
+  .delete(
+    authControllers.protect,
+    authControllers.restrictTo(allPermissions.reservations.delete),
+    reservationControllers.deleteReservation
+  );
+
 /**
  * @swagger
  * /api/v1/reservations:
@@ -504,74 +583,3 @@ export const reservationRouter = express.Router();
  *       500:
  *         description: Server error
  */
-
-reservationRouter
-  .route("/")
-  .post(
-    // authControllers.protect,
-    // authControllers.restrictTo(allPermissions.reservations.create),
-    validateReservationItem,
-    reservationControllers.createReservation
-  )
-  .get(
-    authControllers.protect,
-    authControllers.restrictTo(allPermissions.reservations.readAll),
-    reservationControllers.readAllReservations
-  );
-
-reservationRouter
-  .route("/deposit-redirect")
-  .get(reservationControllers.depositPaymentRedirect);
-
-reservationRouter.route("/calendar").get(
-  // authControllers.protect,
-  // authControllers.restrictTo(allPermissions.reservations.calendar),
-  reservationControllers.reservationCalendar
-);
-
-reservationRouter.route("/manual").post(
-  // authControllers.protect,
-  // authControllers.restrictTo(
-  //   allPermissions.reservations.createManualReservation
-  // ),
-  manualReservationControllers.createManualReservation
-);
-
-reservationRouter.route("/manual/pay").patch(
-  // authControllers.protect,
-  // authControllers.restrictTo(
-  //   allPermissions.reservations.updateManualReservationPay
-  // ),
-  manualReservationControllers.payForReservation
-);
-
-reservationRouter
-  .route("/cancel/:id")
-  .patch(
-    authControllers.protect,
-    authControllers.restrictTo(allPermissions.reservations.cancel),
-    reservationControllers.cancelReservation
-  );
-reservationRouter.route("/update-rooms/:id").patch(
-  // authControllers.protect,
-  // authControllers.restrictTo(allPermissions.reservations.updateRooms),
-  reservationControllers.updatingGuestRooms
-);
-
-reservationRouter
-  .route("/:id")
-  .get(
-    // authControllers.protect,
-    // authControllers.restrictTo(allPermissions.reservations.readOne),
-    reservationControllers.readOneReservation
-  )
-  .patch(
-    // authControllers.protect,
-    // authControllers.restrictTo(allPermissions.reservations.update),
-    reservationControllers.updateReservation
-  )
-  .delete(
-    authControllers.protect,
-    authControllers.restrictTo(allPermissions.reservations.delete),
-    reservationControllers.deleteReservation
-  );

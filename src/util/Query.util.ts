@@ -8,12 +8,17 @@ export class Query {
   }
 
   public filter() {
-    const excludedFields = ["fields", "sort", "page", "limit"];
-    excludedFields.forEach((key) => delete this.queryObj[key]);
+    let obj = { ...this.queryObj };
 
-    // Advanced filtering: convert to MongoDB operators
-    let queryStr = JSON.stringify(this.queryObj);
-    queryStr = queryStr.replace(/\b(gt|gte|lt|lte)\b/g, (match) => `$${match}`);
+    const excludedFields = ["fields", "sort", "page", "limit"];
+
+    excludedFields.forEach((key) => delete obj[key]);
+
+    let queryStr = JSON.stringify(obj);
+    queryStr = queryStr.replace(
+      /\b(gt|gte|lt|lte|in|ne|nin)\b/g,
+      (match) => `$${match}`
+    );
 
     const mongoFilter = JSON.parse(queryStr);
     this.mongooseQuery = this.mongooseQuery.find(mongoFilter);
@@ -21,27 +26,28 @@ export class Query {
     return this;
   }
 
-  // Optional chaining methods for sort, pagination, etc.
-  public sort() {
-    if (this.queryObj["sort"]) {
-      const sortBy = (this.queryObj["sort"] as string).split(",").join(" ");
-      this.mongooseQuery = this.mongooseQuery.sort(sortBy);
-    }
+  public sort(defaultSort: string = "-createdAt") {
+    const sortBy = this.queryObj["sort"]
+      ? (this.queryObj["sort"] as string).split(",").join(" ")
+      : defaultSort;
+
+    this.mongooseQuery = this.mongooseQuery.sort(sortBy);
     return this;
   }
 
   public limitFields() {
+    // console.log(this.queryObj);
     if (this.queryObj["fields"]) {
       const fields = (this.queryObj["fields"] as string).split(",").join(" ");
+      // console.log(fields);
       this.mongooseQuery = this.mongooseQuery.select(fields);
     }
     return this;
   }
 
   public paginate(defaultPage: number, defaultLimit: number) {
-    const page: number = Number(this.queryObj["page"] as string) || defaultPage;
-    const limit: number =
-      Number(this.queryObj["limit"] as string) || defaultLimit;
+    const page: number = parseInt(this.queryObj["page"]) || defaultPage;
+    const limit: number = parseInt(this.queryObj["limit"]) || defaultLimit;
     const skip = (page - 1) * limit;
 
     this.mongooseQuery = this.mongooseQuery.skip(skip).limit(limit);

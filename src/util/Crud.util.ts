@@ -72,33 +72,24 @@ export class CRUD {
     req: Request,
     defaultPage: number,
     defaultLimit: number,
-    populate: string[]
-  ) {
-    let query = new Query(req.query, this.model.find())
+    populate: string[],
+    defaultSort: string = "-createdAt"
+  ): Promise<void> {
+    // console.log("here");
+    let queryBuilder = new Query(req.query, this.model.find())
       .filter()
-      .sort()
+      .sort(defaultSort)
       .limitFields()
-      .paginate(defaultPage, defaultLimit)
-      .getQuery();
+      .paginate(defaultPage, defaultLimit);
+
+    let finalQuery = queryBuilder.getQuery();
 
     if (populate && Array.isArray(populate)) {
       populate.forEach((field) => {
-        query = query.populate(field);
+        finalQuery = finalQuery.populate(field, { strictPopulate: false });
       });
     }
-
-    const data = await query;
-
-    // await logUserActivity(
-    //   req,
-    //   res.locals.user._id,
-    //   `Read all documents in ${this.model.collection.collectionName}`,
-    //   this.model.collection.collectionName,
-    //   undefined,
-    //   undefined,
-    //   undefined
-    // );
-
+    const data = await finalQuery;
     appResponder(StatusCodes.OK, data, res);
   }
 

@@ -6,6 +6,37 @@ import { allPermissions } from "../types/Permissions.type";
 
 export const rolePermissionRouter = express.Router();
 
+rolePermissionRouter
+  .route("/")
+  .post(
+    authControllers.protect,
+    authControllers.restrictTo(allPermissions.rolePermissions.create),
+    rolePermissionControllers.createRolePermission
+  )
+  .get(
+    authControllers.protect,
+    authControllers.restrictTo(allPermissions.rolePermissions.readAll),
+    rolePermissionControllers.readAllRolePermissions
+  );
+
+rolePermissionRouter
+  .route("/:id")
+  .get(
+    authControllers.protect,
+    authControllers.restrictTo(allPermissions.rolePermissions.readOne),
+    rolePermissionControllers.readOneRolePermission
+  )
+  .patch(
+    authControllers.protect,
+    authControllers.restrictTo(allPermissions.rolePermissions.update),
+    rolePermissionControllers.updateRolePermission
+  )
+  .delete(
+    authControllers.protect,
+    authControllers.restrictTo(allPermissions.rolePermissions.delete),
+    rolePermissionControllers.deleteRolePermission
+  );
+
 /**
  * @swagger
  * /api/v1/role-permissions:
@@ -209,34 +240,3 @@ export const rolePermissionRouter = express.Router();
  *                       type: string
  *                       example: resource deleted successfully
  */
-
-rolePermissionRouter
-  .route("/")
-  .post(
-    authControllers.protect,
-    authControllers.restrictTo(allPermissions.rolePermissions.create),
-    rolePermissionControllers.createRolePermission
-  )
-  .get(
-    authControllers.protect,
-    authControllers.restrictTo(allPermissions.rolePermissions.readAll),
-    rolePermissionControllers.readAllRolePermissions
-  );
-
-rolePermissionRouter
-  .route("/:id")
-  .get(
-    authControllers.protect,
-    authControllers.restrictTo(allPermissions.rolePermissions.readOne),
-    rolePermissionControllers.readOneRolePermission
-  )
-  .patch(
-    authControllers.protect,
-    authControllers.restrictTo(allPermissions.rolePermissions.update),
-    rolePermissionControllers.updateRolePermission
-  )
-  .delete(
-    authControllers.protect,
-    authControllers.restrictTo(allPermissions.rolePermissions.delete),
-    rolePermissionControllers.deleteRolePermission
-  );

@@ -6,6 +6,37 @@ import { allPermissions } from "../types/Permissions.type";
 
 export const roleOverideRouter = express.Router();
 
+roleOverideRouter
+  .route("/")
+  .post(
+    authControllers.protect,
+    authControllers.restrictTo(allPermissions.roleOverides.create),
+    roleOverideControllers.createRoleOveride
+  )
+  .get(
+    authControllers.protect,
+    authControllers.restrictTo(allPermissions.roleOverides.readAll),
+    roleOverideControllers.readAllRoleOverides
+  );
+
+roleOverideRouter
+  .route("/:id")
+  .get(
+    authControllers.protect,
+    authControllers.restrictTo(allPermissions.roleOverides.readOne),
+    roleOverideControllers.readOneRoleOveride
+  )
+  .patch(
+    authControllers.protect,
+    authControllers.restrictTo(allPermissions.roleOverides.update),
+    roleOverideControllers.updateRoleOveride
+  )
+  .delete(
+    authControllers.protect,
+    authControllers.restrictTo(allPermissions.roleOverides.delete),
+    roleOverideControllers.deleteRoleOveride
+  );
+
 /**
  * @swagger
  * /api/v1/role-overides:
@@ -283,34 +314,3 @@ export const roleOverideRouter = express.Router();
  *                       type: string
  *                       example: resource deleted successfully
  */
-
-roleOverideRouter
-  .route("/")
-  .post(
-    authControllers.protect,
-    authControllers.restrictTo(allPermissions.roleOverides.create),
-    roleOverideControllers.createRoleOveride
-  )
-  .get(
-    authControllers.protect,
-    authControllers.restrictTo(allPermissions.roleOverides.readAll),
-    roleOverideControllers.readAllRoleOverides
-  );
-
-roleOverideRouter
-  .route("/:id")
-  .get(
-    authControllers.protect,
-    authControllers.restrictTo(allPermissions.roleOverides.readOne),
-    roleOverideControllers.readOneRoleOveride
-  )
-  .patch(
-    authControllers.protect,
-    authControllers.restrictTo(allPermissions.roleOverides.update),
-    roleOverideControllers.updateRoleOveride
-  )
-  .delete(
-    authControllers.protect,
-    authControllers.restrictTo(allPermissions.roleOverides.delete),
-    roleOverideControllers.deleteRoleOveride
-  );

@@ -6,6 +6,37 @@ import { allPermissions } from "../types/Permissions.type";
 
 export const roleRouter = express.Router();
 
+roleRouter
+  .route("/")
+  .post(
+    authControllers.protect,
+    authControllers.restrictTo(allPermissions.roles.create),
+    roleControllers.createRole
+  )
+  .get(
+    authControllers.protect,
+    authControllers.restrictTo(allPermissions.roles.readAll),
+    roleControllers.readAllRoles
+  );
+
+roleRouter
+  .route("/:id")
+  .get(
+    authControllers.protect,
+    authControllers.restrictTo(allPermissions.roles.readOne),
+    roleControllers.readOneRole
+  )
+  .patch(
+    authControllers.protect,
+    authControllers.restrictTo(allPermissions.roles.update),
+    roleControllers.updateRole
+  )
+  .delete(
+    authControllers.protect,
+    authControllers.restrictTo(allPermissions.roles.delete),
+    roleControllers.deleteRole
+  );
+
 /**
  * @swagger
  * /api/v1/roles:
@@ -207,34 +238,3 @@ export const roleRouter = express.Router();
  *                       type: string
  *                       example: resource deleted successfully
  */
-
-roleRouter
-  .route("/")
-  .post(
-    authControllers.protect,
-    authControllers.restrictTo(allPermissions.roles.create),
-    roleControllers.createRole
-  )
-  .get(
-    authControllers.protect,
-    authControllers.restrictTo(allPermissions.roles.readAll),
-    roleControllers.readAllRoles
-  );
-
-roleRouter
-  .route("/:id")
-  .get(
-    authControllers.protect,
-    authControllers.restrictTo(allPermissions.roles.readOne),
-    roleControllers.readOneRole
-  )
-  .patch(
-    authControllers.protect,
-    authControllers.restrictTo(allPermissions.roles.update),
-    roleControllers.updateRole
-  )
-  .delete(
-    authControllers.protect,
-    authControllers.restrictTo(allPermissions.roles.delete),
-    roleControllers.deleteRole
-  );

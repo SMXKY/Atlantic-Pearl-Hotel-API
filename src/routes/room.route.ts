@@ -9,6 +9,39 @@ import multer from "multer";
 export const roomRouter = express.Router();
 const upload = multer({ dest: "../upload" });
 
+roomRouter
+  .route("/")
+  .post(
+    authControllers.protect,
+    authControllers.restrictTo(allPermissions.rooms.create),
+    upload.array("img", 1),
+    handleFilesMiddleware,
+    roomControllers.createRoom
+  )
+  .get(
+    authControllers.protect,
+    authControllers.restrictTo(allPermissions.rooms.readAll),
+    roomControllers.readAllRooms
+  );
+
+roomRouter
+  .route("/:id")
+  .get(
+    authControllers.protect,
+    authControllers.restrictTo(allPermissions.rooms.readOne),
+    roomControllers.readOneRoom
+  )
+  .patch(
+    authControllers.protect,
+    authControllers.restrictTo(allPermissions.rooms.update),
+    roomControllers.updateRoom
+  )
+  .delete(
+    authControllers.protect,
+    authControllers.restrictTo(allPermissions.rooms.delete),
+    roomControllers.deleteRoom
+  );
+
 /**
  * @swagger
  * /api/v1/rooms:
@@ -308,35 +341,56 @@ const upload = multer({ dest: "../upload" });
  *           example: "30 sqmtrs"
  */
 
-roomRouter
-  .route("/")
-  .post(
-    authControllers.protect,
-    authControllers.restrictTo(allPermissions.rooms.create),
-    upload.array("img", 1),
-    handleFilesMiddleware,
-    roomControllers.createRoom
-  )
-  .get(
-    authControllers.protect,
-    authControllers.restrictTo(allPermissions.rooms.readAll),
-    roomControllers.readAllRooms
-  );
-
-roomRouter
-  .route("/:id")
-  .get(
-    authControllers.protect,
-    authControllers.restrictTo(allPermissions.rooms.readOne),
-    roomControllers.readOneRoom
-  )
-  .patch(
-    authControllers.protect,
-    authControllers.restrictTo(allPermissions.rooms.update),
-    roomControllers.updateRoom
-  )
-  .delete(
-    authControllers.protect,
-    authControllers.restrictTo(allPermissions.rooms.delete),
-    roomControllers.deleteRoom
-  );
+/**
+ * @openapi
+ * /api/v1/rooms:
+ *   get:
+ *     summary: Get a list of rooms with advanced query options
+ *     description: |-
+ *       This endpoint supports advanced querying to retrieve room data efficiently.
+ *
+ *       Filtering:
+ *       - Filter by any field using standard query parameters.
+ *         Example: ?status=free&floorNumber=2
+ *       - For advanced filtering, use operators in square brackets:
+ *         Example: ?floorNumber[gte]=2&createdAt[lt]=2025-12-31
+ *         Supported operators: [gt], [gte], [lt], [lte], [in], [ne]
+ *
+ *       Sorting:
+ *       - Use the "sort" query to sort results by fields.
+ *         Example: ?sort=createdAt or ?sort=-floorNumber
+ *         Prefix with "-" for descending order.
+ *
+ *       Pagination:
+ *       - Use "page" and "limit" to paginate results.
+ *         Example: ?page=2&limit=10
+ *
+ *       Field Limiting:
+ *       - Use "fields" to limit the response to specific fields.
+ *         Example: ?fields=number,status,floorNumber
+ *
+ *       Combining:
+ *       - All query options can be combined.
+ *         Example: /api/v1/rooms?status=free&sort=-createdAt&fields=number,status&limit=10&page=1
+ *
+ *       Notes:
+ *       - Dates must be in ISO format (YYYY-MM-DD)
+ *       - If no parameters are provided, the default is: sort by -createdAt, page=1, limit=10
+ *     tags:
+ *       - Rooms
+ *     responses:
+ *       200:
+ *         description: A list of room objects
+ *         content:
+ *           application/json:
+ *             example:
+ *               ok: true
+ *               status: success
+ *               data:
+ *                 - id: "6847fd406656e912d7a76b91"
+ *                   number: "A101"
+ *                   floorNumber: 1
+ *                   status: "free"
+ *                   isSmokingAllowed: false
+ *                   createdAt: "2025-06-10T09:39:12.732Z"
+ */
