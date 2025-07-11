@@ -15,7 +15,6 @@ import { RoleModel } from "../models/Role.model";
 import { GoogleUserPayload } from "../types/googleUserPayload";
 import { getUserPermissions } from "../util/getUserPermissions";
 import crypto from "crypto";
-import { Delete } from "tsoa";
 
 const signToken = (userId: string) => {
   const jwtSecret = process.env.JWT_SECRETE;
@@ -246,6 +245,8 @@ const login = catchAsync(
       );
     }
 
+    // console.log(user);
+
     // Check if account is locked
     if (user.lockUntil && user.lockUntil.getTime() >= Date.now()) {
       const remainingTime = Math.ceil(
@@ -256,6 +257,15 @@ const login = catchAsync(
         new AppError(
           `Your account is locked due to multiple failed login attempts. Please try again in ${remainingTime} minutes.`,
           StatusCodes.FORBIDDEN
+        )
+      );
+    }
+
+    if (!user.password || user.googleId) {
+      return next(
+        new AppError(
+          "Please consider auth with google, this email is assocaited with auth with google within the applciation",
+          StatusCodes.EXPECTATION_FAILED
         )
       );
     }

@@ -42,9 +42,9 @@ createDefualtDcouments().catch((err) => {
 activateUsersCronJob();
 freeRoomsCronJob();
 
-const port: Number = Number(process.env.PORT) || 3000;
+const port: number = Number(process.env.PORT) || 3000;
 
-const server = app.listen(port, () => {
+const server = app.listen(port, "0.0.0.0", () => {
   console.log(`App is up and running on port: ${port}`);
 });
 

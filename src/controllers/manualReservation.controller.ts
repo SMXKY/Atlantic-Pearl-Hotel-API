@@ -63,7 +63,7 @@ const createManualReservation = catchAsync(
       if (reservation?._id) {
         await ReservationModel.findByIdAndDelete(reservation._id);
       }
-      return next(err);
+      throw err;
     }
   }
 );
