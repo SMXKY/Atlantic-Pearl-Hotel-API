@@ -17,8 +17,8 @@ reservationRouter
     reservationControllers.createReservation
   )
   .get(
-    authControllers.protect,
-    authControllers.restrictTo(allPermissions.reservations.readAll),
+    // authControllers.protect,
+    // authControllers.restrictTo(allPermissions.reservations.readAll),
     reservationControllers.readAllReservations
   );
 
@@ -42,15 +42,13 @@ reservationRouter.route("/manual").post(
   manualReservationControllers.createManualReservation
 );
 
-reservationRouter
-  .route("/manual/pay")
-  .patch(
-    authControllers.protect,
-    authControllers.restrictTo(
-      allPermissions.reservations.updateManualReservationPay
-    ),
-    manualReservationControllers.payForReservation
-  );
+reservationRouter.route("/manual/pay").patch(
+  // authControllers.protect,
+  // authControllers.restrictTo(
+  //   allPermissions.reservations.updateManualReservationPay
+  // ),
+  manualReservationControllers.payForReservation
+);
 
 reservationRouter
   .route("/cancel/:id")
@@ -70,8 +68,8 @@ reservationRouter
 reservationRouter
   .route("/:id")
   .get(
-    authControllers.protect,
-    authControllers.restrictTo(allPermissions.reservations.readOne),
+    // authControllers.protect,
+    // authControllers.restrictTo(allPermissions.reservations.readOne),
     reservationControllers.readOneReservation
   )
   .patch(

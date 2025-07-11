@@ -121,17 +121,25 @@ const payForReservation = catchAsync(
     invoice.amountPaid += amount;
     invoice.amountDue = invoice.grandTotal - invoice.amountPaid;
 
+    if (invoice.amountDue < 0) {
+      return next(
+        new AppError("Pay amount execeed due amount.", StatusCodes.BAD_REQUEST)
+      );
+    }
+
     invoice.paymentStatus =
       invoice.amountPaid >= invoice.grandTotal ? "paid" : "partial";
 
     const updatedInvoice = await invoice.save();
+
+    console.log(invoice);
 
     const transaction = await TransactionModel.create({
       transactionType: "bill payment",
       reason: "Payment for reservation",
       amountInCFA: amount,
       status: "success",
-      reservation: invoice.reservation,
+      reservation: invoice.reservation.toString(),
     });
 
     const receipt = await RecieptModel.create({
