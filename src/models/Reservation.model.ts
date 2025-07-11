@@ -305,6 +305,13 @@ reservationSchema.methods.calculateTotalPriceAndTax = async function (
       );
     }
     for (const entry of item.rooms) {
+      if (entry.checkOut.getTime() <= entry.checkIn.getTime()) {
+        throw new AppError(
+          "Item check in date, can not be before or on the same date as the checkout datae",
+          StatusCodes.BAD_REQUEST
+        );
+      }
+
       const nights = Math.round(
         (entry.checkOut.getTime() - entry.checkIn.getTime()) / msInDay
       );
@@ -317,11 +324,13 @@ reservationSchema.methods.calculateTotalPriceAndTax = async function (
   priceAndTax.VAT = priceAndTax.subTotal * (VAT.percentage / 100);
   priceAndTax.totalTaxes = priceAndTax.VAT + priceAndTax.touristTax;
   priceAndTax.totalBill = priceAndTax.subTotal + priceAndTax.totalTaxes;
+
+  console.log(priceAndTax);
   return priceAndTax;
 };
 
 reservationSchema.pre("save", async function (next) {
-  // if (this.bookingSource !== "online") return next();
+  if (this.bookingSource !== "online") return next();
 
   const adminConfiguration = await AdminConfigurationModel.findOne();
 

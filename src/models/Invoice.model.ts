@@ -122,7 +122,7 @@ const InvoiceSchema = new Schema<IInvoice>(
         validator: (url: string) => validator.isURL(url),
         message: "Invalid URL format",
       },
-      required: [true, "Payment link is required."],
+      // required: [true, "Payment link is required."],
     },
     paymentLinkId: {
       type: String,

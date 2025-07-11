@@ -34,6 +34,7 @@ import { bedTypeRouter } from "./routes/bedType.route";
 import { roomTypeBedTypeRouter } from "./routes/roomTypeBedType.route";
 import { roomTypeReviewRouter } from "./routes/roomTypeReview.route";
 import docxRouter from "./util/filterExplantion.util";
+import { invoiceRouter } from "./routes/invoice.routes";
 
 export const app = express();
 
@@ -119,6 +120,7 @@ app.use("/api/v1/bed-types", bedTypeRouter);
 app.use("/api/v1/room-type-bed-types", roomTypeBedTypeRouter);
 app.use("/api/v1/room-type-reveiws", roomTypeReviewRouter);
 app.use("/api/v1/custom-docs", docxRouter);
+app.use("/api/v1/invoices", invoiceRouter);
 
 const swaggerSpec = swaggerJSDoc({
   definition: {

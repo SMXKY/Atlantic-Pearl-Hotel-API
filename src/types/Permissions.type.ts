@@ -184,4 +184,11 @@ export const allPermissions = {
     update: "can_update_room_type_review",
     create: "can_create_room_type_review",
   },
+  invoices: {
+    readOne: "can_read_invoice",
+    readAll: "can_read_all_invoices",
+    delete: "can_delete_invoice",
+    update: "can_update_invoice",
+    create: "can_create_invoice",
+  },
 };

@@ -19,9 +19,22 @@ import { RecieptModel } from "../models/Reciept.model";
 const createManualReservation = catchAsync(
   async (req: Request, res: Response, next: NextFunction) => {
     req.body.status = undefined;
+
+    if (!res.locals.user) {
+      return next(
+        new AppError(
+          "User is not being monitored please check protect controller",
+          StatusCodes.INTERNAL_SERVER_ERROR
+        )
+      );
+    }
+
     req.body.createdBy = res.locals.user._id;
 
     let email = req.body.guestEmail;
+    req.body.depositInCFA = 0;
+    req.body.bookingSource = "onsite";
+    req.body.paymentMethod = "Cash Payment";
 
     const guest = await GuestModel.findById(req.body.guest).populate("user");
 

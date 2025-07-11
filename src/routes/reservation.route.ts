@@ -34,15 +34,13 @@ reservationRouter
     reservationControllers.reservationCalendar
   );
 
-reservationRouter
-  .route("/manual")
-  .post(
-    authControllers.protect,
-    authControllers.restrictTo(
-      allPermissions.reservations.createManualReservation
-    ),
-    manualReservationControllers.createManualReservation
-  );
+reservationRouter.route("/manual").post(
+  authControllers.protect,
+  // authControllers.restrictTo(
+  //   allPermissions.reservations.createManualReservation
+  // ),
+  manualReservationControllers.createManualReservation
+);
 
 reservationRouter
   .route("/manual/pay")
