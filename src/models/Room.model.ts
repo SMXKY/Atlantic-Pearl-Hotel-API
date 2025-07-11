@@ -210,6 +210,17 @@ roomSchema.pre(/^find/, function (this: mongoose.Query<any, IRoom>, next) {
   next();
 });
 
+roomSchema.pre(/^find/, function (this: mongoose.Query<any, IRoom>, next) {
+  this.where({ isActive: { $ne: false } });
+
+  this.populate({
+    path: "type",
+    model: "roomtypes",
+  });
+
+  next();
+});
+
 const applySupportDocTransformation = (docOrDocs: any) => {
   const baseUrl = process.env.FTP_BASE_URL;
   if (!baseUrl) {
