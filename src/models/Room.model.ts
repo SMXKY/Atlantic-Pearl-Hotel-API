@@ -24,7 +24,6 @@ export interface IRoom extends mongoose.Document {
   state: "clean" | "dirty";
   basePriceInCFA: number;
   veiwType?: string;
-  isSmokingAllowed?: boolean;
   isActive?: boolean;
   description: string;
   sizeInSquareMeters?: number;
@@ -86,10 +85,6 @@ const roomSchema = new mongoose.Schema(
     veiwType: {
       type: String,
       default: "Ocean view",
-    },
-    isSmokingAllowed: {
-      type: Boolean,
-      default: false,
     },
     isActive: {
       type: Boolean,

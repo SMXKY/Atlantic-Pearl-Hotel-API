@@ -15,6 +15,7 @@ export interface IRoomType {
   maxNumberOfAdultGuests: number;
   createdAt?: Date;
   updatedAt?: Date;
+  isSmokingAllowed?: boolean;
 }
 
 // Optional: define Room and RoomMedia types properly
@@ -70,6 +71,10 @@ const roomTypeSchema = new mongoose.Schema<IRoomTypeDocument>(
     maxNumberOfAdultGuests: {
       type: Number,
       required: [true, "Maximum number of adult guests is required."],
+    },
+    isSmokingAllowed: {
+      type: Boolean,
+      default: false,
     },
   },
   {
