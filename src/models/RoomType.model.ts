@@ -132,6 +132,13 @@ roomTypeSchema.methods.mutate = async function () {
   };
 };
 
+roomTypeSchema.virtual("rooms", {
+  ref: "rooms", // The model to use
+  localField: "_id", // Find rooms where 'type' == this _id
+  foreignField: "type", // 'type' field in Room refers to RoomType _id
+  justOne: false, // Return array
+});
+
 export const RoomTypeModel = mongoose.model<IRoomTypeDocument>(
   "roomtypes",
   roomTypeSchema

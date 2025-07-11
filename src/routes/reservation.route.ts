@@ -11,8 +11,8 @@ export const reservationRouter = express.Router();
 reservationRouter
   .route("/")
   .post(
-    // authControllers.protect,
-    // authControllers.restrictTo(allPermissions.reservations.create),
+    authControllers.protect,
+    authControllers.restrictTo(allPermissions.reservations.create),
     validateReservationItem,
     reservationControllers.createReservation
   )
@@ -26,29 +26,31 @@ reservationRouter
   .route("/deposit-redirect")
   .get(reservationControllers.depositPaymentRedirect);
 
+reservationRouter.route("/calendar").get(
+  // authControllers.protect,
+  // authControllers.restrictTo(allPermissions.reservations.calendar),
+  reservationControllers.reservationCalendar
+);
+
 reservationRouter
-  .route("/calendar")
-  .get(
+  .route("/manual")
+  .post(
     authControllers.protect,
-    authControllers.restrictTo(allPermissions.reservations.calendar),
-    reservationControllers.reservationCalendar
+    authControllers.restrictTo(
+      allPermissions.reservations.createManualReservation
+    ),
+    manualReservationControllers.createManualReservation
   );
 
-reservationRouter.route("/manual").post(
-  authControllers.protect,
-  // authControllers.restrictTo(
-  //   allPermissions.reservations.createManualReservation
-  // ),
-  manualReservationControllers.createManualReservation
-);
-
-reservationRouter.route("/manual/pay").patch(
-  // authControllers.protect,
-  // authControllers.restrictTo(
-  //   allPermissions.reservations.updateManualReservationPay
-  // ),
-  manualReservationControllers.payForReservation
-);
+reservationRouter
+  .route("/manual/pay")
+  .patch(
+    authControllers.protect,
+    authControllers.restrictTo(
+      allPermissions.reservations.updateManualReservationPay
+    ),
+    manualReservationControllers.payForReservation
+  );
 
 reservationRouter
   .route("/cancel/:id")
@@ -68,8 +70,8 @@ reservationRouter
 reservationRouter
   .route("/:id")
   .get(
-    // authControllers.protect,
-    // authControllers.restrictTo(allPermissions.reservations.readOne),
+    authControllers.protect,
+    authControllers.restrictTo(allPermissions.reservations.readOne),
     reservationControllers.readOneReservation
   )
   .patch(

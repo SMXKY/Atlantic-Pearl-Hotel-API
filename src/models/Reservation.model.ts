@@ -420,6 +420,9 @@ reservationSchema.methods.mutateForCalendar = async function () {
 
   for (const item of reservation.items) {
     const rate = await RateModel.findById(item.rate);
+    const roomType = await RoomTypeModel.findById(item.roomType).populate(
+      "rooms"
+    );
 
     for (const roomItem of item.rooms) {
       const { items, ...mutant } = reservation;
@@ -434,6 +437,7 @@ reservationSchema.methods.mutateForCalendar = async function () {
       newItem.meal = rate?.mealPlan;
       newItem.rate = rate?.totalPriceInCFA;
       newItem.image = roomObj?.imageUrl;
+      newItem.roomType = roomType;
 
       switch (newItem.meal) {
         case "RO":
@@ -459,6 +463,27 @@ reservationSchema.methods.mutateForCalendar = async function () {
 
   return unwindedItems;
 };
+
+async function autoPopulateReservation(docOrDocs: any) {
+  if (!docOrDocs) return;
+
+  const docs = Array.isArray(docOrDocs) ? docOrDocs : [docOrDocs];
+
+  await ReservationModel.populate(docs, [
+    { path: "guest" },
+    { path: "createdby" },
+    { path: "discount" },
+    { path: "items.roomType" },
+    { path: "items.rate" },
+    { path: "items.rooms.room" },
+  ]);
+}
+
+reservationSchema.post("find", autoPopulateReservation);
+reservationSchema.post("findOne", autoPopulateReservation);
+reservationSchema.post("findOneAndUpdate", autoPopulateReservation);
+reservationSchema.post("findOneAndReplace", autoPopulateReservation);
+reservationSchema.post("findOneAndDelete", autoPopulateReservation);
 
 export const ReservationModel = mongoose.model<IReservation>(
   "reservations",
