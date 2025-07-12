@@ -84,10 +84,9 @@ const readAllReservations = catchAsync(
   }
 );
 
-//use it for updating reservation
 const updateReservation = catchAsync(
   async (req: Request, res: Response, next: NextFunction) => {
-    req.body.status = undefined;
+    // req.body.status = undefined;
     await CRUDReservation.update(req.params.id, res, req);
   }
 );
