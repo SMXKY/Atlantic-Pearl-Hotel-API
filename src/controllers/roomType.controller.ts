@@ -70,7 +70,7 @@ const readOneRoomType = catchAsync(
   async (req: Request, res: Response, next: NextFunction) => {
     const id = req.params.id;
 
-    const roomType = await RoomTypeModel.findById(id);
+    const roomType = await RoomTypeModel.findById(id).populate("rates");
     if (!roomType) {
       return next(
         new AppError("No such room type with this id", StatusCodes.BAD_REQUEST)

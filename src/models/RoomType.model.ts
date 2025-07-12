@@ -122,6 +122,7 @@ roomTypeSchema.methods.mutate = async function () {
   const rooms = await RoomModel.find({ type: this._id, status: "free" });
   const allRooms = await RoomModel.find({ type: this._id });
   const images = (await RoomMedia.find({ roomType: this._id }))[0];
+  const rates = await RateModel.find({ roomType: this._id });
 
   return {
     ...obj,
@@ -129,6 +130,7 @@ roomTypeSchema.methods.mutate = async function () {
     numberOfRooms: allRooms.length,
     image: images,
     rooms,
+    rates,
   };
 };
 
@@ -136,6 +138,13 @@ roomTypeSchema.virtual("rooms", {
   ref: "rooms", // The model to use
   localField: "_id", // Find rooms where 'type' == this _id
   foreignField: "type", // 'type' field in Room refers to RoomType _id
+  justOne: false, // Return array
+});
+
+roomTypeSchema.virtual("rates", {
+  ref: "rates", // The model to use
+  localField: "_id", // Find rooms where 'type' == this _id
+  foreignField: "roomType", // 'type' field in Room refers to RoomType _id
   justOne: false, // Return array
 });
 
