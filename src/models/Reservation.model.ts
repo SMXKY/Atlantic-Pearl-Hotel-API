@@ -116,15 +116,9 @@ const reservationSchema = new mongoose.Schema<IReservation>(
       immutable: true,
       validate: {
         validator: function (value: Date) {
-          if (!this.checkInDate) return false; // If checkInDate is not set, this is invalid
-
-          // Must be at least one full day after check-in
-          const oneDayLater = new Date(this.checkInDate);
-          oneDayLater.setDate(oneDayLater.getDate() + 1);
-
-          return value >= oneDayLater;
+          return value > new Date();
         },
-        message: "Check-out date must be at least one day after check-in date.",
+        message: "Date must be in the future.",
       },
     },
     numberOfGuest: { type: Number, default: 1, required: true, min: 1 },
