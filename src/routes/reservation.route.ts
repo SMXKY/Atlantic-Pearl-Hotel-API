@@ -39,6 +39,7 @@ reservationRouter
     authControllers.restrictTo(
       allPermissions.reservations.createManualReservation
     ),
+    validateReservationItem,
     manualReservationControllers.createManualReservation
   );
 
@@ -49,7 +50,6 @@ reservationRouter
     authControllers.restrictTo(
       allPermissions.reservations.updateManualReservationPay
     ),
-    validateReservationItem,
     manualReservationControllers.payForReservation
   );
 
