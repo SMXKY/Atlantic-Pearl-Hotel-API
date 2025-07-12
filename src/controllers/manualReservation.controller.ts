@@ -35,6 +35,7 @@ const createManualReservation = catchAsync(
     req.body.depositInCFA = 0;
     req.body.bookingSource = "onsite";
     req.body.paymentMethod = "Cash Payment";
+    req.body.status = "confirmed";
 
     const guest = await GuestModel.findById(req.body.guest).populate("user");
 
