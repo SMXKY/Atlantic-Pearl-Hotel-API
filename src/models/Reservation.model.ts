@@ -479,34 +479,6 @@ reservationSchema.post("findOneAndUpdate", autoPopulateReservation);
 reservationSchema.post("findOneAndReplace", autoPopulateReservation);
 reservationSchema.post("findOneAndDelete", autoPopulateReservation);
 
-reservationSchema.pre("save", async function (next) {
-  // Only proceed if 'status' was modified
-  if (!this.isModified("status")) return next();
-
-  // Flatten all room IDs from items.rooms
-  const roomIds = this.items
-    .flatMap((item) => item.rooms)
-    .map((roomEntry) => roomEntry.room)
-    .filter(Boolean);
-
-  if (this.status === "checked in") {
-    // Set all these rooms as occupied
-    await RoomModel.updateMany(
-      { _id: { $in: roomIds } },
-      { status: "occupied" }
-    );
-  } else {
-    // Status changed from checked in to something else,
-    // revert rooms back to free (or whatever default you want)
-    await RoomModel.updateMany(
-      { _id: { $in: roomIds }, status: "occupied" },
-      { status: "free" }
-    );
-  }
-
-  next();
-});
-
 export const ReservationModel = mongoose.model<IReservation>(
   "reservations",
   reservationSchema
