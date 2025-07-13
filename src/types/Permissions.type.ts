@@ -191,4 +191,7 @@ export const allPermissions = {
     update: "can_update_invoice",
     create: "can_create_invoice",
   },
+  content: {
+    adminDashboard: "can_read_admin_dashboard",
+  },
 };
