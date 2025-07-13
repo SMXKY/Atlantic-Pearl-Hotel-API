@@ -9,16 +9,19 @@ import * as mongoose from "mongoose";
 export const validateReservationItem = catchAsync(
   async (req: Request, res: Response, next: NextFunction) => {
     const items = req.body.items;
-
     if (!Array.isArray(items) || items.length === 0) {
       return next(
         new AppError("No reservation items provided.", StatusCodes.BAD_REQUEST)
       );
     }
 
+    // Determine the ID of the reservation being updated:
+    // PATCH /reservations/:id  →  req.params.id
+    // fallback to req.body._id if you embed it there
+    const currentResId = req.params.id || req.body._id;
+
     for (const item of items) {
       const { rooms } = item;
-
       if (!Array.isArray(rooms) || rooms.length === 0) {
         return next(
           new AppError(
@@ -30,7 +33,6 @@ export const validateReservationItem = catchAsync(
 
       for (const entry of rooms) {
         const { room: roomId, checkIn, checkOut } = entry;
-
         if (!roomId || !checkIn || !checkOut) {
           return next(
             new AppError(
@@ -51,9 +53,8 @@ export const validateReservationItem = catchAsync(
           );
         }
 
-        // 1. Check room exists and is free
+        // 1. Ensure room exists and is free
         const room = await RoomModel.findById(roomId);
-
         if (!room) {
           return next(
             new AppError(
@@ -62,7 +63,6 @@ export const validateReservationItem = catchAsync(
             )
           );
         }
-
         if (room.status !== "free") {
           return next(
             new AppError(
@@ -72,15 +72,19 @@ export const validateReservationItem = catchAsync(
           );
         }
 
-        // 2. Find confirmed reservations that have this room reserved
+        // 2. Find confirmed reservations that include this room
         const conflictingReservations = await ReservationModel.find({
           status: "confirmed",
           "items.rooms.room": room._id,
         });
 
-        // 3. Check for date conflicts for this room in each reservation's items
+        // 3. For each, check for date overlap—skip the current reservation itself
         for (const reservation of conflictingReservations) {
-          if (reservation._id === req.body._id) {
+          // skip if this is the one being updated
+          if (
+            currentResId &&
+            reservation._id.toString() === currentResId.toString()
+          ) {
             continue;
           }
 
@@ -96,8 +100,7 @@ export const validateReservationItem = catchAsync(
               const existingCheckIn = new Date(existingEntry.checkIn);
               const existingCheckOut = new Date(existingEntry.checkOut);
 
-              // Date overlap check:
-              // requested checkIn < existing checkOut AND requested checkOut > existing checkIn
+              // overlap: requestStart < existingEnd && requestEnd > existingStart
               if (
                 checkInDate < existingCheckOut &&
                 checkOutDate > existingCheckIn
