@@ -80,6 +80,10 @@ export const validateReservationItem = catchAsync(
 
         // 3. Check for date conflicts for this room in each reservation's items
         for (const reservation of conflictingReservations) {
+          if (reservation._id === req.body._id) {
+            continue;
+          }
+
           for (const existingItem of reservation.items) {
             for (const existingEntry of existingItem.rooms) {
               if (
