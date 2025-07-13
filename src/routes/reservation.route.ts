@@ -78,6 +78,7 @@ reservationRouter
   .patch(
     authControllers.protect,
     authControllers.restrictTo(allPermissions.reservations.update),
+    validateReservationItem,
     reservationControllers.updateReservation
   )
   .delete(
