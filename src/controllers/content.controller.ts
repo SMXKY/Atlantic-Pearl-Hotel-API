@@ -1,5 +1,4 @@
 import { Request, Response, NextFunction } from "express";
-
 import dayjs from "dayjs";
 import { ReservationModel } from "../models/Reservation.model";
 import { RoomModel } from "../models/Room.model";
@@ -13,11 +12,15 @@ const dashboardAdmin = catchAsync(
     const numberOfFreeRooms = await RoomModel.countDocuments({
       status: "free",
     });
+    const numberOfOccupiedRooms = numberRooms - numberOfFreeRooms;
+    const occupancyRate =
+      numberRooms === 0
+        ? 0
+        : Math.round((numberOfOccupiedRooms / numberRooms) * 100);
 
     const today = dayjs().startOf("day");
-
-    // Get past 7 days of confirmed reservations
     const last7Days = dayjs().subtract(6, "day").startOf("day");
+
     const reservations = await ReservationModel.find({
       createdAt: { $gte: last7Days.toDate() },
     });
@@ -43,6 +46,7 @@ const dashboardAdmin = catchAsync(
       if (analyticsMap.has(checkIn)) {
         analyticsMap.get(checkIn)!.checkin += 1;
       }
+
       if (analyticsMap.has(checkOut)) {
         analyticsMap.get(checkOut)!.checkout += 1;
       }
@@ -50,6 +54,7 @@ const dashboardAdmin = catchAsync(
       if (dayjs(reservation.checkInDate).isSame(today, "day")) {
         todaysCheckIns += 1;
       }
+
       if (dayjs(reservation.checkOutDate).isSame(today, "day")) {
         todaysCheckOuts += 1;
       }
@@ -122,6 +127,7 @@ const dashboardAdmin = catchAsync(
       {
         overviewStats,
         analyticsData,
+        occupancyRate,
       },
       res
     );
