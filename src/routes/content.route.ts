@@ -11,3 +11,9 @@ contentRouter.route("/admin-dashboard").get(
   //   authControllers.restrictTo(allPermissions.content.adminDashboard),
   contentControllers.dashboardAdmin
 );
+
+contentRouter.route("/reservation-dashboard").get(
+  // authControllers.protect,
+  //   authControllers.restrictTo(allPermissions.content.adminDashboard),
+  contentControllers.reservationDashboard
+);
