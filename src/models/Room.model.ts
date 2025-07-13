@@ -1,10 +1,11 @@
 import * as mongoose from "mongoose";
+import dayjs from "dayjs";
 import { BuildingModel } from "./Building.model";
 import { RoomTypeModel } from "./RoomType.model";
-import { AppError } from "../util/AppError.util";
-import { StatusCodes } from "http-status-codes";
 import { GuestModel } from "./Guest.model";
 import { ReservationModel } from "./Reservation.model";
+import { AppError } from "../util/AppError.util";
+import { StatusCodes } from "http-status-codes";
 
 interface ILockUntil {
   until: Date | null;
@@ -75,10 +76,9 @@ const roomSchema = new mongoose.Schema(
     },
     state: {
       type: String,
-      // required: [true, "Room status is required."],
       enum: {
         values: ["clean", "dirty"],
-        message: "Room types are limited to clean or dirty",
+        message: "Room states are limited to clean or dirty",
       },
       default: "clean",
     },
@@ -169,44 +169,11 @@ roomSchema.virtual("size").get(function () {
   return `${this.sizeInSquareMeters} sqmtrs`;
 });
 
-roomSchema.pre("save", async function (next) {
-  const roomType = await RoomTypeModel.findById(this.type);
-
-  if (!roomType) {
-    return next(new AppError("Invalid Room Type Id", StatusCodes.BAD_REQUEST));
-  }
-
-  if (!roomType?.minimumPriceInCFA) {
-    return next(
-      new AppError(
-        "Room type does not have a minimum set price",
-        StatusCodes.INTERNAL_SERVER_ERROR
-      )
-    );
-  }
-
-  // if (this.basePriceInCFA < roomType?.minimumPriceInCFA) {
-  //   return next(
-  //     new AppError(
-  //       `Room base price may not be less than: ${roomType.minimumPriceInCFA}`,
-  //       StatusCodes.BAD_REQUEST
-  //     )
-  //   );
-  // }
-
-  next();
-});
-
+// Keep pre and post hooks for populate, filtering, and transformations
 roomSchema.pre(/^find/, function (this: mongoose.Query<any, IRoom>, next) {
   this.where({
     isActive: { $ne: false },
   });
-
-  next();
-});
-
-roomSchema.pre(/^find/, function (this: mongoose.Query<any, IRoom>, next) {
-  this.where({ isActive: { $ne: false } });
 
   this.populate({
     path: "type",

@@ -1,28 +1,30 @@
 import { Request, Response, NextFunction } from "express";
+import { catchAsync } from "../util/catchAsync";
 import dayjs from "dayjs";
 import { ReservationModel } from "../models/Reservation.model";
 import { RoomModel } from "../models/Room.model";
-import { catchAsync } from "../util/catchAsync";
-import { appResponder } from "../util/appResponder.util";
 import { StatusCodes } from "http-status-codes";
+import { appResponder } from "../util/appResponder.util";
 
-const dashboardAdmin = catchAsync(
+export const dashboardAdmin = catchAsync(
   async (req: Request, res: Response, next: NextFunction) => {
     const numberRooms = await RoomModel.countDocuments();
     const numberOfFreeRooms = await RoomModel.countDocuments({
       status: "free",
     });
-    const numberOfOccupiedRooms = numberRooms - numberOfFreeRooms;
+    const numberOfOccupiedRooms = await RoomModel.countDocuments({
+      status: "occupied",
+    });
+
     const occupancyRate =
-      numberRooms === 0
-        ? 0
-        : Math.round((numberOfOccupiedRooms / numberRooms) * 100);
+      numberRooms === 0 ? 0 : (numberOfOccupiedRooms / numberRooms) * 100;
 
     const today = dayjs().startOf("day");
     const last7Days = dayjs().subtract(6, "day").startOf("day");
 
     const reservations = await ReservationModel.find({
       createdAt: { $gte: last7Days.toDate() },
+      status: { $in: ["confirmed", "checked in"] },
     });
 
     let roomsReserved = 0;
@@ -46,7 +48,6 @@ const dashboardAdmin = catchAsync(
       if (analyticsMap.has(checkIn)) {
         analyticsMap.get(checkIn)!.checkin += 1;
       }
-
       if (analyticsMap.has(checkOut)) {
         analyticsMap.get(checkOut)!.checkout += 1;
       }
@@ -54,7 +55,6 @@ const dashboardAdmin = catchAsync(
       if (dayjs(reservation.checkInDate).isSame(today, "day")) {
         todaysCheckIns += 1;
       }
-
       if (dayjs(reservation.checkOutDate).isSame(today, "day")) {
         todaysCheckOuts += 1;
       }
@@ -62,7 +62,6 @@ const dashboardAdmin = catchAsync(
       roomsReserved += reservation.items?.length || 0;
     });
 
-    // === Calculate trends ===
     const totalCheckIns7Days = Array.from(analyticsMap.values()).reduce(
       (acc, curr) => acc + curr.checkin,
       0
@@ -82,7 +81,6 @@ const dashboardAdmin = catchAsync(
     const checkOutPercent = percent(todaysCheckOuts, totalCheckOuts7Days);
     const roomsAvailablePercent = percent(numberOfFreeRooms, numberRooms);
 
-    // === Format analyticsData ===
     const analyticsData = Array.from(analyticsMap.entries()).map(
       ([date, stats]) => ({
         date: dayjs(date).format("MMM D"),
@@ -97,6 +95,8 @@ const dashboardAdmin = catchAsync(
         value: todaysCheckIns,
         percentage: Math.abs(checkInPercent),
         trend: checkInPercent >= 0 ? "up" : "down",
+        bgColor: "bg-success-400",
+        bgColorMute: "bg-success-100",
         duration: "Last 7 days",
       },
       {
@@ -104,6 +104,8 @@ const dashboardAdmin = catchAsync(
         value: todaysCheckOuts,
         percentage: Math.abs(checkOutPercent),
         trend: checkOutPercent >= 0 ? "up" : "down",
+        bgColor: "bg-danger-400",
+        bgColorMute: "bg-danger-100",
         duration: "Last 7 days",
       },
       {
@@ -111,6 +113,17 @@ const dashboardAdmin = catchAsync(
         value: roomsReserved,
         percentage: 0,
         trend: "up",
+        bgColor: "bg-warning-400",
+        bgColorMute: "bg-warning-100",
+        duration: "Today",
+      },
+      {
+        title: "Room's Occupied",
+        value: numberOfOccupiedRooms,
+        percentage: 0,
+        trend: "up",
+        bgColor: "bg-dark-400",
+        bgColorMute: "bg-dark-100",
         duration: "Today",
       },
       {
@@ -118,6 +131,8 @@ const dashboardAdmin = catchAsync(
         value: numberOfFreeRooms,
         percentage: Math.abs(roomsAvailablePercent),
         trend: roomsAvailablePercent >= 0 ? "up" : "down",
+        bgColor: "bg-primary-400",
+        bgColorMute: "bg-primary-100",
         duration: "Today",
       },
     ];
@@ -127,7 +142,7 @@ const dashboardAdmin = catchAsync(
       {
         overviewStats,
         analyticsData,
-        occupancyRate,
+        occupancyRate: Math.round(occupancyRate),
       },
       res
     );
