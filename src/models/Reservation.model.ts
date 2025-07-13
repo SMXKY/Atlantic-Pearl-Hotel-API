@@ -481,6 +481,69 @@ reservationSchema.post("findOneAndUpdate", async function (doc: IReservation) {
   });
 });
 
+//update room status on reservation
+reservationSchema.pre("findOneAndUpdate", async function (next) {
+  const update = this.getUpdate() as any; // avoid TS error due to unknown structure
+  const newStatus =
+    update?.status ?? update?.$set?.status ?? update?.$setOnInsert?.status;
+
+  if (newStatus !== "checked in") return next();
+
+  const filter = this.getQuery();
+  const currentReservation = await this.model.findOne(filter);
+
+  if (!currentReservation) {
+    throw new AppError(
+      "Reservation Id cannot be found in the database",
+      StatusCodes.NOT_FOUND
+    );
+  }
+
+  if (currentReservation.status !== "confirmed") {
+    throw new AppError(
+      "Reservation cannot be checked-in unless it's currently confirmed.",
+      StatusCodes.BAD_REQUEST
+    );
+  }
+
+  const now = dayjs();
+  const checkIn = dayjs(currentReservation.checkInDate);
+  const checkOut = dayjs(currentReservation.checkOutDate);
+
+  if (!checkIn.isValid() || !checkOut.isValid()) {
+    throw new AppError(
+      "Invalid check-in or check-out date.",
+      StatusCodes.INTERNAL_SERVER_ERROR
+    );
+  }
+
+  if (now.diff(checkIn, "hour") >= 5) {
+    throw new AppError(
+      "It has been more than 5 hours since check-in time. Update the check-in date or mark as 'no showed'.",
+      StatusCodes.BAD_REQUEST
+    );
+  }
+
+  if (now.isBefore(checkIn) || !now.isBefore(checkOut)) {
+    throw new AppError(
+      "Can only check in on or after check-in date and before check-out date.",
+      StatusCodes.BAD_REQUEST
+    );
+  }
+
+  for (const item of currentReservation.items) {
+    for (const roomEntry of item.rooms) {
+      await RoomModel.findByIdAndUpdate(
+        roomEntry.room,
+        { status: "occupied" },
+        { runValidators: true }
+      );
+    }
+  }
+
+  next();
+});
+
 //update room status on resevation  check out
 reservationSchema.pre("findOneAndUpdate", async function (next) {
   const update = this.getUpdate() as Partial<IReservation>;
