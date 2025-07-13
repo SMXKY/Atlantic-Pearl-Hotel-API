@@ -3,10 +3,11 @@ import { catchAsync } from "../util/catchAsync";
 import dayjs from "dayjs";
 import { ReservationModel } from "../models/Reservation.model";
 import { RoomModel } from "../models/Room.model";
+import { ReservationStatusChangeModel } from "../models/ReservationStatusChange.model";
 import { StatusCodes } from "http-status-codes";
 import { appResponder } from "../util/appResponder.util";
 
-export const dashboardAdmin = catchAsync(
+const dashboardAdmin = catchAsync(
   async (req: Request, res: Response, next: NextFunction) => {
     const numberRooms = await RoomModel.countDocuments();
     const numberOfFreeRooms = await RoomModel.countDocuments({
@@ -15,72 +16,59 @@ export const dashboardAdmin = catchAsync(
     const numberOfOccupiedRooms = await RoomModel.countDocuments({
       status: "occupied",
     });
-
     const occupancyRate =
       numberRooms === 0 ? 0 : (numberOfOccupiedRooms / numberRooms) * 100;
 
     const today = dayjs().startOf("day");
     const last7Days = dayjs().subtract(6, "day").startOf("day");
 
-    const reservations = await ReservationModel.find({
-      createdAt: { $gte: last7Days.toDate() },
-      status: { $in: ["confirmed", "checked in"] },
-    });
+    // 1. Check‑in logs
+    const checkInLogs = await ReservationStatusChangeModel.find({
+      statusChange: "checked in",
+    }).lean();
+    const todaysCheckIns = checkInLogs.filter((log) =>
+      dayjs(log.createdAt).isSame(today, "day")
+    ).length;
 
-    let roomsReserved = 0;
-    let todaysCheckIns = 0;
-    let todaysCheckOuts = 0;
+    // 2. Check‑out logs
+    const checkOutLogs = await ReservationStatusChangeModel.find({
+      statusChange: "checked out",
+    }).lean();
+    const todaysCheckOuts = checkOutLogs.filter((log) =>
+      dayjs(log.createdAt).isSame(today, "day")
+    ).length;
+
+    // 3. Rooms reserved (confirmed with future check-in)
+    const futureReservations = await ReservationModel.find({
+      status: "confirmed",
+      checkInDate: { $gt: today.toDate() },
+    }).lean();
+    const roomsReserved = futureReservations.reduce(
+      (sum, r) => sum + r.items.reduce((s2, item) => s2 + item.rooms.length, 0),
+      0
+    );
+
+    // 5. Build analyticsData from status‑change logs over last 7 days
+    const logsLast7 = await ReservationStatusChangeModel.find({
+      createdAt: { $gte: last7Days.toDate() },
+      statusChange: { $in: ["checked in", "checked out"] },
+    }).lean();
 
     const analyticsMap = new Map<
       string,
       { checkin: number; checkout: number }
     >();
-
     for (let i = 0; i < 7; i++) {
       const date = last7Days.add(i, "day").format("YYYY-MM-DD");
       analyticsMap.set(date, { checkin: 0, checkout: 0 });
     }
-
-    reservations.forEach((reservation) => {
-      const checkIn = dayjs(reservation.checkInDate).format("YYYY-MM-DD");
-      const checkOut = dayjs(reservation.checkOutDate).format("YYYY-MM-DD");
-
-      if (analyticsMap.has(checkIn)) {
-        analyticsMap.get(checkIn)!.checkin += 1;
-      }
-      if (analyticsMap.has(checkOut)) {
-        analyticsMap.get(checkOut)!.checkout += 1;
-      }
-
-      if (dayjs(reservation.checkInDate).isSame(today, "day")) {
-        todaysCheckIns += 1;
-      }
-      if (dayjs(reservation.checkOutDate).isSame(today, "day")) {
-        todaysCheckOuts += 1;
-      }
-
-      roomsReserved += reservation.items?.length || 0;
+    logsLast7.forEach((log) => {
+      const d = dayjs(log.createdAt).format("YYYY-MM-DD");
+      if (!analyticsMap.has(d)) return;
+      const bucket = analyticsMap.get(d)!;
+      if (log.statusChange === "checked in") bucket.checkin++;
+      else if (log.statusChange === "checked out") bucket.checkout++;
     });
-
-    const totalCheckIns7Days = Array.from(analyticsMap.values()).reduce(
-      (acc, curr) => acc + curr.checkin,
-      0
-    );
-    const totalCheckOuts7Days = Array.from(analyticsMap.values()).reduce(
-      (acc, curr) => acc + curr.checkout,
-      0
-    );
-
-    const percent = (todayCount: number, total: number) => {
-      if (total === 0) return 0;
-      const avg = total / 7;
-      return Math.round(((todayCount - avg) / avg) * 100);
-    };
-
-    const checkInPercent = percent(todaysCheckIns, totalCheckIns7Days);
-    const checkOutPercent = percent(todaysCheckOuts, totalCheckOuts7Days);
-    const roomsAvailablePercent = percent(numberOfFreeRooms, numberRooms);
-
     const analyticsData = Array.from(analyticsMap.entries()).map(
       ([date, stats]) => ({
         date: dayjs(date).format("MMM D"),
@@ -93,8 +81,8 @@ export const dashboardAdmin = catchAsync(
       {
         title: "Today's Check In",
         value: todaysCheckIns,
-        percentage: Math.abs(checkInPercent),
-        trend: checkInPercent >= 0 ? "up" : "down",
+        percentage: 0,
+        trend: "up",
         bgColor: "bg-success-400",
         bgColorMute: "bg-success-100",
         duration: "Last 7 days",
@@ -102,8 +90,8 @@ export const dashboardAdmin = catchAsync(
       {
         title: "Today's Check Out",
         value: todaysCheckOuts,
-        percentage: Math.abs(checkOutPercent),
-        trend: checkOutPercent >= 0 ? "up" : "down",
+        percentage: 0,
+        trend: "down",
         bgColor: "bg-danger-400",
         bgColorMute: "bg-danger-100",
         duration: "Last 7 days",
@@ -115,7 +103,7 @@ export const dashboardAdmin = catchAsync(
         trend: "up",
         bgColor: "bg-warning-400",
         bgColorMute: "bg-warning-100",
-        duration: "Today",
+        duration: "Future",
       },
       {
         title: "Room's Occupied",
@@ -129,8 +117,8 @@ export const dashboardAdmin = catchAsync(
       {
         title: "Room's Available",
         value: numberOfFreeRooms,
-        percentage: Math.abs(roomsAvailablePercent),
-        trend: roomsAvailablePercent >= 0 ? "up" : "down",
+        percentage: 0,
+        trend: "down",
         bgColor: "bg-primary-400",
         bgColorMute: "bg-primary-100",
         duration: "Today",

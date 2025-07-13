@@ -14,6 +14,7 @@ import { AdminConfigurationModel } from "./AdminConfiguration.model";
 import { UserModel } from "./User.model";
 const { v4: uuidv4 } = require("uuid");
 import dayjs from "dayjs";
+import { ReservationStatusChangeModel } from "./ReservationStatusChange.model";
 
 interface IRoomEntry {
   room: mongoose.Types.ObjectId;
@@ -102,7 +103,7 @@ const reservationSchema = new mongoose.Schema<IReservation>(
     checkInDate: {
       type: Date,
       required: true,
-      immutable: true,
+      // immutable: true,
       validate: {
         validator: function (value: Date) {
           // Must be in the future (compared to now)
@@ -114,7 +115,7 @@ const reservationSchema = new mongoose.Schema<IReservation>(
     checkOutDate: {
       type: Date,
       required: true,
-      immutable: true,
+      // immutable: true,
       validate: {
         validator: function (value: Date) {
           return value > new Date();
@@ -404,64 +405,109 @@ reservationSchema.post("save", async function (this: IReservation) {
 
 //Update room status on reservation check in update
 reservationSchema.pre("findOneAndUpdate", async function (next) {
-  const update = this.getUpdate() as Partial<IReservation>;
-  const statusToUpdate = update.status;
+  const update = this.getUpdate();
+  const filter = this.getFilter();
 
-  if (statusToUpdate !== "checked in") return next();
+  (this as any)._updateData = update;
+  (this as any)._filterData = filter;
 
-  const filter = this.getQuery();
   const currentReservation = await this.model.findOne(filter);
 
   if (!currentReservation) {
-    throw new AppError(
-      "Reservation Id cannot be found in the database",
-      StatusCodes.NOT_FOUND
+    return next(
+      new AppError(
+        "Cannot find reservation for the update",
+        StatusCodes.INTERNAL_SERVER_ERROR
+      )
     );
   }
 
-  if (currentReservation.status !== "confirmed") {
-    throw new AppError(
-      "Reservation cannot be updated to checked-in unless it is currently confirmed.",
-      StatusCodes.BAD_REQUEST
-    );
-  }
-
-  if (!currentReservation.checkInDate || !currentReservation.checkOutDate) {
-    throw new AppError(
-      "Reservation must have both check-in and check-out dates",
-      StatusCodes.INTERNAL_SERVER_ERROR
-    );
-  }
-
-  const now = dayjs();
-  const checkIn = dayjs(currentReservation.checkInDate);
-  const checkOut = dayjs(currentReservation.checkOutDate);
-
-  if (now.diff(checkIn, "hour") >= 5) {
-    throw new AppError(
-      "It has been over 5 hours since the reservation check-in time. You may update the check-in date or mark it as 'no showed'.",
-      StatusCodes.BAD_REQUEST
-    );
-  }
-
-  if (now.isBefore(checkIn) || !now.isBefore(checkOut)) {
-    throw new AppError(
-      "Reservation can only be marked as checked in on or after the check-in date and before the check-out date.",
-      StatusCodes.BAD_REQUEST
-    );
-  }
-
-  for (const item of currentReservation.items) {
-    for (const roomEntry of item.rooms) {
-      await RoomModel.findByIdAndUpdate(
-        roomEntry.room,
-        { status: "occupied" },
-        { runValidators: true }
-      );
-    }
-  }
+  (this as any)._reservationId = currentReservation._id;
 
   next();
+});
+
+reservationSchema.post("findOneAndUpdate", async function (doc: IReservation) {
+  const update = (this as any)._updateData;
+  const filter = (this as any)._filterData;
+
+  if (!doc || !update) return;
+
+  // Try to get the new status from update object or $set operator
+  const newStatus = (update?.status || update?.$set?.status) as
+    | "checked in"
+    | "checked out"
+    | "no showed"
+    | "canceled"
+    | "confirmed"
+    | "expired"
+    | "pending"
+    | undefined;
+
+  if (!newStatus) return;
+
+  console.log(`Reservation ${doc._id} was updated to status: ${newStatus}`);
+
+  // Check if the status change was already logged
+  const alreadyLogged = await ReservationStatusChangeModel.findOne({
+    reservation: (this as any)._reservationId,
+    statusChange: newStatus,
+  });
+
+  if (alreadyLogged) {
+    const friendlyStatus =
+      {
+        "checked in": "already checked in",
+        "checked out": "already checked out",
+        "no showed": "already marked as no-showed",
+        canceled: "already canceled",
+        confirmed: "already confirmed",
+        expired: "already expired",
+        pending: "still pending",
+      }[newStatus] || `already updated to "${newStatus}"`;
+
+    throw new AppError(
+      `This reservation has ${friendlyStatus}. You cannot perform this action again.`,
+      StatusCodes.BAD_REQUEST
+    );
+  }
+
+  // Log the new status change
+  await ReservationStatusChangeModel.create({
+    reservation: (this as any)._reservationId,
+    statusChange: newStatus,
+  });
+});
+
+reservationSchema.post("findOneAndUpdate", async function (doc: IReservation) {
+  const update = (this as any)._updateData;
+  const query = (this as any)._queryData;
+
+  if (!doc || !update) return;
+
+  const newStatus = update?.status || update?.$set?.status;
+  if (newStatus) {
+    console.log(`Reservation ${doc._id} was updated to status: ${newStatus}`);
+  }
+
+  const statusUpdate = await ReservationStatusChangeModel.findOne({
+    reservation: (this as any)._reservationId,
+    statusChange: newStatus,
+  });
+
+  if (statusUpdate) {
+    throw new AppError(
+      "Reservation cannot ve updated as guest arleady " +
+        newStatus +
+        " for this reservation",
+      StatusCodes.BAD_REQUEST
+    );
+  }
+
+  await ReservationStatusChangeModel.create({
+    reservation: (this as any)._reservationId,
+    statusChange: newStatus,
+  });
 });
 
 //update room status on resevation  check out
