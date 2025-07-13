@@ -103,30 +103,10 @@ const reservationSchema = new mongoose.Schema<IReservation>(
     checkInDate: {
       type: Date,
       required: true,
-      validate: {
-        validator: function (value: Date) {
-          // Only validate during save/create
-          if (this.isNew || this.isModified("checkInDate")) {
-            return value > new Date();
-          }
-          return true;
-        },
-        message: "Check-in date must be in the future.",
-      },
     },
     checkOutDate: {
       type: Date,
       required: true,
-      validate: {
-        validator: function (value: Date) {
-          // Only validate during save/create
-          if (this.isNew || this.isModified("checkOutDate")) {
-            return value > new Date();
-          }
-          return true;
-        },
-        message: "Check-out date must be in the future.",
-      },
     },
     numberOfGuest: { type: Number, default: 1, required: true, min: 1 },
     guestNIC: { type: String },
@@ -674,6 +654,33 @@ reservationSchema.post("findOne", autoPopulateReservation);
 reservationSchema.post("findOneAndUpdate", autoPopulateReservation);
 reservationSchema.post("findOneAndReplace", autoPopulateReservation);
 reservationSchema.post("findOneAndDelete", autoPopulateReservation);
+
+reservationSchema.pre("save", function (next) {
+  if (!this.isNew) return next(); // Only validate for new documents
+
+  const now = new Date();
+
+  if (!this.checkInDate || !this.checkOutDate) {
+    throw new AppError(
+      "check-in and check-out dates are required",
+      StatusCodes.BAD_REQUEST
+    );
+  }
+
+  if (this.checkInDate <= now) {
+    return next(new Error("Check-in date must be in the future."));
+  }
+
+  if (this.checkOutDate <= now) {
+    return next(new Error("Check-out date must be in the future."));
+  }
+
+  if (this.checkOutDate <= this.checkInDate) {
+    return next(new Error("Check-out date must be after check-in date."));
+  }
+
+  next();
+});
 
 export const ReservationModel = mongoose.model<IReservation>(
   "reservations",

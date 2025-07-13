@@ -64,12 +64,22 @@ export const validateReservationItem = catchAsync(
           );
         }
         if (room.status !== "free") {
-          return next(
-            new AppError(
-              `Room ${room.number} is currently not free.`,
-              StatusCodes.BAD_REQUEST
-            )
-          );
+          // Check if this room is occupied by the current reservation itself
+          const isOccupiedByCurrentReservation = req.params.id
+            ? await ReservationModel.exists({
+                _id: req.params.id,
+                "items.rooms.room": room._id,
+              })
+            : false;
+
+          if (!isOccupiedByCurrentReservation) {
+            return next(
+              new AppError(
+                `Room ${room.number} is currently not free.`,
+                StatusCodes.BAD_REQUEST
+              )
+            );
+          }
         }
 
         // 2. Find confirmed reservations that include this room
