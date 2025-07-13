@@ -103,11 +103,13 @@ const reservationSchema = new mongoose.Schema<IReservation>(
     checkInDate: {
       type: Date,
       required: true,
-      // immutable: true,
       validate: {
         validator: function (value: Date) {
-          // Must be in the future (compared to now)
-          return value > new Date();
+          // Only validate during save/create
+          if (this.isNew || this.isModified("checkInDate")) {
+            return value > new Date();
+          }
+          return true;
         },
         message: "Check-in date must be in the future.",
       },
@@ -115,12 +117,15 @@ const reservationSchema = new mongoose.Schema<IReservation>(
     checkOutDate: {
       type: Date,
       required: true,
-      // immutable: true,
       validate: {
         validator: function (value: Date) {
-          return value > new Date();
+          // Only validate during save/create
+          if (this.isNew || this.isModified("checkOutDate")) {
+            return value > new Date();
+          }
+          return true;
         },
-        message: "Date must be in the future.",
+        message: "Check-out date must be in the future.",
       },
     },
     numberOfGuest: { type: Number, default: 1, required: true, min: 1 },
