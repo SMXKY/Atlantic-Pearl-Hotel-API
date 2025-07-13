@@ -13,6 +13,7 @@ import { TaxModel } from "./Tax.model";
 import { AdminConfigurationModel } from "./AdminConfiguration.model";
 import { UserModel } from "./User.model";
 const { v4: uuidv4 } = require("uuid");
+import dayjs from "dayjs";
 
 interface IRoomEntry {
   room: mongoose.Types.ObjectId;
@@ -399,6 +400,116 @@ reservationSchema.post("save", async function (this: IReservation) {
   }
 
   await Promise.all(savePromises);
+});
+
+//Update room status on reservation check in update
+reservationSchema.pre("findOneAndUpdate", async function (next) {
+  const update = this.getUpdate() as Partial<IReservation>;
+  const statusToUpdate = update.status;
+
+  if (statusToUpdate !== "checked in") return next();
+
+  const filter = this.getQuery();
+  const currentReservation = await this.model.findOne(filter);
+
+  if (!currentReservation) {
+    throw new AppError(
+      "Reservation Id cannot be found in the database",
+      StatusCodes.NOT_FOUND
+    );
+  }
+
+  if (currentReservation.status !== "confirmed") {
+    throw new AppError(
+      "Reservation cannot be updated to checked-in unless it is currently confirmed.",
+      StatusCodes.BAD_REQUEST
+    );
+  }
+
+  if (!currentReservation.checkInDate || !currentReservation.checkOutDate) {
+    throw new AppError(
+      "Reservation must have both check-in and check-out dates",
+      StatusCodes.INTERNAL_SERVER_ERROR
+    );
+  }
+
+  const now = dayjs();
+  const checkIn = dayjs(currentReservation.checkInDate);
+  const checkOut = dayjs(currentReservation.checkOutDate);
+
+  if (now.diff(checkIn, "hour") >= 5) {
+    throw new AppError(
+      "It has been over 5 hours since the reservation check-in time. You may update the check-in date or mark it as 'no showed'.",
+      StatusCodes.BAD_REQUEST
+    );
+  }
+
+  if (now.isBefore(checkIn) || !now.isBefore(checkOut)) {
+    throw new AppError(
+      "Reservation can only be marked as checked in on or after the check-in date and before the check-out date.",
+      StatusCodes.BAD_REQUEST
+    );
+  }
+
+  for (const item of currentReservation.items) {
+    for (const roomEntry of item.rooms) {
+      await RoomModel.findByIdAndUpdate(
+        roomEntry.room,
+        { status: "occupied" },
+        { runValidators: true }
+      );
+    }
+  }
+
+  next();
+});
+
+//update room status on resevation  check out
+reservationSchema.pre("findOneAndUpdate", async function (next) {
+  const update = this.getUpdate() as Partial<IReservation>;
+  const statusToUpdate = update.status;
+
+  if (statusToUpdate !== "checked out") return next();
+
+  const filter = this.getQuery();
+  const currentReservation = await this.model.findOne(filter);
+
+  if (!currentReservation) {
+    throw new AppError(
+      "Reservation Id cannot be found in the database",
+      StatusCodes.NOT_FOUND
+    );
+  }
+
+  if (currentReservation.status !== "checked in") {
+    throw new AppError(
+      "Reservation cannot be updated to checked-out unless it is currently checked in.",
+      StatusCodes.BAD_REQUEST
+    );
+  }
+
+  if (!currentReservation.checkInDate || !currentReservation.checkOutDate) {
+    throw new AppError(
+      "Reservation must have both check-in and check-out dates",
+      StatusCodes.INTERNAL_SERVER_ERROR
+    );
+  }
+
+  const now = dayjs();
+  const checkIn = dayjs(currentReservation.checkInDate);
+  const checkOut = dayjs(currentReservation.checkOutDate);
+
+  for (const item of currentReservation.items) {
+    for (const roomEntry of item.rooms) {
+      await RoomModel.findByIdAndUpdate(
+        roomEntry.room,
+        { status: "free" },
+        { runValidators: true }
+      );
+    }
+  }
+
+  next();
 });
 
 reservationSchema.methods.mutateForCalendar = async function () {
