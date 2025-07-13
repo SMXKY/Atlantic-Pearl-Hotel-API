@@ -433,6 +433,8 @@ reservationSchema.post("findOneAndUpdate", async function (doc: IReservation) {
 
   if (!doc || !update) return;
 
+  if (!update.status) return;
+
   // Try to get the new status from update object or $set operator
   const newStatus = (update?.status || update?.$set?.status) as
     | "checked in"
@@ -473,37 +475,6 @@ reservationSchema.post("findOneAndUpdate", async function (doc: IReservation) {
   }
 
   // Log the new status change
-  await ReservationStatusChangeModel.create({
-    reservation: (this as any)._reservationId,
-    statusChange: newStatus,
-  });
-});
-
-reservationSchema.post("findOneAndUpdate", async function (doc: IReservation) {
-  const update = (this as any)._updateData;
-  const query = (this as any)._queryData;
-
-  if (!doc || !update) return;
-
-  const newStatus = update?.status || update?.$set?.status;
-  if (newStatus) {
-    console.log(`Reservation ${doc._id} was updated to status: ${newStatus}`);
-  }
-
-  const statusUpdate = await ReservationStatusChangeModel.findOne({
-    reservation: (this as any)._reservationId,
-    statusChange: newStatus,
-  });
-
-  if (statusUpdate) {
-    throw new AppError(
-      "Reservation cannot ve updated as guest arleady " +
-        newStatus +
-        " for this reservation",
-      StatusCodes.BAD_REQUEST
-    );
-  }
-
   await ReservationStatusChangeModel.create({
     reservation: (this as any)._reservationId,
     statusChange: newStatus,
