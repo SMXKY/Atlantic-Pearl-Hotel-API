@@ -70,7 +70,7 @@ const deleteRoom = catchAsync(
       );
     }
 
-    return appResponder(StatusCodes.OK, {}, res);
+    // return appResponder(StatusCodes.OK, {}, res);
 
     await CRUDRoom.delete(req.params.id, res, req);
   }
