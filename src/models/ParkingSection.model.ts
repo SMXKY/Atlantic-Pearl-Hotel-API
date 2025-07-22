@@ -1,5 +1,6 @@
 import mongoose, { Schema, Document, Model } from "mongoose";
 import { ParkingSectionTypeModel } from "./ParkingSectionType.model";
+import { ParkingSpotModel } from "./ParkingSpot.model";
 
 export interface IParkingSection extends Document {
   name: string;
@@ -48,6 +49,18 @@ const parkingSectionSchema: Schema<IParkingSection> = new Schema(
     toObject: { virtuals: true },
   }
 );
+
+parkingSectionSchema.virtual("parkingSpots", {
+  ref: "parking_spots",
+  localField: "_id",
+  foreignField: "section",
+});
+
+parkingSectionSchema.post("findOneAndDelete", async function (doc) {
+  if (doc) {
+    await ParkingSpotModel.deleteMany({ section: doc._id });
+  }
+});
 
 export const ParkingSectionModel: Model<IParkingSection> =
   mongoose.model<IParkingSection>("parking_sections", parkingSectionSchema);

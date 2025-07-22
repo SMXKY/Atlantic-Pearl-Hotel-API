@@ -148,6 +148,12 @@ roomTypeSchema.virtual("rates", {
   justOne: false, // Return array
 });
 
+roomTypeSchema.post("findOneAndDelete", async function (doc) {
+  if (doc) {
+    await RoomModel.deleteMany({ type: doc._id });
+  }
+});
+
 export const RoomTypeModel = mongoose.model<IRoomTypeDocument>(
   "roomtypes",
   roomTypeSchema

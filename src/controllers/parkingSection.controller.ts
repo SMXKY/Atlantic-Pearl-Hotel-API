@@ -14,13 +14,13 @@ const createParkingSection = catchAsync(
 
 const readOneParkingSection = catchAsync(
   async (req: Request, res: Response, next: NextFunction) => {
-    await CRUDParkingSection.readOne(req.params.id, res, [], req);
+    await CRUDParkingSection.readOne(req.params.id, res, ["parkingSpots"], req);
   }
 );
 
 const readAllParkingSections = catchAsync(
   async (req: Request, res: Response, next: NextFunction) => {
-    await CRUDParkingSection.readAll(res, req, 1, 100, []);
+    await CRUDParkingSection.readAll(res, req, 1, 100, ["parkingSpots"]);
   }
 );
 
