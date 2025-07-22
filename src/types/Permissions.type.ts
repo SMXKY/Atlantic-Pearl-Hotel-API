@@ -194,4 +194,46 @@ export const allPermissions = {
   content: {
     adminDashboard: "can_read_admin_dashboard",
   },
+  parkingSectionTypes: {
+    readOne: "can_read_parking_section_type",
+    readAll: "can_read_all_parking_section_types",
+    delete: "can_delete_parking_section_type",
+    update: "can_update_parking_section_type",
+    create: "can_create_parking_section_type",
+  },
+  parkingSections: {
+    readOne: "can_read_parking_section",
+    readAll: "can_read_all_parking_sections",
+    delete: "can_delete_parking_section",
+    update: "can_update_parking_section",
+    create: "can_create_parking_section",
+  },
+  parkingSpots: {
+    readOne: "can_read_parking_spot",
+    readAll: "can_read_all_parking_spots",
+    delete: "can_delete_parking_spot",
+    update: "can_update_parking_spot",
+    create: "can_create_parking_spot",
+  },
+  parkingReservations: {
+    readOne: "can_read_parking_reservation",
+    readAll: "can_read_all_parking_reservations",
+    delete: "can_delete_parking_reservation",
+    update: "can_update_parking_reservation",
+    create: "can_create_parking_reservation",
+  },
+  bills: {
+    readOne: "can_read_bill",
+    readAll: "can_read_all_bills",
+    delete: "can_delete_bill",
+    update: "can_update_bill",
+    create: "can_create_bill",
+  },
+  billItems: {
+    readOne: "can_read_bill_item",
+    readAll: "can_read_all_bill_items",
+    delete: "can_delete_bill_item",
+    update: "can_update_bill_item",
+    create: "can_create_bill_item",
+  },
 };

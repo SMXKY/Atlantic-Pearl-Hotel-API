@@ -36,6 +36,12 @@ import { roomTypeReviewRouter } from "./routes/roomTypeReview.route";
 import docxRouter from "./util/filterExplantion.util";
 import { invoiceRouter } from "./routes/invoice.routes";
 import { contentRouter } from "./routes/content.route";
+import { billRouter } from "./routes/bill.route";
+import { billItemsRouter } from "./routes/billItem.route";
+import { parkingReservationRouter } from "./routes/parkingReservation.route";
+import { parkingSectionRouter } from "./routes/parkingSection.route";
+import { parkingSpotRouter } from "./routes/parkingSpots.route";
+import { parkingSectionTypeRouter } from "./routes/parkingSectionType.route";
 
 export const app = express();
 
@@ -123,6 +129,12 @@ app.use("/api/v1/room-type-reveiws", roomTypeReviewRouter);
 app.use("/api/v1/custom-docs", docxRouter);
 app.use("/api/v1/invoices", invoiceRouter);
 app.use("/api/v1/content", contentRouter);
+app.use("/api/v1/bills", billRouter);
+app.use("/api/v1/bill-items", billItemsRouter);
+app.use("/api/v1/parking-reservations", parkingReservationRouter);
+app.use("/api/v1/parking-sections", parkingSectionRouter);
+app.use("/api/v1/parking-section-types", parkingSectionTypeRouter);
+app.use("/api/v1/parking-spot", parkingSpotRouter);
 
 const swaggerSpec = swaggerJSDoc({
   definition: {
