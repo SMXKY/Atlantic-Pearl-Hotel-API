@@ -19,8 +19,8 @@ let db: string;
 if (process.env.NODE_ENV === "production") {
   db = process.env.REMOTE_DB!;
 } else {
-  // db = process.env.LOCAL_DB!;
-  db = process.env.REMOTE_DB!;
+  db = process.env.LOCAL_DB!;
+  // db = process.env.REMOTE_DB!;
 }
 
 //Connecting our app to the database

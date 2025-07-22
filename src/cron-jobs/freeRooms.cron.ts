@@ -3,6 +3,9 @@ import { InvoiceModel } from "../models/Invoice.model";
 import { RoomModel } from "../models/Room.model";
 import { ReservationModel } from "../models/Reservation.model";
 import cron from "node-cron";
+import { AppError } from "../util/AppError.util";
+import { StatusCodes } from "http-status-codes";
+import { AdminConfigurationModel } from "../models/AdminConfiguration.model";
 
 export const freeRoomsCronJob = () => {
   cron.schedule("* * * * *", async () => {
@@ -56,5 +59,85 @@ export const freeRoomsCronJob = () => {
         );
       }
     }
+  });
+};
+
+const freeRoomsOnReservationCompletion = async () => {
+  const now = new Date();
+
+  try {
+    const reservations = await ReservationModel.find({
+      checkInDate: { $lte: now },
+    });
+
+    const adminConfiguration = await AdminConfigurationModel.findOne();
+    if (!adminConfiguration) {
+      throw new AppError(
+        "Admin config document not found",
+        StatusCodes.INTERNAL_SERVER_ERROR
+      );
+    }
+
+    const noShowGraceHours =
+      adminConfiguration.hotel.policies.hoursPassedBeforeConsideredNoShow || 5;
+    const noShowMs = noShowGraceHours * 60 * 60 * 1000;
+
+    for (const reservation of reservations) {
+      let shouldSave = false;
+
+      // Auto-checkout
+      if (reservation.status === "checked in" && reservation.checkOutDate) {
+        if (reservation.checkOutDate.getTime() <= now.getTime()) {
+          reservation.status = "checked out";
+          shouldSave = true;
+
+          // Free rooms
+          for (const item of reservation.items) {
+            for (const roomEntry of item.rooms) {
+              await RoomModel.findByIdAndUpdate(
+                roomEntry.room,
+                { status: "free" },
+                { runValidators: true }
+              );
+            }
+          }
+        }
+      }
+
+      // No-show logic
+      if (reservation.status === "confirmed" && reservation.checkInDate) {
+        const noShowCutoff = new Date(
+          reservation.checkInDate.getTime() + noShowMs
+        );
+
+        if (now.getTime() > noShowCutoff.getTime()) {
+          reservation.status = "no showed";
+          shouldSave = true;
+
+          // Free rooms
+          for (const item of reservation.items) {
+            for (const roomEntry of item.rooms) {
+              await RoomModel.findByIdAndUpdate(
+                roomEntry.room,
+                { status: "free" },
+                { runValidators: true }
+              );
+            }
+          }
+        }
+      }
+
+      if (shouldSave) {
+        await reservation.save();
+      }
+    }
+  } catch (err) {
+    console.error("Error in auto-checkout cron:", err);
+  }
+};
+
+export const freeRoomsOnReserationStatus = () => {
+  cron.schedule("* * * * * ", async () => {
+    await freeRoomsOnReservationCompletion();
   });
 };

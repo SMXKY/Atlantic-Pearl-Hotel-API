@@ -18,6 +18,7 @@ interface IHotelPolicies {
   checkInTime: string; // e.g., "14:00"
   checkOutTime: string; // e.g., "11:00"
   description?: string;
+  hoursPassedBeforeConsideredNoShow: number;
 }
 
 export interface IAdminConfiguration extends Document {
@@ -105,6 +106,10 @@ const adminConfigurationSchema = new Schema<IAdminConfiguration>(
         description: {
           type: String,
           default: "General hotel policies for guest conduct and expectations.",
+        },
+        hoursPassedBeforeConsideredNoShow: {
+          type: Number,
+          default: 5,
         },
       },
     },
