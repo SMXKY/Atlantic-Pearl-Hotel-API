@@ -5,13 +5,7 @@ export interface IParkingSpot extends Document {
   section: mongoose.Types.ObjectId;
   spotNumber: string;
   type?: string;
-  status?:
-    | "available"
-    | "reserved"
-    | "occupied"
-    | "maintenance"
-    | "disabled"
-    | "free";
+  status?: "available" | "reserved" | "occupied" | "maintenance" | "disabled";
   isActive: boolean;
 }
 
@@ -42,15 +36,8 @@ const parkingSpotSchema: Schema<IParkingSpot> = new Schema(
     },
     status: {
       type: String,
-      enum: [
-        "available",
-        "reserved",
-        "occupied",
-        "maintenance",
-        "disabled",
-        "free",
-      ],
-      default: "free",
+      enum: ["available", "reserved", "occupied", "maintenance", "disabled"],
+      default: "available",
     },
     isActive: {
       type: Boolean,

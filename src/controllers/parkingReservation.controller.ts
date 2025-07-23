@@ -18,9 +18,6 @@ const CRUDParkingReservation: CRUD = new CRUD(ParkingReservationModel);
 
 const createParkingReservation = catchAsync(
   async (req: Request, res: Response, next: NextFunction) => {
-    const session = await mongoose.startSession();
-    session.startTransaction();
-
     try {
       let {
         spotId,
@@ -32,16 +29,39 @@ const createParkingReservation = catchAsync(
       } = req.body;
 
       // Validate presence of required fields
-      if (
-        !spotId ||
-        !guestId ||
-        !reservationBookingReference ||
-        !reservedFrom ||
-        !reservedTo ||
-        !status
-      ) {
+      if (!spotId) {
         throw new AppError(
-          "Missing required fields: spotId, guestId, reservationBookingReference, reservedFrom, reservedTo, status.",
+          "Missing required field: spotId",
+          StatusCodes.BAD_REQUEST
+        );
+      }
+      if (!guestId) {
+        throw new AppError(
+          "Missing required field: guestId",
+          StatusCodes.BAD_REQUEST
+        );
+      }
+      if (!reservationBookingReference) {
+        throw new AppError(
+          "Missing required field: reservationBookingReference",
+          StatusCodes.BAD_REQUEST
+        );
+      }
+      if (!reservedFrom) {
+        throw new AppError(
+          "Missing required field: reservedFrom",
+          StatusCodes.BAD_REQUEST
+        );
+      }
+      if (!reservedTo) {
+        throw new AppError(
+          "Missing required field: reservedTo",
+          StatusCodes.BAD_REQUEST
+        );
+      }
+      if (!status) {
+        throw new AppError(
+          "Missing required field: status",
           StatusCodes.BAD_REQUEST
         );
       }
@@ -75,7 +95,7 @@ const createParkingReservation = catchAsync(
       }
 
       // Fetch parking spot
-      const spot = await ParkingSpotModel.findById(spotId).session(session);
+      const spot = await ParkingSpotModel.findById(spotId);
       if (!spot)
         throw new AppError("Parking spot not found.", StatusCodes.NOT_FOUND);
       if (spot.status !== "available") {
@@ -83,27 +103,27 @@ const createParkingReservation = catchAsync(
       }
 
       // Fetch guest with populated user
-      const guest = await GuestModel.findById(guestId)
-        .populate({ path: "user", select: "name" })
-        .session(session);
-
+      const guest = await GuestModel.findById(guestId).populate({
+        path: "user",
+        select: "name",
+      });
       if (!guest) throw new AppError("Guest not found.", StatusCodes.NOT_FOUND);
 
       const guestName = (guest.user as any)?.name;
-      if (!guestName)
+      if (!guestName) {
         throw new AppError(
           "Guest user.name not found.",
           StatusCodes.INTERNAL_SERVER_ERROR
         );
+      }
 
+      // Find reservation by booking reference
       const reservation = await ReservationModel.findOne({
         bookingReference: reservationBookingReference,
-      }).session(session);
-
+      });
       if (!reservation) {
         throw new AppError("Reservation not found.", StatusCodes.NOT_FOUND);
       }
-
       if (reservation.status !== "checked in") {
         throw new AppError(
           "Only checked-in guests can reserve parking.",
@@ -115,20 +135,17 @@ const createParkingReservation = catchAsync(
       let bill = await BillModel.findOne({
         guestId: guest._id,
         reservationId: reservation._id,
-      }).session(session);
-
+      });
       if (!bill) {
-        bill = await BillModel.create(
-          [{ guestId: guest._id, reservationId: reservation._id }],
-          { session }
-        ).then(([created]) => created);
+        bill = await BillModel.create([
+          { guestId: guest._id, reservationId: reservation._id },
+        ]).then(([created]) => created);
       }
 
       // Get parking section + rate
-      const parkingSection = await ParkingSectionModel.findById(spot.section)
-        .populate("type")
-        .session(session);
-
+      const parkingSection = await ParkingSectionModel.findById(
+        spot.section
+      ).populate("type");
       if (!parkingSection || !parkingSection.type) {
         throw new AppError(
           "Parking section or type not found.",
@@ -136,62 +153,77 @@ const createParkingReservation = catchAsync(
         );
       }
 
-      const hourlyRate = (parkingSection.type as any).amount;
+      const hourlyRate = (parkingSection.type as any).hourlyRateInCFA;
       const durationInHours =
         (reservedTo.getTime() - reservedFrom.getTime()) / 3_600_000;
+
+      //   console.log(hourlyRate, durationInHours);
+
+      if (isNaN(hourlyRate) || isNaN(durationInHours)) {
+        throw new AppError(
+          "Invalid hourly rate or duration for billing.",
+          StatusCodes.INTERNAL_SERVER_ERROR
+        );
+      }
+
       const totalAmount = Math.ceil(durationInHours * hourlyRate);
+      if (isNaN(totalAmount)) {
+        throw new AppError(
+          "Calculated total amount is invalid.",
+          StatusCodes.INTERNAL_SERVER_ERROR
+        );
+      }
 
       // Create parking reservation
-      const parkingReservation = await ParkingReservationModel.create(
-        [
-          {
-            spotId,
-            guestId,
-            reservationBookingReference,
-            reservedFrom,
-            reservedTo,
-            status,
-          },
-        ],
-        { session }
-      ).then(([created]) => created);
+      const parkingReservation = await ParkingReservationModel.create({
+        spot: spotId,
+        guest: guestId,
+        reservationBookingReference,
+        reservedFrom,
+        reservedTo,
+        status,
+      });
 
       if (!bill) {
         return next(
           new AppError(
-            "Error creating/find bill",
+            "Bill or Bill id not found.",
             StatusCodes.INTERNAL_SERVER_ERROR
           )
         );
       }
 
-      // Create bill item
-      await BillItemModel.create(
-        [
-          {
-            billId: bill._id,
-            description: `${guestName} reserved spot ${
-              spot._id
-            } from ${reservedFrom.toISOString()} to ${reservedTo.toISOString()}`,
-            category: "parking_reservations",
-            linkedEntity: parkingReservation._id,
-            amount: totalAmount,
-          },
-        ],
-        { session }
-      );
+      // Create bill item with correct enum category
+      await BillItemModel.create({
+        billId: bill._id,
+        description: `${guestName} reserved spot ${
+          spot._id
+        } from ${reservedFrom.toISOString()} to ${reservedTo.toISOString()}`,
+        category: "parking_reservations", // must match enum values
+        linkedEntityId: parkingReservation._id,
+        amount: totalAmount,
+      });
 
       // Update spot status
       spot.status = status;
-      await spot.save({ session });
+      await spot.save();
 
-      await session.commitTransaction();
-      session.endSession();
-
+      // Send response
       appResponder(StatusCodes.CREATED, parkingReservation.toObject(), res);
     } catch (err) {
-      await session.abortTransaction();
-      session.endSession();
+      // Attempt revert logic if partial changes happen (basic manual rollback)
+      //   if (req.body.spotId) {
+      //     try {
+      //       // Revert spot status if needed
+      //       const spot = await ParkingSpotModel.findById(req.body.spotId);
+      //       if (spot && ["reserved", "occupied"].includes(req.body.status)) {
+      //         spot.status = "available";
+      //         await spot.save();
+      //       }
+      //     } catch (rollbackErr) {
+      //       console.error("Rollback error:", rollbackErr);
+      //     }
+      //   }
       next(err);
     }
   }

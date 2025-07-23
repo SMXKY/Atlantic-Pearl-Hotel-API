@@ -6,6 +6,8 @@ import { RoomModel } from "../models/Room.model";
 import { ReservationStatusChangeModel } from "../models/ReservationStatusChange.model";
 import { StatusCodes } from "http-status-codes";
 import { appResponder } from "../util/appResponder.util";
+import { ParkingSpotModel } from "../models/ParkingSpot.model";
+import { BillItemModel } from "../models/BillItem.model";
 
 const dashboardAdmin = catchAsync(
   async (req: Request, res: Response, next: NextFunction) => {
@@ -234,7 +236,45 @@ export const reservationDashboard = catchAsync(
   }
 );
 
+const parkingDashboard = catchAsync(
+  async (req: Request, res: Response, next: NextFunction) => {
+    const parkingSpots = await ParkingSpotModel.countDocuments({});
+
+    const availableParkingSpots = await ParkingSpotModel.countDocuments({
+      status: "available",
+    });
+
+    const occupiedParkingSpots = await ParkingSpotModel.countDocuments({
+      status: { $in: ["reserved", "occupied"] },
+    });
+
+    // Use valid enum value defined in BillItemModel
+    const parkingBillItems = await BillItemModel.find({
+      category: "parking_reservations",
+    });
+
+    let amountMadeOnParking = 0;
+
+    parkingBillItems.forEach((item) => {
+      const amt = Number(item.amount);
+      if (!isNaN(amt)) amountMadeOnParking += amt;
+    });
+
+    appResponder(
+      StatusCodes.OK,
+      {
+        numberOfParkingSpots: parkingSpots,
+        numberOfAvailableParkingSpots: availableParkingSpots,
+        numberOfOccupiedParkingSpots: occupiedParkingSpots,
+        amountMadeInParking: amountMadeOnParking,
+      },
+      res
+    );
+  }
+);
+
 export const contentControllers = {
   dashboardAdmin,
   reservationDashboard,
+  parkingDashboard,
 };

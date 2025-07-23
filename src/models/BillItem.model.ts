@@ -2,7 +2,7 @@ import mongoose, { Schema, Document, Model } from "mongoose";
 
 const allowedCategories = {
   room_reservation: "ReservationModel",
-  parking: "parking_reservations",
+  parking_reservations: "parking_reservations",
   food: "FoodOrderModel",
   amenity: "AmenityUsageModel",
 } as const;
@@ -45,7 +45,7 @@ const billItemSchema = new Schema<IBillItem>(
     },
     linkedEntityId: {
       type: Schema.Types.ObjectId,
-      required: false,
+      required: true,
     },
   },
   {

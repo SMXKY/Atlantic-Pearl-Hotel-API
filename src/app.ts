@@ -134,7 +134,7 @@ app.use("/api/v1/bill-items", billItemsRouter);
 app.use("/api/v1/parking-reservations", parkingReservationRouter);
 app.use("/api/v1/parking-sections", parkingSectionRouter);
 app.use("/api/v1/parking-section-types", parkingSectionTypeRouter);
-app.use("/api/v1/parking-spot", parkingSpotRouter);
+app.use("/api/v1/parking-spots", parkingSpotRouter);
 
 const swaggerSpec = swaggerJSDoc({
   definition: {
