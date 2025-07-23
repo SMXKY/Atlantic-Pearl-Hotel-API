@@ -1,6 +1,7 @@
 import mongoose, { Schema, Document, Model } from "mongoose";
 import { ParkingSectionTypeModel } from "./ParkingSectionType.model";
 import { ParkingSpotModel } from "./ParkingSpot.model";
+import { number } from "currency-codes";
 
 export interface IParkingSection extends Document {
   name: string;

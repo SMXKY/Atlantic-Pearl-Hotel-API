@@ -5,15 +5,11 @@ import { RolePermissionModel } from "../models/RolePermission.model";
 import { allPermissions } from "../types/Permissions.type";
 import { AdminConfigurationModel } from "../models/AdminConfiguration.model";
 
-export const createDefualtDcouments = async () => {
-  const rolesExist = await RoleModel.find();
-  const permissionsExist = await PermissionModel.find();
-
-  if (rolesExist.length > 0 || permissionsExist.length > 0) {
-    return;
-  }
-
+export const createDefaultDocuments = async () => {
   const createDefaultRoles = async () => {
+    const rolesExist = await RoleModel.countDocuments();
+    if (rolesExist > 0) return;
+
     const defaultRoles = [
       {
         name: "super admin",
@@ -26,125 +22,114 @@ export const createDefualtDcouments = async () => {
       { name: "guest", description: "Has access to user routes" },
     ];
 
-    try {
-      for (const role of defaultRoles) {
-        const existingRole = await RoleModel.findOne({ name: role.name });
-        if (!existingRole) {
-          const createdRole = await RoleModel.create(role);
-          //   allDefaultRoles.push(createdRole._id.toString());
-          console.log(`Created default role: ${role}`);
-        }
-      }
-    } catch (err) {
-      console.log(err);
+    for (const role of defaultRoles) {
+      await RoleModel.create(role);
+      console.log(`✅ Created default role: ${role.name}`);
     }
   };
 
   const createDefaultPermissions = async () => {
-    const defaultPermissions: string[] = [];
+    const permissionsExist = await PermissionModel.countDocuments();
+    if (permissionsExist > 0) return;
 
-    Object.values(allPermissions).forEach((permissions) => {
-      // Push each sub-property value into the array
-      defaultPermissions.push(...Object.values(permissions));
+    const defaultPermissions: string[] = [];
+    Object.values(allPermissions).forEach((group) => {
+      defaultPermissions.push(...Object.values(group));
     });
 
-    try {
-      for (const permission of defaultPermissions) {
-        const existingRole = await PermissionModel.findOne({
-          name: permission,
-        });
-
-        if (!existingRole) {
-          const createdPermission = await PermissionModel.create({
-            name: permission,
-            description: "Default system permssion",
-          });
-
-          //   allDefaultPermissions.push(createdPermission._id.toString());
-          console.log(`Created default permssion: ${permission}`);
-        }
-      }
-    } catch (err) {
-      console.log(err);
+    for (const permission of defaultPermissions) {
+      await PermissionModel.create({
+        name: permission,
+        description: "Default system permission",
+      });
+      console.log(`✅ Created default permission: ${permission}`);
     }
   };
 
   const createDefaultRolePermissions = async () => {
+    const existing = await RolePermissionModel.countDocuments();
+    if (existing > 0) return;
+
     const superAdmin = await RoleModel.findOne({ name: "super admin" });
     const permissions = await PermissionModel.find();
 
-    try {
-      for (const permission of permissions) {
-        await RolePermissionModel.create({
-          role: superAdmin?._id,
-          permission: permission._id,
-        });
-      }
-    } catch (err) {
-      console.log(err);
+    if (!superAdmin) return;
+
+    for (const permission of permissions) {
+      await RolePermissionModel.create({
+        role: superAdmin._id,
+        permission: permission._id,
+      });
     }
+
+    console.log(`✅ Mapped all permissions to super admin role.`);
   };
 
   const createDefaultTaxes = async () => {
-    try {
-      await TaxModel.create([
-        {
-          name: "Value Added Tax",
-          percentage: 19.25,
-          taxType: "percentage",
-          protected: true,
-        },
-        {
-          name: "Tourist Tax",
-          amount: 3000,
-          taxType: "amount",
-          protected: true,
-        },
-      ]);
-    } catch (err) {
-      console.log(err);
-    }
+    const taxesExist = await TaxModel.countDocuments();
+    if (taxesExist > 0) return;
+
+    await TaxModel.create([
+      {
+        name: "Value Added Tax",
+        percentage: 19.25,
+        taxType: "percentage",
+        protected: true,
+      },
+      {
+        name: "Tourist Tax",
+        amount: 3000,
+        taxType: "amount",
+        protected: true,
+      },
+    ]);
+
+    console.log(`✅ Created default taxes.`);
   };
 
   const createDefaultAdminConfigurations = async () => {
-    try {
-      await AdminConfigurationModel.create({
-        reservations: {
-          minimumDepositPercentage: {
-            value: 20,
-            description:
-              "The minimum deposit required (in %) to confirm a reservation.",
-          },
-          expireAfter: {
-            value: 30,
-            description:
-              "The number of minutes after which an unconfirmed reservation expires.",
-          },
-          cancelationPolicy: {
-            isRefundable: true,
-            refundableUntilInHours: 48,
-            refundablePercentage: 80,
-          },
+    const configExists = await AdminConfigurationModel.countDocuments();
+    if (configExists > 0) return;
+
+    await AdminConfigurationModel.create({
+      reservations: {
+        minimumDepositPercentage: {
+          value: 20,
+          description:
+            "The minimum deposit required (in %) to confirm a reservation.",
         },
-        hotel: {
-          policies: {
-            smokingAllowed: false,
-            petsAllowed: true,
-            partyingAllowed: false,
-            checkInTime: "15:00",
-            checkOutTime: "11:00",
-            description: "No smoking. Pets allowed. Quiet hours after 10 PM.",
-          },
+        expireAfter: {
+          value: 30,
+          description:
+            "The number of minutes after which an unconfirmed reservation expires.",
         },
-      });
-    } catch (err) {
-      console.log(err);
-    }
+        cancelationPolicy: {
+          isRefundable: true,
+          refundableUntilInHours: 48,
+          refundablePercentage: 80,
+        },
+      },
+      hotel: {
+        policies: {
+          smokingAllowed: false,
+          petsAllowed: true,
+          partyingAllowed: false,
+          checkInTime: "15:00",
+          checkOutTime: "11:00",
+          description: "No smoking. Pets allowed. Quiet hours after 10 PM.",
+        },
+      },
+    });
+
+    console.log(`✅ Created default admin configurations.`);
   };
 
-  await createDefaultRoles();
-  await createDefaultPermissions();
-  await createDefaultRolePermissions();
-  await createDefaultTaxes();
-  await createDefaultAdminConfigurations();
+  // Run all setups in parallel for better performance
+  await Promise.all([
+    createDefaultRoles(),
+    createDefaultPermissions(),
+    createDefaultRolePermissions(),
+    createDefaultTaxes(),
+    createDefaultAdminConfigurations(),
+  ]);
 };

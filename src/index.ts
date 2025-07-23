@@ -2,7 +2,7 @@ import * as dotEnv from "dotenv";
 import * as mongoose from "mongoose";
 
 import { app } from "./app";
-import { createDefualtDcouments } from "./defaults/documents.default";
+import { createDefaultDocuments } from "./defaults/documents.default";
 import { activateUsersCronJob } from "./cron-jobs/activateUsers.cron";
 import { freeRoomsCronJob } from "./cron-jobs/freeRooms.cron";
 
@@ -36,7 +36,7 @@ mongoose
     console.log("Error connecting to database: ", err);
   });
 
-createDefualtDcouments().catch((err) => {
+createDefaultDocuments().catch((err: any) => {
   console.log("Error: Creating default documents", err);
 });
 

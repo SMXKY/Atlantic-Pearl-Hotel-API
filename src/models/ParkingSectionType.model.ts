@@ -3,6 +3,7 @@ import mongoose, { Schema, Document, Model } from "mongoose";
 export interface IParkingSectionType extends Document {
   name: string;
   description?: string;
+  hourlyRateInCFA: number;
 }
 
 const parkingSectionTypeSchema: Schema<IParkingSectionType> = new Schema(
@@ -16,6 +17,10 @@ const parkingSectionTypeSchema: Schema<IParkingSectionType> = new Schema(
     description: {
       type: String,
       default: "",
+    },
+    hourlyRateInCFA: {
+      type: Number,
+      required: [true, "Parking Section Hourly rate in CFA is required."],
     },
   },
   {

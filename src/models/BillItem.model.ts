@@ -2,7 +2,7 @@ import mongoose, { Schema, Document, Model } from "mongoose";
 
 const allowedCategories = {
   room_reservation: "ReservationModel",
-  parking: "ParkingReservationModel",
+  parking: "parking_reservations",
   food: "FoodOrderModel",
   amenity: "AmenityUsageModel",
 } as const;
