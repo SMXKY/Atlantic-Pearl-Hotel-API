@@ -42,6 +42,11 @@ import { parkingReservationRouter } from "./routes/parkingReservation.route";
 import { parkingSectionRouter } from "./routes/parkingSection.route";
 import { parkingSpotRouter } from "./routes/parkingSpots.route";
 import { parkingSectionTypeRouter } from "./routes/parkingSectionType.route";
+import { restaurantCartRouter } from "./routes/restaurantCart.route";
+import { restaurantCartItemRouter } from "./routes/restaurantCartItem.route";
+import { restaurantItemRouter } from "./routes/restaurantItem.route";
+import { restaurantItemCategoryRouter } from "./routes/restaurantItemCategory.route";
+import { restaurantOrderRouter } from "./routes/restaurantOrder.route";
 
 export const app = express();
 
@@ -135,6 +140,11 @@ app.use("/api/v1/parking-reservations", parkingReservationRouter);
 app.use("/api/v1/parking-sections", parkingSectionRouter);
 app.use("/api/v1/parking-section-types", parkingSectionTypeRouter);
 app.use("/api/v1/parking-spots", parkingSpotRouter);
+app.use("/api/v1/restaurant-carts", restaurantCartRouter);
+app.use("/api/v1/restaurant-cart-items", restaurantCartItemRouter);
+app.use("/api/v1/restaurant-items", restaurantItemRouter);
+app.use("/api/v1/restaurant-item-categories", restaurantItemCategoryRouter);
+app.use("/api/v1/restaurant-orders", restaurantOrderRouter);
 
 const swaggerSpec = swaggerJSDoc({
   definition: {
