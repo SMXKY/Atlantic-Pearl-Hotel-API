@@ -14,16 +14,16 @@ roomTypeAmenityRouter
     roomTypeAmenityControllers.createRoomTypeAmenity
   )
   .get(
-    authControllers.protect,
-    authControllers.restrictTo(allPermissions.roomTypeAmenities.readAll),
+    // authControllers.protect,
+    // authControllers.restrictTo(allPermissions.roomTypeAmenities.readAll),
     roomTypeAmenityControllers.readAllRoomTypeAmenitys
   );
 
 roomTypeAmenityRouter
   .route("/:id")
   .get(
-    authControllers.protect,
-    authControllers.restrictTo(allPermissions.roomTypeAmenities.readOne),
+    // authControllers.protect,
+    // authControllers.restrictTo(allPermissions.roomTypeAmenities.readOne),
     roomTypeAmenityControllers.readOneRoomTypeAmenity
   )
   .patch(

@@ -14,16 +14,16 @@ roomTypeBedTypeRouter
     roomTypeBedTypeControllers.createRoomTypeBedType
   )
   .get(
-    authControllers.protect,
-    authControllers.restrictTo(allPermissions.roomTypeBedTypes.readAll),
+    // authControllers.protect,
+    // authControllers.restrictTo(allPermissions.roomTypeBedTypes.readAll),
     roomTypeBedTypeControllers.readAllRoomTypeBedTypes
   );
 
 roomTypeBedTypeRouter
   .route("/:id")
   .get(
-    authControllers.protect,
-    authControllers.restrictTo(allPermissions.roomTypeBedTypes.readOne),
+    // authControllers.protect,
+    // authControllers.restrictTo(allPermissions.roomTypeBedTypes.readOne),
     roomTypeBedTypeControllers.readOneRoomTypeBedType
   )
   .patch(

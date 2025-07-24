@@ -29,6 +29,8 @@ const createRestaurantOrder = catchAsync(
       );
     }
 
+    console.log("Here is the guest Id", guestId);
+
     if (!Array.isArray(cart) || cart.length === 0) {
       return next(
         new AppError(

@@ -11,8 +11,8 @@ export const reservationRouter = express.Router();
 reservationRouter
   .route("/")
   .post(
-    authControllers.protect,
-    authControllers.restrictTo(allPermissions.reservations.create),
+    // authControllers.protect,
+    // authControllers.restrictTo(allPermissions.reservations.create),
     validateReservationItem,
     reservationControllers.createReservation
   )
@@ -26,11 +26,13 @@ reservationRouter
   .route("/deposit-redirect")
   .get(reservationControllers.depositPaymentRedirect);
 
-reservationRouter.route("/calendar").get(
-  // authControllers.protect,
-  // authControllers.restrictTo(allPermissions.reservations.calendar),
-  reservationControllers.reservationCalendar
-);
+reservationRouter
+  .route("/calendar")
+  .get(
+    authControllers.protect,
+    authControllers.restrictTo(allPermissions.reservations.calendar),
+    reservationControllers.reservationCalendar
+  );
 
 reservationRouter
   .route("/manual")
@@ -53,13 +55,11 @@ reservationRouter
     manualReservationControllers.payForReservation
   );
 
-reservationRouter
-  .route("/cancel/:id")
-  .patch(
-    authControllers.protect,
-    authControllers.restrictTo(allPermissions.reservations.cancel),
-    reservationControllers.cancelReservation
-  );
+reservationRouter.route("/cancel/:id").patch(
+  // authControllers.protect,
+  // authControllers.restrictTo(allPermissions.reservations.cancel),
+  reservationControllers.cancelReservation
+);
 reservationRouter
   .route("/update-rooms/:id")
   .patch(

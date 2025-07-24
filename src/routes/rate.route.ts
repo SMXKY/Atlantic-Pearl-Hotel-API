@@ -14,16 +14,16 @@ rateRouter
     rateControllers.createRate
   )
   .get(
-    authControllers.protect,
-    authControllers.restrictTo(allPermissions.rates.readAll),
+    // authControllers.protect,
+    // authControllers.restrictTo(allPermissions.rates.readAll),
     rateControllers.readAllRates
   );
 
 rateRouter
   .route("/:id")
   .get(
-    authControllers.protect,
-    authControllers.restrictTo(allPermissions.rates.readOne),
+    // authControllers.protect,
+    // authControllers.restrictTo(allPermissions.rates.readOne),
     rateControllers.readOneRate
   )
   .patch(
