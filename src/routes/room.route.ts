@@ -34,6 +34,8 @@ roomRouter
   .patch(
     authControllers.protect,
     authControllers.restrictTo(allPermissions.rooms.update),
+    upload.array("img", 1),
+    handleFilesMiddleware,
     roomControllers.updateRoom
   )
   .delete(
