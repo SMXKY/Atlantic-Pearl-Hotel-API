@@ -24,6 +24,7 @@ import fs from "fs";
 import { AdminConfigurationModel } from "../models/AdminConfiguration.model";
 import { getGuestDetailsFromReservation } from "../util/getGuestFromReservation.util";
 import { validateReservationItemsAvailability } from "../util/validateReservationItems.util";
+import { BillModel } from "../models/Bill.model";
 
 const CRUDReservation: CRUD = new CRUD(ReservationModel);
 
@@ -88,6 +89,42 @@ const updateReservation = catchAsync(
   async (req: Request, res: Response, next: NextFunction) => {
     req.body._id = req.params.id;
     req.body.items = undefined;
+
+    if (req.body.status === "check out") {
+      const invoice = await InvoiceModel.findOne({
+        reservation: req.params.id,
+      });
+
+      if (!invoice) {
+        return next(
+          new AppError(
+            "No invoice found for this reservation",
+            StatusCodes.BAD_REQUEST
+          )
+        );
+      }
+
+      if (["unpaid", "partial"].includes(invoice.paymentStatus)) {
+        return next(
+          new AppError(
+            "Guest must settle their invoice before checking out",
+            StatusCodes.BAD_REQUEST
+          )
+        );
+      }
+
+      const bill = await BillModel.findOne({ reservationId: req.params.id });
+
+      if (bill && bill.status === "pending") {
+        return next(
+          new AppError(
+            "Guest must settle their bill before checking out",
+            StatusCodes.BAD_REQUEST
+          )
+        );
+      }
+    }
+
     await CRUDReservation.update(req.params.id, res, req);
   }
 );
