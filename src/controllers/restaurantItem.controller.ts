@@ -3,12 +3,31 @@ import { NextFunction, Request, Response } from "express";
 import { catchAsync } from "../util/catchAsync";
 import { CRUD } from "../util/Crud.util";
 import { RestaurantItemModel } from "../models/RestaurantItem.model";
+import { handleFileUploads } from "../external-apis/ftpServer";
+import { appResponder } from "../util/appResponder.util";
+import { StatusCodes } from "http-status-codes";
+import { AppError } from "../util/AppError.util";
 
 const CRUDRestaurantItem: CRUD = new CRUD(RestaurantItemModel);
 
 const createRestaurantItem = catchAsync(
   async (req: Request, res: Response, next: NextFunction) => {
-    await CRUDRestaurantItem.create(req.body, res, req);
+    req.body.imageUrl = "https://image.url";
+
+    const restaurantItem = new RestaurantItemModel(req.body);
+    await restaurantItem.validate();
+
+    const restaurantItemImageUrl = await handleFileUploads(req, 2, [
+      ".png",
+      ".jpg",
+      ".jpeg",
+    ]);
+
+    restaurantItem.imageUrl = restaurantItemImageUrl[0];
+
+    await restaurantItem.save();
+
+    appResponder(StatusCodes.OK, { restaurantItem }, res);
   }
 );
 
