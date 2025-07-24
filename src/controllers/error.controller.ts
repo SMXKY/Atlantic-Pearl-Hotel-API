@@ -34,6 +34,7 @@ const productionResponse = (err: Error | AppError, res: Response) => {
       message: message,
     });
   } else {
+    console.log(err);
     res.status(statusCode).json({
       ok: false,
       status: "Server error",
