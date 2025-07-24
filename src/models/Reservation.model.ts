@@ -464,6 +464,8 @@ reservationSchema.post("findOneAndUpdate", async function (doc: IReservation) {
     reservation: (this as any)._reservationId,
     statusChange: newStatus,
   });
+
+  const savePromises = [];
 });
 
 //update room status on reservation
@@ -524,6 +526,27 @@ reservationSchema.pre("findOneAndUpdate", async function (next) {
         { runValidators: true }
       );
     }
+  }
+
+  //Temporal solution
+  if (update.checkInDate) {
+    for (const item of currentReservation.Items) {
+      for (const roomEntry of item.rooms) {
+        roomEntry.checkIn = update.checkInDate;
+      }
+    }
+
+    await currentReservation.save();
+  }
+
+  if (update.checkOutDate) {
+    for (const item of currentReservation.Items) {
+      for (const roomEntry of item.rooms) {
+        roomEntry.checkOut = update.checkOutate;
+      }
+    }
+
+    await currentReservation.save();
   }
 
   next();
