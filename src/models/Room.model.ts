@@ -13,6 +13,7 @@ interface ILockUntil {
 }
 
 export interface IRoom extends mongoose.Document {
+  _id: mongoose.Types.ObjectId;
   number: string;
   floorNumber: number;
   status:

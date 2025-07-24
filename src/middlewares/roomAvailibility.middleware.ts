@@ -4,7 +4,7 @@ import { StatusCodes } from "http-status-codes";
 import { ReservationModel } from "../models/Reservation.model";
 import { RoomModel } from "../models/Room.model";
 import { catchAsync } from "../util/catchAsync";
-import * as mongoose from "mongoose";
+import mongoose from "mongoose";
 
 export const validateReservationItem = catchAsync(
   async (req: Request, res: Response, next: NextFunction) => {
@@ -15,14 +15,17 @@ export const validateReservationItem = catchAsync(
       );
     }
 
-    // Determine the ID of the reservation being updated:
-    // PATCH /reservations/:id  →  req.params.id
-    // fallback to req.body._id if you embed it there
-    const currentResId = req.params.id || req.body._id;
+    const currentReservationId = req.params.id || req.body._id;
+
+    // Flatten all room reservations to check overlaps in one pass
+    const allRequestedRooms: {
+      room: string;
+      checkIn: Date;
+      checkOut: Date;
+    }[] = [];
 
     for (const item of items) {
-      const { rooms } = item;
-      if (!Array.isArray(rooms) || rooms.length === 0) {
+      if (!Array.isArray(item.rooms) || item.rooms.length === 0) {
         return next(
           new AppError(
             "Each reservation item must have a non-empty rooms array.",
@@ -31,12 +34,11 @@ export const validateReservationItem = catchAsync(
         );
       }
 
-      for (const entry of rooms) {
-        const { room: roomId, checkIn, checkOut } = entry;
+      for (const { room: roomId, checkIn, checkOut } of item.rooms) {
         if (!roomId || !checkIn || !checkOut) {
           return next(
             new AppError(
-              "Each room entry must have room, checkIn and checkOut fields.",
+              "Each room entry must include 'room', 'checkIn', and 'checkOut'.",
               StatusCodes.BAD_REQUEST
             )
           );
@@ -44,89 +46,95 @@ export const validateReservationItem = catchAsync(
 
         const checkInDate = new Date(checkIn);
         const checkOutDate = new Date(checkOut);
+
         if (checkOutDate <= checkInDate) {
           return next(
             new AppError(
-              "checkOut date must be after checkIn date.",
+              `Invalid date range for room ${roomId}.`,
               StatusCodes.BAD_REQUEST
             )
           );
         }
 
-        // 1. Ensure room exists and is free
-        const room = await RoomModel.findById(roomId);
-        if (!room) {
+        allRequestedRooms.push({
+          room: roomId,
+          checkIn: checkInDate,
+          checkOut: checkOutDate,
+        });
+      }
+    }
+
+    // Get all rooms at once
+    const roomIds = allRequestedRooms.map((r) => r.room);
+    const uniqueRoomIds = [...new Set(roomIds.map((id) => id.toString()))];
+
+    const rooms = await RoomModel.find({ _id: { $in: uniqueRoomIds } });
+    const roomMap = new Map(rooms.map((room) => [room._id.toString(), room]));
+
+    for (const { room: roomId, checkIn, checkOut } of allRequestedRooms) {
+      const room = roomMap.get(roomId.toString());
+      if (!room) {
+        return next(
+          new AppError(
+            `Room ID ${roomId} does not exist.`,
+            StatusCodes.BAD_REQUEST
+          )
+        );
+      }
+
+      // Check if the room is not free and not already reserved by this reservation
+      const isCurrentlyReservedByThis = currentReservationId
+        ? await ReservationModel.exists({
+            _id: currentReservationId,
+            "items.rooms.room": room._id,
+          })
+        : false;
+
+      if (room.status !== "free" && !isCurrentlyReservedByThis) {
+        return next(
+          new AppError(
+            `Room ${room.number} is currently not available.`,
+            StatusCodes.BAD_REQUEST
+          )
+        );
+      }
+
+      // Check for date overlap with other reservations
+      const overlappingReservations = await ReservationModel.find({
+        _id: { $ne: currentReservationId },
+        status: { $in: ["pending", "confirmed"] },
+        "items.rooms.room": room._id,
+        "items.rooms": {
+          $elemMatch: {
+            room: room._id,
+            checkIn: { $lt: checkOut },
+            checkOut: { $gt: checkIn },
+          },
+        },
+      });
+
+      if (overlappingReservations.length > 0) {
+        const conflicting = overlappingReservations[0];
+        const conflictDates = conflicting.items
+          .flatMap((item) => item.rooms)
+          .find(
+            (r) =>
+              r.room.toString() === room._id.toString() &&
+              new Date(r.checkIn) < checkOut &&
+              new Date(r.checkOut) > checkIn
+          );
+
+        if (conflictDates) {
           return next(
             new AppError(
-              `Room ID ${roomId} does not exist.`,
+              `Room ${room.number} is already reserved from ${new Date(
+                conflictDates.checkIn
+              ).toDateString()} to ${new Date(
+                conflictDates.checkOut
+              ).toDateString()}.`,
               StatusCodes.BAD_REQUEST
             )
           );
-        }
-        if (room.status !== "free") {
-          // Check if this room is occupied by the current reservation itself
-          const isOccupiedByCurrentReservation = req.params.id
-            ? await ReservationModel.exists({
-                _id: req.params.id,
-                "items.rooms.room": room._id,
-              })
-            : false;
-
-          if (!isOccupiedByCurrentReservation) {
-            return next(
-              new AppError(
-                `Room ${room.number} is currently not free.`,
-                StatusCodes.BAD_REQUEST
-              )
-            );
-          }
-        }
-
-        // 2. Find confirmed reservations that include this room
-        // 2. Find reservations that include this room with overlapping statuses
-        const conflictingReservations = await ReservationModel.find({
-          status: { $in: ["pending", "confirmed"] },
-          "items.rooms.room": room._id,
-        });
-
-        // 3. For each, check for date overlap—skip the current reservation itself
-        for (const reservation of conflictingReservations) {
-          // skip if this is the one being updated
-          if (
-            currentResId &&
-            reservation._id.toString() === currentResId.toString()
-          ) {
-            continue;
-          }
-
-          for (const existingItem of reservation.items) {
-            for (const existingEntry of existingItem.rooms) {
-              if (
-                !(existingEntry.room as mongoose.Types.ObjectId).equals(
-                  room._id as mongoose.Types.ObjectId
-                )
-              )
-                continue;
-
-              const existingCheckIn = new Date(existingEntry.checkIn);
-              const existingCheckOut = new Date(existingEntry.checkOut);
-
-              // overlap: requestStart < existingEnd && requestEnd > existingStart
-              if (
-                checkInDate < existingCheckOut &&
-                checkOutDate > existingCheckIn
-              ) {
-                return next(
-                  new AppError(
-                    `Room ${
-                      room.number
-                    } is already reserved from ${existingCheckIn.toDateString()} to ${existingCheckOut.toDateString()}.`,
-                    StatusCodes.BAD_REQUEST
-                  )
-                );
-              }
-            }
-          }
         }
       }
     }
