@@ -11,6 +11,10 @@ const roleSchema = new mongoose.Schema(
     description: {
       type: String,
     },
+    isActive: {
+      type: Boolean,
+      default: true,
+    },
   },
   {
     timestamps: true,
@@ -18,5 +22,23 @@ const roleSchema = new mongoose.Schema(
     toObject: { virtuals: true },
   }
 );
+
+roleSchema.virtual("permissions", {
+  ref: "rolePermissions",
+  localField: "_id",
+  foreignField: "role",
+  justOne: false,
+});
+
+import { Query } from "mongoose";
+
+roleSchema.pre(/^find/, function (this: Query<any, any>, next) {
+  this.populate({
+    path: "permissions",
+    populate: { path: "permission" },
+  });
+
+  next();
+});
 
 export const RoleModel = mongoose.model("roles", roleSchema);
