@@ -7,9 +7,9 @@ export interface IRestaurantCartItem {
   cart: Types.ObjectId;
   item: Types.ObjectId;
   name_snapshot: string;
-  price_snapshot: number;
+  priceSnapShotInCFA: number;
   quantity: number;
-  prep_time_snapshot: number;
+  prepTimeSnapshot: number;
   createdAt?: Date;
   updatedAt?: Date;
 }
@@ -47,7 +47,7 @@ const RestaurantCartItemSchema = new Schema<IRestaurantCartItem>(
       required: true,
       trim: true,
     },
-    price_snapshot: {
+    priceSnapShotInCFA: {
       type: Number,
       required: true,
       min: 0,
@@ -57,7 +57,7 @@ const RestaurantCartItemSchema = new Schema<IRestaurantCartItem>(
       required: true,
       min: 1,
     },
-    prep_time_snapshot: {
+    prepTimeSnapshot: {
       type: Number,
       required: true,
       min: 0,

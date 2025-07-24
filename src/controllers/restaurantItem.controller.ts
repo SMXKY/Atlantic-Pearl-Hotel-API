@@ -7,6 +7,7 @@ import { handleFileUploads } from "../external-apis/ftpServer";
 import { appResponder } from "../util/appResponder.util";
 import { StatusCodes } from "http-status-codes";
 import { AppError } from "../util/AppError.util";
+import { appendFile } from "fs";
 
 const CRUDRestaurantItem: CRUD = new CRUD(RestaurantItemModel);
 
@@ -55,10 +56,51 @@ const deleteRestaurantItem = catchAsync(
   }
 );
 
+const quickUpdateDailyAvailability = catchAsync(
+  async (req: Request, res: Response, next: NextFunction) => {
+    const { id } = req.params;
+
+    if (!id) {
+      return next(
+        new AppError(
+          "Restaurant item id is required to toggle daily availability",
+          StatusCodes.BAD_REQUEST
+        )
+      );
+    }
+
+    const item = await RestaurantItemModel.findById(id);
+
+    if (!item) {
+      return next(
+        new AppError(
+          "Invalid Restaurant item id, or restaurant item no longer exists",
+          StatusCodes.NOT_FOUND
+        )
+      );
+    }
+
+    item.availableToday = !item.availableToday;
+    await item.save();
+
+    appResponder(
+      StatusCodes.OK,
+      {
+        message: `Item: ${item.name}'s availability has been toggled successfully.`,
+        data: {
+          availableToday: item.availableToday,
+        },
+      },
+      res
+    );
+  }
+);
+
 export const restaurantItemControllers = {
   createRestaurantItem,
   readOneRestaurantItem,
   readAllRestaurantItems,
   updateRestaurantItem,
   deleteRestaurantItem,
+  quickUpdateDailyAvailability,
 };
