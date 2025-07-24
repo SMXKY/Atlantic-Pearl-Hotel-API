@@ -107,6 +107,9 @@ const createParkingReservation = catchAsync(
         path: "user",
         select: "name",
       });
+
+      console.log(guest, guestId);
+
       if (!guest) throw new AppError("Guest not found.", StatusCodes.NOT_FOUND);
 
       const guestName = (guest.user as any)?.name;
