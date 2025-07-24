@@ -1,5 +1,7 @@
 import mongoose, { Schema, model, Types } from "mongoose";
 import { RestaurantItemCategoryModel } from "./RestaurantItemCategory.model";
+import { AppError } from "../util/AppError.util";
+import { StatusCodes } from "http-status-codes";
 
 export interface IRestaurantItem {
   _id?: Types.ObjectId;
@@ -95,6 +97,44 @@ const RestaurantItemSchema = new Schema<IRestaurantItem>(
     toJSON: { virtuals: true },
   }
 );
+
+const applySupportDocTransformation = (docOrDocs: any) => {
+  const baseUrl = process.env.FTP_BASE_URL;
+  if (!baseUrl) {
+    throw new AppError(
+      "No ftp base url in config file.",
+      StatusCodes.INTERNAL_SERVER_ERROR
+    );
+  }
+
+  const transform = (doc: any) => {
+    if (doc && doc.imageUrl && !doc.imageUrl.startsWith("https://")) {
+      doc.imageUrl = baseUrl + doc.imageUrl;
+    }
+  };
+
+  if (Array.isArray(docOrDocs)) {
+    docOrDocs.forEach(transform);
+  } else {
+    transform(docOrDocs);
+  }
+};
+
+RestaurantItemSchema.post("find", function (docs) {
+  applySupportDocTransformation(docs);
+});
+
+RestaurantItemSchema.post("findOne", function (doc) {
+  applySupportDocTransformation(doc);
+});
+
+RestaurantItemSchema.post("findOneAndUpdate", function (doc) {
+  applySupportDocTransformation(doc);
+});
+
+RestaurantItemSchema.post("findOneAndDelete", function (doc) {
+  applySupportDocTransformation(doc);
+});
 
 RestaurantItemSchema.index({ type: 1, isAvailable: 1, availableToday: 1 });
 
