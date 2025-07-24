@@ -15,7 +15,7 @@ export interface IRestaurantOrder {
     | "delivered"
     | "cancelled";
   totalAmountInCFA: number; // in cents
-  added_to_guest_bill: boolean;
+  addedToGuestBill: boolean;
   createdAt?: Date;
   updatedAt?: Date;
 }
@@ -59,7 +59,6 @@ const RestaurantOrderSchema = new Schema<IRestaurantOrder>(
         "delivered",
         "cancelled",
       ],
-      required: true,
       default: "pending",
     },
     totalAmountInCFA: {
@@ -67,7 +66,7 @@ const RestaurantOrderSchema = new Schema<IRestaurantOrder>(
       required: true,
       min: 0,
     },
-    added_to_guest_bill: {
+    addedToGuestBill: {
       type: Boolean,
       default: false,
     },

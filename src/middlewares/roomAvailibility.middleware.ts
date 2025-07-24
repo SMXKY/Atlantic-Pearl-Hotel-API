@@ -83,8 +83,9 @@ export const validateReservationItem = catchAsync(
         }
 
         // 2. Find confirmed reservations that include this room
+        // 2. Find reservations that include this room with overlapping statuses
         const conflictingReservations = await ReservationModel.find({
-          status: "confirmed",
+          status: { $in: ["pending", "confirmed"] },
           "items.rooms.room": room._id,
         });
 

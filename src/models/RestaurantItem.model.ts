@@ -45,6 +45,7 @@ const RestaurantItemSchema = new Schema<IRestaurantItem>(
         },
         message: "Referenced categoryId does not exist.",
       },
+      required: [true, "Restaurant Itme category is required."],
     },
     imageUrl: {
       type: String,
