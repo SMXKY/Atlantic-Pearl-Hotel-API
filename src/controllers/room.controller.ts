@@ -35,22 +35,13 @@ const createRoom = catchAsync(
 
 const readOneRoom = catchAsync(
   async (req: Request, res: Response, next: NextFunction) => {
-    await CRUDRoom.readOne(
-      req.params.id,
-      res,
-      ["type", "building", "assignedTo"],
-      req
-    );
+    await CRUDRoom.readOne(req.params.id, res, ["building", "assignedTo"], req);
   }
 );
 
 const readAllRooms = catchAsync(
   async (req: Request, res: Response, next: NextFunction) => {
-    await CRUDRoom.readAll(res, req, 1, 100, [
-      "type",
-      "building",
-      "assignedTo",
-    ]);
+    await CRUDRoom.readAll(res, req, 1, 100, ["building", "assignedTo"]);
   }
 );
 

@@ -154,6 +154,13 @@ roomTypeSchema.post("findOneAndDelete", async function (doc) {
   }
 });
 
+import type { Query } from "mongoose";
+
+roomTypeSchema.pre<Query<any, any>>(/^find/, function (next) {
+  this.populate("rates");
+  next();
+});
+
 export const RoomTypeModel = mongoose.model<IRoomTypeDocument>(
   "roomtypes",
   roomTypeSchema

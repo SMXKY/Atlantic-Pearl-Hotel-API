@@ -221,4 +221,14 @@ roomSchema.post("findOneAndDelete", function (doc) {
   applySupportDocTransformation(doc);
 });
 
+import { Schema, Document, Query } from "mongoose";
+
+roomSchema.pre<Query<IRoom[], IRoom>>(/^find/, function (next) {
+  this.populate({
+    path: "type",
+    populate: { path: "rates" },
+  });
+  next();
+});
+
 export const RoomModel = mongoose.model<IRoom>("rooms", roomSchema);

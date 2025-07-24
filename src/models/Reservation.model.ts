@@ -468,6 +468,29 @@ reservationSchema.post("findOneAndUpdate", async function (doc: IReservation) {
   const savePromises = [];
 });
 
+reservationSchema.pre("findOneAndUpdate", async function (next) {
+  const update = this.getUpdate() as any;
+  const filter = this.getQuery();
+  const currentReservation = await this.model.findOne(filter);
+  if (update.checkInDate) {
+    for (const item of currentReservation.items) {
+      for (const roomEntry of item.rooms) {
+        roomEntry.checkIn = update.checkInDate;
+      }
+    }
+    update.items = currentReservation.items;
+  }
+
+  if (update.checkOutDate) {
+    for (const item of currentReservation.items) {
+      for (const roomEntry of item.rooms) {
+        roomEntry.checkOut = update.checkOutDate;
+      }
+    }
+    update.items = currentReservation.items;
+  }
+});
+
 //update room status on reservation
 reservationSchema.pre("findOneAndUpdate", async function (next) {
   const update = this.getUpdate() as any; // avoid TS error due to unknown structure
@@ -526,27 +549,6 @@ reservationSchema.pre("findOneAndUpdate", async function (next) {
         { runValidators: true }
       );
     }
-  }
-
-  //Temporal solution
-  if (update.checkInDate) {
-    for (const item of currentReservation.Items) {
-      for (const roomEntry of item.rooms) {
-        roomEntry.checkIn = update.checkInDate;
-      }
-    }
-
-    await currentReservation.save();
-  }
-
-  if (update.checkOutDate) {
-    for (const item of currentReservation.Items) {
-      for (const roomEntry of item.rooms) {
-        roomEntry.checkOut = update.checkOutate;
-      }
-    }
-
-    await currentReservation.save();
   }
 
   next();
