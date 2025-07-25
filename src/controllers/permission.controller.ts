@@ -20,7 +20,7 @@ const readOnePermission = catchAsync(
 
 const readAllPermissions = catchAsync(
   async (req: Request, res: Response, next: NextFunction) => {
-    await CRUDPermission.readAll(res, req, 1, 100, []);
+    await CRUDPermission.readAll(res, req, 1, 200, []);
   }
 );
 

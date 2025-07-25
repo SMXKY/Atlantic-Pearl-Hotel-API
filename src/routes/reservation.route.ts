@@ -55,11 +55,13 @@ reservationRouter
     manualReservationControllers.payForReservation
   );
 
-reservationRouter.route("/cancel/:id").patch(
-  // authControllers.protect,
-  // authControllers.restrictTo(allPermissions.reservations.cancel),
-  reservationControllers.cancelReservation
-);
+reservationRouter
+  .route("/cancel/:id")
+  .patch(
+    authControllers.protect,
+    authControllers.restrictTo(allPermissions.reservations.cancel),
+    reservationControllers.cancelReservation
+  );
 reservationRouter
   .route("/update-rooms/:id")
   .patch(

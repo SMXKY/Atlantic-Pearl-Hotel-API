@@ -131,6 +131,29 @@ const updateReservation = catchAsync(
 
 const deleteReservation = catchAsync(
   async (req: Request, res: Response, next: NextFunction) => {
+    const reservation = await ReservationModel.findById(req.params.id);
+
+    if (!reservation) {
+      return next(
+        new AppError(
+          "Invalid reservation ID or the reservation has already been deleted.",
+          StatusCodes.NOT_FOUND
+        )
+      );
+    }
+
+    if (
+      reservation.status === "checked in" ||
+      reservation.status === "confirmed"
+    ) {
+      return next(
+        new AppError(
+          "You cannot delete a confirmed or checked-in reservation. Please update its status to 'cancelled' or 'no-show' instead.",
+          StatusCodes.BAD_REQUEST
+        )
+      );
+    }
+
     await CRUDReservation.delete(req.params.id, res, req);
   }
 );

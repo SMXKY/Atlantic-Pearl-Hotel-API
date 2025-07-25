@@ -707,6 +707,62 @@ reservationSchema.pre("save", function (next) {
   next();
 });
 
+// right alongside your existing pre("save") hook:
+reservationSchema.pre("findOneAndUpdate", function (next) {
+  // extract the “update” object
+  const upd = this.getUpdate() as Partial<{
+    checkInDate: Date;
+    checkOutDate: Date;
+  }>;
+
+  // if someone isn’t touching the dates, skip it
+  if (!upd.checkInDate && !upd.checkOutDate) {
+    return next();
+  }
+
+  const now = new Date();
+  const inDate = upd.checkInDate ?? this.getQuery().checkInDate;
+  const outDate = upd.checkOutDate ?? this.getQuery().checkOutDate;
+
+  if (!inDate || !outDate) {
+    return next(
+      new AppError(
+        "Both check-in and check-out dates must be provided when updating.",
+        StatusCodes.BAD_REQUEST
+      )
+    );
+  }
+
+  if (inDate <= now) {
+    return next(
+      new AppError(
+        "Check-in date must be in the future.",
+        StatusCodes.BAD_REQUEST
+      )
+    );
+  }
+
+  if (outDate <= now) {
+    return next(
+      new AppError(
+        "Check-out date must be in the future.",
+        StatusCodes.BAD_REQUEST
+      )
+    );
+  }
+
+  if (outDate <= inDate) {
+    return next(
+      new AppError(
+        "Check-out date must be after check-in date.",
+        StatusCodes.BAD_REQUEST
+      )
+    );
+  }
+
+  next();
+});
+
 export const ReservationModel = mongoose.model<IReservation>(
   "reservations",
   reservationSchema
