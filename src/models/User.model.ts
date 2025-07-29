@@ -4,6 +4,9 @@ import { isValidNumber } from "libphonenumber-js";
 import bcrypt from "bcrypt";
 import { RoleModel } from "./Role.model";
 import { Document, Types } from "mongoose";
+import { RoleOverideModel } from "./RoleOveride.model";
+import { AppError } from "../util/AppError.util";
+import { StatusCodes } from "http-status-codes";
 
 export interface IUser extends Document {
   name: string;
@@ -26,6 +29,7 @@ export interface IUser extends Document {
   passWordChangedAt?: Date;
   createdAt: Date;
   updatedAt: Date;
+  getAllRoles(): Promise<string>;
 }
 
 const userSchema = new mongoose.Schema(
@@ -233,5 +237,30 @@ userSchema.pre("save", function (next) {
 
   next();
 });
+
+userSchema.methods.getAllRoles = async function (): Promise<string> {
+  const roleOverrides = await RoleOverideModel.find({
+    user: this._id,
+  }).populate("role");
+
+  const baseRole = await RoleModel.findById(this.role);
+
+  if (!baseRole) {
+    throw new AppError(
+      "No base role found for this user",
+      StatusCodes.INTERNAL_SERVER_ERROR
+    );
+  }
+
+  let roleNames = [baseRole.name];
+
+  for (const override of roleOverrides) {
+    if ((override.role as any)?.name) {
+      roleNames.push((override.role as any).name);
+    }
+  }
+
+  return roleNames.join(", ");
+};
 
 export const UserModel = mongoose.model("users", userSchema);

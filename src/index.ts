@@ -4,7 +4,11 @@ import * as mongoose from "mongoose";
 import { app } from "./app";
 import { createDefaultDocuments } from "./defaults/documents.default";
 import { activateUsersCronJob } from "./cron-jobs/activateUsers.cron";
-import { freeRoomsCronJob } from "./cron-jobs/freeRooms.cron";
+import {
+  freeRoomsCronJob,
+  freeRoomsOnReserationStatus,
+} from "./cron-jobs/freeRooms.cron";
+import { setupSuperAdmin } from "./defaults/superAdmin.default";
 
 dotEnv.config();
 
@@ -42,6 +46,8 @@ createDefaultDocuments().catch((err: any) => {
 
 activateUsersCronJob();
 freeRoomsCronJob();
+setupSuperAdmin();
+freeRoomsOnReserationStatus();
 
 const port: number = Number(process.env.PORT) || 3000;
 

@@ -138,6 +138,7 @@ const freeRoomsOnReservationCompletion = async () => {
 
 export const freeRoomsOnReserationStatus = () => {
   cron.schedule("* * * * * ", async () => {
+    console.log("Running the Free rooms on reservation cron job.🔯");
     await freeRoomsOnReservationCompletion();
   });
 };

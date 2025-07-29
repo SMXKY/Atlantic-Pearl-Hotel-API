@@ -19,13 +19,13 @@ const createUser = catchAsync(
 
 const readOneUser = catchAsync(
   async (req: Request, res: Response, next: NextFunction) => {
-    await CRUDUser.readOne(req.params.id, res, [], req);
+    await CRUDUser.readOne(req.params.id, res, ["role"], req);
   }
 );
 
 const readAllUsers = catchAsync(
   async (req: Request, res: Response, next: NextFunction) => {
-    await CRUDUser.readAll(res, req, 1, 100, []);
+    await CRUDUser.readAll(res, req, 1, 100, ["role"]);
   }
 );
 
@@ -52,7 +52,7 @@ const updateUser = catchAsync(
     if (req.body.role) {
       return next(
         new AppError(
-          "You cannot update users on this route.",
+          "You cannot update user role on this route.",
           StatusCodes.BAD_REQUEST
         )
       );
@@ -150,8 +150,8 @@ const updatePassword = catchAsync(
       "Updated thier password",
       "users",
       res.locals.user._id,
-      undefined,
-      undefined
+      "",
+      ""
     );
 
     appResponder(
@@ -162,6 +162,28 @@ const updatePassword = catchAsync(
   }
 );
 
+const updateUserRole = catchAsync(
+  async (req: Request, res: Response, next: NextFunction) => {
+    const { role } = req.body;
+
+    if (!req.params.id) {
+      return next(
+        new AppError("User param id is required.", StatusCodes.BAD_REQUEST)
+      );
+    }
+
+    const data = await UserModel.findByIdAndUpdate(
+      req.params.id,
+      {
+        role,
+      },
+      { new: true, runValidators: true }
+    );
+
+    appResponder(StatusCodes.OK, { data }, res);
+  }
+);
+
 export const userControllers = {
   createUser,
   readOneUser,
@@ -169,4 +191,5 @@ export const userControllers = {
   updateUser,
   deleteUser,
   updatePassword,
+  updateUserRole,
 };

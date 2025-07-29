@@ -14,16 +14,16 @@ taxRouter
     taxControllers.createTax
   )
   .get(
-    authControllers.protect,
-    authControllers.restrictTo(allPermissions.taxes.readAll),
+    // authControllers.protect,
+    // authControllers.restrictTo(allPermissions.taxes.readAll),
     taxControllers.readAllTaxes
   );
 
 taxRouter
   .route("/:id")
   .get(
-    authControllers.protect,
-    authControllers.restrictTo(allPermissions.taxes.readOne),
+    // authControllers.protect,
+    // authControllers.restrictTo(allPermissions.taxes.readOne),
     taxControllers.readOneTax
   )
   .patch(

@@ -5,8 +5,9 @@ import { AppError } from "./AppError.util";
 import { Query } from "./Query.util";
 import { Request, Response } from "express";
 import { logUserActivity } from "./logUserActivity.util";
+import { UserModel } from "../models/User.model";
 
-//try and catch blocks are handled within controllers
+// try/catch blocks are handled within controllers
 export class CRUD {
   public model: any;
 
@@ -17,18 +18,33 @@ export class CRUD {
   public async create(body: any, res: Response, req: Request) {
     const data = await this.model.create(body);
 
-    // logUserActivity(
-    //   req,
-    //   res.locals.user._id,
-    //   `Created a document in ${this.model.collection.collectionName}`,
-    //   this.model.collection.collectionName,
-    //   data._id,
-    //   undefined,
-    //   //Bellow is so if we are createing an rray the toObject() method does not caurse and error
-    //   data.toObject() ? data.toObject() : { data }
-    // );
+    if (!res.locals.user?._id) {
+      throw new AppError(
+        "Authentication error: user identity missing from session.",
+        StatusCodes.UNAUTHORIZED
+      );
+    }
 
-    appResponder(StatusCodes.OK, data, res);
+    const user = await UserModel.findById(res.locals.user._id);
+
+    if (!user) {
+      throw new AppError(
+        "User not found in the database during activity logging. The account may have been deleted—check activity logs for details.",
+        StatusCodes.INTERNAL_SERVER_ERROR
+      );
+    }
+
+    logUserActivity(
+      req,
+      res.locals.user._id,
+      `${user.name} created a document in collection: ${this.model.collection.collectionName}, with id: ${data._id}`,
+      this.model.collection.collectionName,
+      data._id,
+      JSON.stringify(data.toObject()),
+      JSON.stringify(data.toObject())
+    );
+
+    appResponder(StatusCodes.CREATED, data, res);
   }
 
   public async readOne(
@@ -49,20 +65,36 @@ export class CRUD {
 
     if (!data) {
       throw new AppError(
-        "Invalid id, no such resource in the database.",
+        "Invalid id: no such resource in the database.",
         StatusCodes.NOT_FOUND
       );
     }
 
-    // await logUserActivity(
-    //   req,
-    //   res.locals.user._id,
-    //   `Read document in ${this.model.collection.collectionName}`,
-    //   this.model.collection.collectionName,
-    //   data._id,
-    //   data.toObject(),
-    //   data.toObject()
-    // );
+    if (!res.locals.user?._id) {
+      throw new AppError(
+        "Authentication error: user identity missing from session.",
+        StatusCodes.UNAUTHORIZED
+      );
+    }
+
+    const user = await UserModel.findById(res.locals.user._id);
+
+    if (!user) {
+      throw new AppError(
+        "User not found in the database during activity logging. The account may have been deleted—check activity logs for details.",
+        StatusCodes.INTERNAL_SERVER_ERROR
+      );
+    }
+
+    await logUserActivity(
+      req,
+      res.locals.user._id,
+      `${user.name} read document in ${this.model.collection.collectionName} with id: ${data._id}`,
+      this.model.collection.collectionName,
+      data._id,
+      JSON.stringify(data.toObject()),
+      JSON.stringify(data.toObject())
+    );
 
     appResponder(StatusCodes.OK, data, res);
   }
@@ -75,8 +107,7 @@ export class CRUD {
     populate: string[],
     defaultSort: string = "-createdAt"
   ): Promise<void> {
-    // console.log("here");
-    let queryBuilder = new Query(req.query, this.model.find())
+    const queryBuilder = new Query(req.query, this.model.find())
       .filter()
       .sort(defaultSort)
       .limitFields()
@@ -90,6 +121,33 @@ export class CRUD {
       });
     }
     const data = await finalQuery;
+
+    if (!res.locals.user?._id) {
+      throw new AppError(
+        "Authentication error: user identity missing from session.",
+        StatusCodes.UNAUTHORIZED
+      );
+    }
+
+    const user = await UserModel.findById(res.locals.user._id);
+
+    if (!user) {
+      throw new AppError(
+        "User not found in the database during activity logging. The account may have been deleted—check activity logs for details.",
+        StatusCodes.INTERNAL_SERVER_ERROR
+      );
+    }
+
+    await logUserActivity(
+      req,
+      res.locals.user._id,
+      `${user.name} read all documents in ${this.model.collection.collectionName}`,
+      this.model.collection.collectionName,
+      "",
+      "",
+      ""
+    );
+
     appResponder(StatusCodes.OK, data, res);
   }
 
@@ -102,19 +160,35 @@ export class CRUD {
 
     if (!data) {
       throw new AppError(
-        "Invalid Id, no such resource in the database",
+        "Invalid id: no such resource in the database.",
         StatusCodes.NOT_FOUND
+      );
+    }
+
+    if (!res.locals.user?._id) {
+      throw new AppError(
+        "Authentication error: user identity missing from session.",
+        StatusCodes.UNAUTHORIZED
+      );
+    }
+
+    const user = await UserModel.findById(res.locals.user._id);
+
+    if (!user) {
+      throw new AppError(
+        "User not found in the database during activity logging. The account may have been deleted—check activity logs for details.",
+        StatusCodes.INTERNAL_SERVER_ERROR
       );
     }
 
     await logUserActivity(
       req,
       res.locals.user._id,
-      `Updated document in ${this.model.collection.collectionName}`,
+      `${user.name} updated document in ${this.model.collection.collectionName} with id: ${data._id}`,
       this.model.collection.collectionName,
       data._id,
-      prevData.toObject(),
-      data.toObject()
+      JSON.stringify(prevData?.toObject()),
+      JSON.stringify(data.toObject())
     );
 
     appResponder(StatusCodes.OK, data, res);
@@ -125,18 +199,37 @@ export class CRUD {
     const data = await this.model.findByIdAndDelete(id);
 
     if (!data) {
-      throw new AppError("No such Id in the database", StatusCodes.NOT_FOUND);
+      throw new AppError(
+        "Invalid id: no such resource in the database.",
+        StatusCodes.NOT_FOUND
+      );
     }
 
-    // await logUserActivity(
-    //   req,
-    //   res.locals.user._id,
-    //   `Deleted document in ${this.model.collection.collectionName}`,
-    //   this.model.collection.collectionName,
-    //   prevData._id,
-    //   prevData.toObject(),
-    //   undefined
-    // );
+    if (!res.locals.user?._id) {
+      throw new AppError(
+        "Authentication error: user identity missing from session.",
+        StatusCodes.UNAUTHORIZED
+      );
+    }
+
+    const user = await UserModel.findById(res.locals.user._id);
+
+    if (!user) {
+      throw new AppError(
+        "User not found in the database during activity logging. The account may have been deleted—check activity logs for details.",
+        StatusCodes.INTERNAL_SERVER_ERROR
+      );
+    }
+
+    await logUserActivity(
+      req,
+      res.locals.user._id,
+      `${user.name} deleted document in ${this.model.collection.collectionName} with id: ${prevData?._id}`,
+      this.model.collection.collectionName,
+      prevData?._id,
+      JSON.stringify(prevData?.toObject()),
+      ""
+    );
 
     appResponder(
       StatusCodes.OK,

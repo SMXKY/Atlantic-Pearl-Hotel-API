@@ -14,13 +14,13 @@ const createRoleOveride = catchAsync(
 
 const readOneRoleOveride = catchAsync(
   async (req: Request, res: Response, next: NextFunction) => {
-    await CRUDroleOveride.readOne(req.params.id, res, [], req);
+    await CRUDroleOveride.readOne(req.params.id, res, ["role"], req);
   }
 );
 
 const readAllRoleOverides = catchAsync(
   async (req: Request, res: Response, next: NextFunction) => {
-    await CRUDroleOveride.readAll(res, req, 1, 100, []);
+    await CRUDroleOveride.readAll(res, req, 1, 100, ["role"]);
   }
 );
 

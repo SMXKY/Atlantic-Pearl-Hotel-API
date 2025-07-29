@@ -28,6 +28,14 @@ userRouter
   );
 
 userRouter
+  .route("/update-role/:id")
+  .patch(
+    authControllers.protect,
+    authControllers.restrictTo(allPermissions.users.updatePassword),
+    userControllers.updateUserRole
+  );
+
+userRouter
   .route("/:id")
   .get(
     authControllers.protect,

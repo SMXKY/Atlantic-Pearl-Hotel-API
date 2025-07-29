@@ -31,14 +31,12 @@ const activityLogSchema = new mongoose.Schema(
       trim: true,
     },
     previousDocumentState: {
-      type: Map,
-      of: mongoose.Schema.Types.Mixed,
-      default: {},
+      type: String,
+      default: "",
     },
     newDocumentState: {
-      type: Map,
-      of: mongoose.Schema.Types.Mixed,
-      default: {},
+      type: String,
+      default: "",
     },
     ipAddress: {
       type: String,
