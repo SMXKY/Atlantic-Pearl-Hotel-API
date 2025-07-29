@@ -42,7 +42,7 @@ const RestaurantOrderSchema = new Schema<IRestaurantOrder>(
       validate: {
         validator: async function (guestId: mongoose.Schema.Types.ObjectId) {
           if (!guestId) return false;
-          const exists = await GuestModel.exists({ _id: guestId });
+          const exists = await GuestModel.findById(guestId);
           return exists !== null;
         },
         message: "Referenced guest_id does not exist.",

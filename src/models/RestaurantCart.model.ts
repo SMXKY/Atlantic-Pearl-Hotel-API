@@ -16,12 +16,11 @@ const RestaurantCartSchema = new Schema<IRestaurantCart>(
       ref: "guests",
       required: true,
       validate: {
-        validator: async function (userId: Types.ObjectId) {
-          if (!userId) return false;
-          const exists = await GuestModel.exists({ _id: userId });
+        validator: async (id: mongoose.Types.ObjectId) => {
+          const exists = await mongoose.model("guests").exists({ _id: id });
           return exists !== null;
         },
-        message: "Referenced guest_id does not exist.",
+        message: "Guest not found",
       },
     },
     status: {

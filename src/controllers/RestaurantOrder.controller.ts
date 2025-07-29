@@ -8,6 +8,7 @@ import { AppError } from "../util/AppError.util";
 import { RestaurantItemModel } from "../models/RestaurantItem.model";
 import { RestaurantCartModel } from "../models/RestaurantCart.model";
 import { RestaurantCartItemModel } from "../models/RestaurantCartItem.model";
+import { GuestModel } from "../models/Guest.model";
 
 interface ICartItem {
   itemId: string;
@@ -20,7 +21,9 @@ const createRestaurantOrder = catchAsync(
   async (req: Request, res: Response, next: NextFunction) => {
     const { guestId, cart } = req.body;
 
-    if (!guestId) {
+    const guest = await GuestModel.findById(guestId);
+
+    if (!guestId || !guest) {
       return next(
         new AppError(
           "Guest ID is required to create a restaurant order.",
@@ -29,7 +32,7 @@ const createRestaurantOrder = catchAsync(
       );
     }
 
-    console.log("Here is the guest Id", guestId);
+    console.log("Here is the guest Id", guest._id);
 
     if (!Array.isArray(cart) || cart.length === 0) {
       return next(
@@ -42,7 +45,9 @@ const createRestaurantOrder = catchAsync(
 
     let totalAmount = 0;
 
-    const orderCart = await RestaurantCartModel.create({ guest: guestId });
+    const orderCart = await RestaurantCartModel.create({
+      guest: String(guest._id),
+    });
 
     for (const cartItem of cart as ICartItem[]) {
       const { itemId, amount } = cartItem;
@@ -117,7 +122,7 @@ const createRestaurantOrder = catchAsync(
     }
 
     req.body.cart = orderCart._id;
-    req.body.guest = guestId;
+    req.body.guest = guest._id;
     req.body.totalAmountInCFA = totalAmount;
 
     await CRUDRestaurantOrder.create(req.body, res, req);

@@ -112,13 +112,22 @@ const signIn = catchAsync(
       );
     }
 
+    const numberExist = await UserModel.exists({
+      phoneNumber: req.body.phoneNumber,
+    });
+    if (numberExist) {
+      return next(
+        new AppError("Phone number already in use.", StatusCodes.BAD_REQUEST)
+      );
+    }
+
     const user = await UserModel.create({ ...req.body, role: role._id });
 
     try {
       await GuestModel.create({ ...req.body, user: user._id });
     } catch (err) {
       await UserModel.findByIdAndDelete(user._id);
-      return next(err);
+      throw err;
     }
 
     if (!process.env.JWT_SECRETE) {
