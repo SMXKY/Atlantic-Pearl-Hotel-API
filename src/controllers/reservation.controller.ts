@@ -75,13 +75,13 @@ const createReservation = catchAsync(async (req, res, next) => {
 
 const readOneReservation = catchAsync(
   async (req: Request, res: Response, next: NextFunction) => {
-    await CRUDReservation.readOne(req.params.id, res, [], req);
+    await CRUDReservation.readOne(req.params.id, res, ["user"], req);
   }
 );
 
 const readAllReservations = catchAsync(
   async (req: Request, res: Response, next: NextFunction) => {
-    await CRUDReservation.readAll(res, req, 1, 100, []);
+    await CRUDReservation.readAll(res, req, 1, 1000, ["user"]);
   }
 );
 

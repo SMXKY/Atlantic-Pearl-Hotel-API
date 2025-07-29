@@ -4,19 +4,27 @@ import { ActivityLogModel } from "../models/ActivityLog.model";
 import { appResponder } from "../util/appResponder.util";
 import { StatusCodes } from "http-status-codes";
 import { logUserActivity } from "../util/logUserActivity.util";
+import { UserModel } from "../models/User.model";
+import { AppError } from "../util/AppError.util";
 
-const readActivityLogs = catchAsync(
+export const readActivityLogs = catchAsync(
   async (req: Request, res: Response, next: NextFunction) => {
     const {
       startDate,
       endDate,
       collectionName,
       user,
-      page = 1,
-      limit = 20,
+      search,
+      page = "1",
+      limit = "20",
     } = req.query;
 
-    // Build the base query
+    const pageNum = Math.max(Number(page), 1);
+    const limitNum = Math.max(Number(limit), 1);
+
+    // console.log(req.query);
+
+    // Build the base filter
     const filter: Record<string, any> = {};
 
     // Date range filter
@@ -33,16 +41,66 @@ const readActivityLogs = catchAsync(
 
     // User ID filter
     if (user) {
-      filter.user = user;
+      filter["user._id"] = user;
     }
 
-    // Fetch filtered and sorted data
-    const data = await ActivityLogModel.find(filter)
-      .sort({ createdAt: -1 }) // Most recent first
-      .skip((+page - 1) * +limit)
-      .limit(+limit);
+    // Search across multiple fields
+    if (search) {
+      const s = (search as string).trim();
+      const regex = new RegExp(s, "i");
+      filter.$or = [
+        { "user.name": regex },
+        { "user.email": regex },
+        { collectionName: regex },
+        { resourceId: regex },
+        { action: regex },
+      ];
+    }
 
-    appResponder(StatusCodes.OK, data, res);
+    // Get total count
+    const totalCount = await ActivityLogModel.countDocuments(filter);
+    const totalPages = Math.ceil(totalCount / limitNum) || 1;
+
+    // If page exceeds, clamp
+    const skip = (pageNum - 1) * limitNum;
+    const effectiveSkip =
+      skip >= totalCount ? (totalPages - 1) * limitNum : skip;
+
+    // Fetch filtered, sorted, paginated data
+    const logs = await ActivityLogModel.find(filter)
+      .sort({ createdAt: -1 })
+      .skip(effectiveSkip)
+      .limit(limitNum)
+      .populate("user");
+
+    // Respond with logs and pagination
+    if (!res.locals.user?._id) {
+      throw new AppError(
+        "Authentication error: user identity missing from session.",
+        StatusCodes.UNAUTHORIZED
+      );
+    }
+
+    const userCheck = await UserModel.findById(res.locals.user._id);
+
+    if (!userCheck) {
+      throw new AppError(
+        "User not found in the database during activity logging. The account may have been deleted—check activity logs for details.",
+        StatusCodes.INTERNAL_SERVER_ERROR
+      );
+    }
+
+    await logUserActivity(
+      req,
+      res.locals.user._id,
+      `${userCheck.name} read all documents in activity-logs`,
+      "activity-logs",
+      "",
+      "",
+      ""
+    );
+
+    appResponder(StatusCodes.OK, { logs, totalPages, page: pageNum }, res);
   }
 );
 
