@@ -7,6 +7,7 @@ export interface IRestaurantCart {
   status: "cart" | "placed" | "cancelled";
   createdAt?: Date;
   updatedAt?: Date;
+  cartItems: any;
 }
 
 const RestaurantCartSchema = new Schema<IRestaurantCart>(
@@ -36,6 +37,12 @@ const RestaurantCartSchema = new Schema<IRestaurantCart>(
     toJSON: { virtuals: true },
   }
 );
+
+RestaurantCartSchema.virtual("cartItems", {
+  ref: "restaurant_cart_items",
+  localField: "_id",
+  foreignField: "cart",
+});
 
 export const RestaurantCartModel = model<IRestaurantCart>(
   "restaurant_carts",

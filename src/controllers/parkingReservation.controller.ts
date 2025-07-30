@@ -234,13 +234,18 @@ const createParkingReservation = catchAsync(
 
 const readOneParkingReservation = catchAsync(
   async (req: Request, res: Response, next: NextFunction) => {
-    await CRUDParkingReservation.readOne(req.params.id, res, [], req);
+    await CRUDParkingReservation.readOne(
+      req.params.id,
+      res,
+      ["guest", "spot"],
+      req
+    );
   }
 );
 
 const readAllParkingReservations = catchAsync(
   async (req: Request, res: Response, next: NextFunction) => {
-    await CRUDParkingReservation.readAll(res, req, 1, 100, []);
+    await CRUDParkingReservation.readAll(res, req, 1, 100, ["guest", "spot"]);
   }
 );
 

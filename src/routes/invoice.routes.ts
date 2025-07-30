@@ -6,6 +6,12 @@ import { allPermissions } from "../types/Permissions.type";
 
 export const invoiceRouter = express.Router();
 
+invoiceRouter.route("/bill-and-invoice").get(
+  // authControllers.protect,
+  // authControllers.restrictTo(allPermissions.invoices.readAll),
+  invoiceControllers.showBillAndInvoiceSettleMentData
+);
+
 invoiceRouter
   .route("/")
   .post(
@@ -14,16 +20,16 @@ invoiceRouter
     invoiceControllers.createInvoice
   )
   .get(
-    // authControllers.protect,
-    // authControllers.restrictTo(allPermissions.invoices.readAll),
+    authControllers.protect,
+    authControllers.restrictTo(allPermissions.invoices.readAll),
     invoiceControllers.readAllInvoices
   );
 
 invoiceRouter
   .route("/:id")
   .get(
-    // authControllers.protect,
-    // authControllers.restrictTo(allPermissions.invoices.readOne),
+    authControllers.protect,
+    authControllers.restrictTo(allPermissions.invoices.readOne),
     invoiceControllers.readOneInvoice
   )
   .patch(

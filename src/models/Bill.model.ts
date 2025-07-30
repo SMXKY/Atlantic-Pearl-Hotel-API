@@ -1,4 +1,5 @@
 import mongoose, { Schema, Document, Model } from "mongoose";
+import { IBillItem } from "./BillItem.model";
 
 export interface IBill extends Document {
   guestId: mongoose.Types.ObjectId;
@@ -7,6 +8,7 @@ export interface IBill extends Document {
   issuedAt: Date;
   paidAt?: Date;
   notes?: string;
+  billItems: IBillItem[];
 }
 
 const billSchema = new Schema<IBill>(
@@ -59,6 +61,12 @@ const billSchema = new Schema<IBill>(
     collection: "bills",
   }
 );
+
+billSchema.virtual("billItems", {
+  ref: "bill_items",
+  localField: "_id",
+  foreignField: "billId",
+});
 
 export const BillModel: Model<IBill> = mongoose.model<IBill>(
   "bills",

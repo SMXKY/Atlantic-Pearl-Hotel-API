@@ -57,6 +57,7 @@ export interface IReservation extends mongoose.Document {
   checkOutDate?: Date;
   numberOfGuest: number;
   guestNIC?: string;
+  settlementUrl: string;
   guest?: mongoose.Types.ObjectId | IGuest;
   bookingSource?: "online" | "onsite" | "phone call";
   paymentMethod?:
@@ -197,6 +198,9 @@ const reservationSchema = new mongoose.Schema<IReservation>(
     depositInCFA: {
       type: Number,
       required: [true, "Reservation deposit amount is required."],
+    },
+    settlementUrl: {
+      type: String,
     },
   },
   { timestamps: true, toJSON: { virtuals: true }, toObject: { virtuals: true } }

@@ -7,8 +7,14 @@ import { StatusCodes } from "http-status-codes";
 import { AppError } from "../util/AppError.util";
 import { RestaurantItemModel } from "../models/RestaurantItem.model";
 import { RestaurantCartModel } from "../models/RestaurantCart.model";
-import { RestaurantCartItemModel } from "../models/RestaurantCartItem.model";
+import {
+  IRestaurantCartItem,
+  RestaurantCartItemModel,
+} from "../models/RestaurantCartItem.model";
 import { GuestModel } from "../models/Guest.model";
+import { BillItemModel } from "../models/BillItem.model";
+import { BillModel } from "../models/Bill.model";
+import { ReservationModel } from "../models/Reservation.model";
 
 interface ICartItem {
   itemId: string;
@@ -140,10 +146,111 @@ const readAllRestaurantOrders = catchAsync(
     await CRUDRestaurantOrder.readAll(res, req, 1, 100, []);
   }
 );
-
 const updateRestaurantOrder = catchAsync(
   async (req: Request, res: Response, next: NextFunction) => {
-    await CRUDRestaurantOrder.update(req.params.id, res, req);
+    const { status, reservationId, guestId } = req.body;
+    const { id: orderId } = req.params;
+
+    const order = await RestaurantOrderModel.findById(orderId);
+
+    if (!order) {
+      return next(
+        new AppError(
+          "No such restaurant order with the provided ID.",
+          StatusCodes.NOT_FOUND
+        )
+      );
+    }
+
+    if (status === "delivered") {
+      if (!reservationId || !guestId) {
+        return next(
+          new AppError(
+            "You must provide both reservationId and guestId to charge the guest for the delivered restaurant order.",
+            StatusCodes.BAD_REQUEST
+          )
+        );
+      }
+
+      const [reservation, guest] = await Promise.all([
+        ReservationModel.findById(reservationId),
+        GuestModel.findById(guestId).populate("user"),
+      ]);
+
+      if (!reservation) {
+        return next(
+          new AppError(
+            "Reservation not found. Unable to charge guest for restaurant order.",
+            StatusCodes.BAD_REQUEST
+          )
+        );
+      }
+
+      if (!guest) {
+        return next(
+          new AppError(
+            "Guest not found. Unable to charge guest for restaurant order.",
+            StatusCodes.BAD_REQUEST
+          )
+        );
+      }
+
+      // Fetch or create the bill
+      let bill = await BillModel.findOne({ reservationId });
+
+      if (!bill) {
+        const [created] = await BillModel.create([
+          {
+            guestId: guest._id,
+            reservationId: reservation._id,
+          },
+        ]);
+        bill = created;
+      }
+
+      // Fetch the cart and calculate total
+      const cart = await RestaurantCartModel.findById(order.cart).populate(
+        "cartItems"
+      );
+
+      if (!cart || !cart.cartItems) {
+        return next(
+          new AppError(
+            "Unable to load cart or its items associated with this order.",
+            StatusCodes.BAD_REQUEST
+          )
+        );
+      }
+
+      const totalAmount = cart.cartItems.reduce(
+        (sum: any, item: IRestaurantCartItem) => {
+          const quantity = item.quantity || 1;
+          return sum + item.priceSnapShotInCFA * quantity;
+        },
+        0
+      );
+
+      if (isNaN(totalAmount) || totalAmount < 0) {
+        return next(
+          new AppError(
+            "Calculated total amount is invalid.",
+            StatusCodes.INTERNAL_SERVER_ERROR
+          )
+        );
+      }
+
+      // Create a bill item for the restaurant order
+      await BillItemModel.create({
+        billId: bill._id,
+        description: `${(guest.user as any).name} ordered restaurant items`,
+        category: "restaurant_orders", // enum value
+        linkedEntityId: order._id,
+        amount: totalAmount,
+      });
+    }
+
+    // Proceed with the update
+    await CRUDRestaurantOrder.update(orderId, res, req);
   }
 );
 

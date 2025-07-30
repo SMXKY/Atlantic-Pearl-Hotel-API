@@ -5,6 +5,7 @@ const allowedCategories = {
   parking_reservations: "parking_reservations",
   food: "FoodOrderModel",
   amenity: "AmenityUsageModel",
+  restaurant_orders: "restaurant_orders",
 } as const;
 
 type AllowedCategory = keyof typeof allowedCategories;
