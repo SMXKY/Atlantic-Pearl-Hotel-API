@@ -124,6 +124,7 @@ const createParkingReservation = catchAsync(
       const reservation = await ReservationModel.findOne({
         bookingReference: reservationBookingReference,
       });
+
       if (!reservation) {
         throw new AppError("Reservation not found.", StatusCodes.NOT_FOUND);
       }

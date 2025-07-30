@@ -12,6 +12,12 @@ invoiceRouter.route("/bill-and-invoice").get(
   invoiceControllers.showBillAndInvoiceSettleMentData
 );
 
+invoiceRouter.route("/bill-and-invoice/settle").get(
+  // authControllers.protect,
+  // authControllers.restrictTo(allPermissions.invoices.readAll),
+  invoiceControllers.settleBillAndInvoice
+);
+
 invoiceRouter
   .route("/")
   .post(

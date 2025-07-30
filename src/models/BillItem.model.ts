@@ -16,6 +16,7 @@ export interface IBillItem extends Document {
   amount: number;
   category: AllowedCategory;
   linkedEntityId?: mongoose.Types.ObjectId;
+  createdAt: Date;
 }
 
 const billItemSchema = new Schema<IBillItem>(

@@ -18,7 +18,7 @@ interface IRoomEntry {
 }
 
 // Line item interface
-interface IInvoiceLine {
+export interface IInvoiceLine {
   roomType: mongoose.Types.ObjectId;
   rate: mongoose.Types.ObjectId;
   rooms: IRoomEntry[];

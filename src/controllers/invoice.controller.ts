@@ -11,6 +11,11 @@ import { BillModel } from "../models/Bill.model";
 import { IBillItem } from "../models/BillItem.model";
 import { initiatePay, InitiatePayData } from "../external-apis/fapshi.api";
 import { TransactionModel } from "../models/Transaction.model";
+import {
+  EmailData,
+  renderInvoiceEmail,
+} from "../util/generateInvoiceAndBillSettlementEmail.template";
+import { sendEmail } from "../util/sendEmail.util";
 
 const CRUDInvoice: CRUD = new CRUD(InvoiceModel);
 
@@ -46,68 +51,56 @@ const deleteInvoice = catchAsync(
 
 const settleBillAndInvoice = catchAsync(
   async (req: Request, res: Response, next: NextFunction) => {
-    /*
-    I have to get the reservation id or the refrence code
-    I need to know if the reservation is by credit card, momo, or cash
-    find the invoice and bill associated with the reservation ( bill may not exist)
-    if it by cash, update the bill and invoice to paid
-    send a response.
-    else:
-    calcluate the bill total and the invoice amout due
-    create a payment link with fapshi 
-    email the user the payment link, and also send to the front end
-    //only sette the buill and invoice on fapshi redirect and expirte the payment link
-     */
-
     const { reservationId, bookingReference, method } = req.body;
 
-    if (!reservationId || !bookingReference) {
+    if (!reservationId && !bookingReference) {
       return next(
         new AppError(
-          "Reservation Id or booking reference is required to settle bill or reservation invoice",
+          "Reservation ID or booking reference is required to settle bill or invoice.",
           StatusCodes.BAD_REQUEST
         )
       );
     }
 
-    const reservation = await ReservationModel.findOne({
-      $or: [{ _id: reservationId }, { bookingReference: bookingReference }],
-    });
+    const reservation = await ReservationModel.findById(reservationId);
 
     if (!reservation) {
       return next(
         new AppError(
-          "No such reservation booking reference or Id",
+          "No reservation found with the provided ID or reference.",
           StatusCodes.NOT_FOUND
         )
       );
     }
 
     const bill = await BillModel.findOne({
-      reservationId: reservationId,
+      reservationId: reservation._id,
     }).populate("billItems");
 
-    const invoice = await InvoiceModel.findOne({ reservation: reservationId });
+    const invoice = await InvoiceModel.findOne({
+      reservation: reservation._id,
+    });
 
     if (!invoice) {
       return next(
         new AppError(
-          "No invoice associated with the reservation. FATAL SERVER ERORR have the DEV FIX THIS ASAP",
+          "No invoice found for the reservation. This is a critical error; developer intervention required.",
           StatusCodes.INTERNAL_SERVER_ERROR
         )
       );
     }
 
-    let totalDebtInCFA = 0;
+    let totalDebtInCFA = invoice.amountDue;
+    let totalBill = 0;
 
     if (bill) {
-      bill.billItems.forEach((item) => {
+      for (const item of bill.billItems) {
         totalDebtInCFA += item.amount;
-      });
+        totalBill += item.amount;
+      }
     }
 
-    totalDebtInCFA += invoice.amountDue;
-
+    // Handle CASH PAYMENT
     if (method === "cash") {
       invoice.amountPaid += invoice.amountDue;
       invoice.amountDue = 0;
@@ -116,63 +109,109 @@ const settleBillAndInvoice = catchAsync(
 
       if (bill) {
         bill.status = "paid";
-        bill.paidAt = new Date(Date.now());
+        bill.paidAt = new Date();
         await bill.save();
       }
 
       return appResponder(
         StatusCodes.OK,
         {
-          message: `Reservation  with amount ${totalDebtInCFA.toLocaleString()}XAF Invoice and Or Bill have been settled, guest may now checkout, assuming the money has been colleted by the front the des the server will save this transaction as done`,
+          message: `Reservation invoice and bill totaling ${totalDebtInCFA.toLocaleString()} XAF have been marked as settled. Guest may proceed to checkout.`,
         },
         res
       );
     }
 
-    const baseUrl =
+    // HANDLE PAYMENT LINK
+    const envBaseUrl =
       process.env.NODE_ENV === "production"
         ? process.env.PROD_BASE_URL
         : process.env.BASE_URL;
 
-    console.log(baseUrl);
-
-    if (
-      !process.env.BASE_URL ||
-      !process.env.NODE_ENV ||
-      !process.env.PROD_BASE_URL
-    ) {
+    if (!envBaseUrl) {
       return next(
         new AppError(
-          "Node Env and Base url missing from enviroment varaibles",
+          "Base URL is not set in environment variables.",
           StatusCodes.INTERNAL_SERVER_ERROR
         )
       );
     }
 
-    const data = {
+    // console.log(reservation);
+    // return next(new AppError("test here", 404));
+    const paymentDataPayload = {
       amount: totalDebtInCFA,
-      reservationId: String(reservation._id),
+      reservationId: reservation._id.toString(),
     };
 
-    const dataString = encodeURIComponent(JSON.stringify(data));
-    const redirectUrl = `${baseUrl}/api/v1/invoices/settlement-redirect?data=${dataString}`;
+    const encodedPayload = encodeURIComponent(
+      JSON.stringify(paymentDataPayload)
+    );
+
+    const redirectUrl = `${envBaseUrl}/api/v1/invoices/settlement-redirect?data=${encodedPayload}`;
 
     const payData: InitiatePayData = {
-      amount: reservation.depositInCFA,
+      amount: totalDebtInCFA,
       redirectUrl,
       userId: reservation._id.toString(),
-      message: "Atlantic Pearl Hotel and Resort, Bill and Invoice settlement", // Optional message shown to user
+      message: "Atlantic Pearl Hotel and Resort - Bill & Invoice Settlement",
     };
 
-    const payment = await initiatePay(payData);
+    const paymentLink = await initiatePay(payData);
+    // reservation.settlementUrl = paymentLink.link;
+    // await reservation.save();
+    await ReservationModel.findByIdAndUpdate(
+      reservation._id,
+      {
+        settlementUrl: paymentLink.link,
+      },
+      { runValidators: true, new: true }
+    );
 
-    reservation.settlementUrl = payment;
+    // Prepare email data
+    const emailData: EmailData = {
+      guestName: reservation.guestName,
+      invoice: {
+        ref: invoice.invoiceNumber,
+        lineItems: invoice.lineItems,
+        total: invoice.grandTotal,
+        amountPaid: invoice.amountPaid,
+        amountDue: invoice.amountDue,
+      },
+      bill: {
+        ref: bill ? String(bill._id) : undefined,
+        items: bill?.billItems ?? [],
+        total: totalBill,
+      },
+      total: totalDebtInCFA,
+      paymentLink,
+      issueDate: new Date().toISOString(),
+    };
 
-    appResponder(
+    if (!reservation.guestEmail) {
+      return next(
+        new AppError(
+          "Reservation guest email is missing. Cannot send payment email.",
+          StatusCodes.INTERNAL_SERVER_ERROR
+        )
+      );
+    }
+
+    const emailHTML = await renderInvoiceEmail(emailData);
+
+    await sendEmail(
+      reservation.guestEmail,
+      "BILL and RESERVATION SETTLEMENT - ATLANTIC PEARL HOTEL and RESORT",
+      "",
+      emailHTML
+    );
+
+    return appResponder(
       StatusCodes.OK,
       {
         message:
-          "Email with payment links sent to guest email, proceed to email, click  and click on the payment button to pay with credit card or mobile money",
+          "Email sent to guest with payment link. User can pay via mobile money or card.",
+        paymentLink,
       },
       res
     );
@@ -227,10 +266,12 @@ const showBillAndInvoiceSettleMentData = catchAsync(
     }
 
     let totalDebtInCFA = 0;
+    let totalBill = 0;
 
     if (bill && bill.billItems?.length) {
       bill.billItems.forEach((item: any) => {
         totalDebtInCFA += item.amount;
+        totalBill += item.amount;
       });
     }
 
@@ -242,10 +283,14 @@ const showBillAndInvoiceSettleMentData = catchAsync(
         invoice: {
           ref: invoice.invoiceNumber,
           lineItems: invoice.lineItems,
+          total: invoice.grandTotal,
+          amountPaid: invoice.amountPaid,
+          amountDue: invoice.amountDue,
         },
         bill: {
           ref: bill?._id ?? null,
           items: bill?.billItems ?? [],
+          total: totalBill,
         },
         total: totalDebtInCFA,
       },
