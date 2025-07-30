@@ -75,25 +75,28 @@ const createReservation = catchAsync(async (req, res, next) => {
 
 const readOneReservation = catchAsync(
   async (req: Request, res: Response, next: NextFunction) => {
-    await CRUDReservation.readOne(req.params.id, res, ["user"], req);
+    await CRUDReservation.readOne(req.params.id, res, [], req);
   }
 );
 
 const readAllReservations = catchAsync(
   async (req: Request, res: Response, next: NextFunction) => {
-    await CRUDReservation.readAll(res, req, 1, 1000, ["user"]);
+    await CRUDReservation.readAll(res, req, 1, 1000, []);
   }
 );
 
 const updateReservation = catchAsync(
   async (req: Request, res: Response, next: NextFunction) => {
-    req.body._id = req.params.id;
-    req.body.items = undefined;
+    const reservationId = req.params.id;
 
-    if (req.body.status === "check out") {
+    // Prevent modification of reservation items through this endpoint
+    delete req.body.items;
+
+    // Check-out logic: validate invoice and bill before allowing check-out
+    if (req.body.status === "checked out") {
       const invoice = await InvoiceModel.findOne({
-        reservation: req.params.id,
-      });
+        reservation: reservationId,
+      }).lean();
 
       if (!invoice) {
         return next(
@@ -113,9 +116,9 @@ const updateReservation = catchAsync(
         );
       }
 
-      const bill = await BillModel.findOne({ reservationId: req.params.id });
+      const bill = await BillModel.findOne({ reservationId }).lean();
 
-      if (bill && bill.status === "pending") {
+      if (bill?.status === "pending") {
         return next(
           new AppError(
             "Guest must settle their bill before checking out",
@@ -125,7 +128,8 @@ const updateReservation = catchAsync(
       }
     }
 
-    await CRUDReservation.update(req.params.id, res, req);
+    // Proceed to update reservation
+    await CRUDReservation.update(reservationId, res, req);
   }
 );
 

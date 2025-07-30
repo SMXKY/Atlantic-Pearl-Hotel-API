@@ -17,8 +17,8 @@ reservationRouter
     reservationControllers.createReservation
   )
   .get(
-    // authControllers.protect,
-    // authControllers.restrictTo(allPermissions.reservations.readAll),
+    authControllers.protect,
+    authControllers.restrictTo(allPermissions.reservations.readAll),
     reservationControllers.readAllReservations
   );
 
