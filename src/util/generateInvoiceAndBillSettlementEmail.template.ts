@@ -36,6 +36,7 @@ export interface EmailData {
   bill?: BillData;
   paymentLink: string;
   total: number; // use total from email data
+  redirect: string;
 }
 
 // Helper formatters

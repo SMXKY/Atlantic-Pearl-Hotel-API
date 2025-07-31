@@ -9,13 +9,20 @@ import { StatusCodes } from "http-status-codes";
 import { appResponder } from "../util/appResponder.util";
 import { BillModel } from "../models/Bill.model";
 import { IBillItem } from "../models/BillItem.model";
-import { initiatePay, InitiatePayData } from "../external-apis/fapshi.api";
+import {
+  expirePay,
+  initiatePay,
+  InitiatePayData,
+} from "../external-apis/fapshi.api";
 import { TransactionModel } from "../models/Transaction.model";
 import {
   EmailData,
   renderInvoiceEmail,
 } from "../util/generateInvoiceAndBillSettlementEmail.template";
 import { sendEmail } from "../util/sendEmail.util";
+import { RecieptModel } from "../models/Reciept.model";
+import path from "path";
+import fs from "fs";
 
 const CRUDInvoice: CRUD = new CRUD(InvoiceModel);
 
@@ -90,6 +97,18 @@ const settleBillAndInvoice = catchAsync(
       );
     }
 
+    if (
+      (bill && invoice.paymentStatus === "paid" && bill.status === "paid") ||
+      (!bill && invoice.paymentStatus === "paid")
+    ) {
+      return next(
+        new AppError(
+          "Reservation payment link has already been sent or bill and invoice have already been paid.",
+          StatusCodes.BAD_REQUEST
+        )
+      );
+    }
+
     let totalDebtInCFA = invoice.amountDue;
     let totalBill = 0;
 
@@ -150,6 +169,8 @@ const settleBillAndInvoice = catchAsync(
 
     const redirectUrl = `${envBaseUrl}/api/v1/invoices/settlement-redirect?data=${encodedPayload}`;
 
+    console.log(totalDebtInCFA);
+
     const payData: InitiatePayData = {
       amount: totalDebtInCFA,
       redirectUrl,
@@ -158,6 +179,8 @@ const settleBillAndInvoice = catchAsync(
     };
 
     const paymentLink = await initiatePay(payData);
+    // console.log(paymentLink);
+    // return;
     // reservation.settlementUrl = paymentLink.link;
     // await reservation.save();
     await ReservationModel.findByIdAndUpdate(
@@ -184,8 +207,9 @@ const settleBillAndInvoice = catchAsync(
         total: totalBill,
       },
       total: totalDebtInCFA,
-      paymentLink,
+      paymentLink: paymentLink.link,
       issueDate: new Date().toISOString(),
+      redirect: redirectUrl,
     };
 
     if (!reservation.guestEmail) {
@@ -219,7 +243,163 @@ const settleBillAndInvoice = catchAsync(
 );
 
 const settleBillAndInvoiceRedirect = catchAsync(
-  async (req: Request, res: Response, next: NextFunction) => {}
+  async (req: Request, res: Response, next: NextFunction) => {
+    if (typeof req.query.data !== "string") {
+      return next(new AppError("Invalid data format", StatusCodes.BAD_REQUEST));
+    }
+
+    const data = JSON.parse(decodeURIComponent(req.query.data));
+
+    if (!data.amount || !data.reservationId) {
+      return next(
+        new AppError("Invalid data object format", StatusCodes.BAD_REQUEST)
+      );
+    }
+
+    try {
+      const reservation = await ReservationModel.findById(
+        data.reservationId
+      ).populate({
+        path: "guest",
+        populate: {
+          path: "user",
+        },
+      });
+
+      if (!reservation) {
+        throw new AppError(
+          "No such reservation Id in the database.",
+          StatusCodes.BAD_REQUEST
+        );
+      }
+
+      const guestId = reservation.guest?._id;
+
+      const existingTransaction = await TransactionModel.find({
+        transactionType: "Bill and Invoice payment",
+        reason: "Settlement of Reservation Invoice and Bill Payments.",
+        amountInCFA: data.amount,
+        status: "success",
+        reservation: data.reservationId,
+      });
+
+      if (existingTransaction.length > 0) {
+        return next(
+          new AppError(
+            "Transaction has already been executed",
+            StatusCodes.UNAUTHORIZED
+          )
+        );
+      }
+
+      const transaction = await TransactionModel.create({
+        transactionType: "Bill and Invoice payment",
+        reason: "Settlement of Reservation Invoice and Bill Payments.",
+        amountInCFA: data.amount,
+        status: "success",
+        reservation: data.reservationId,
+        guest: guestId,
+      });
+
+      const reciept = await RecieptModel.create({
+        transaction: transaction._id,
+        amountInCFA: data.amount,
+        issued: true,
+        method: "Email",
+        guest: guestId,
+      });
+
+      const invoice = await InvoiceModel.findOne({
+        reservation: data.reservationId,
+      });
+
+      if (!invoice) {
+        throw new AppError(
+          "No invoice associated with the reservation",
+          StatusCodes.BAD_REQUEST
+        );
+      }
+
+      if (invoice.amountPaid == null || invoice.amountDue == null) {
+        throw new AppError(
+          "Invoice fields amountPaid or amountDue are missing",
+          StatusCodes.INTERNAL_SERVER_ERROR
+        );
+      }
+
+      invoice.amountPaid = invoice.amountPaid || 0;
+      invoice.amountDue = invoice.amountDue ?? invoice.grandTotal;
+
+      invoice.amountPaid += data.amount;
+      invoice.amountDue = invoice.grandTotal - invoice.amountPaid;
+
+      invoice.paymentStatus =
+        invoice.amountPaid >= invoice.grandTotal ? "paid" : "partial";
+
+      await invoice.save();
+
+      // const expirePaymentLink = await expirePay(reservation.settlementUrl);
+
+      // if (expirePaymentLink.status !== "EXPIRED") {
+      //   console.log(expirePaymentLink);
+      //   console.log("Transaction Id", reservation.settlementUrl);
+      //   throw new AppError(
+      //     "Failed to expire the payment link",
+      //     StatusCodes.INTERNAL_SERVER_ERROR
+      //   );
+      // }
+
+      const templatePath = path.join(
+        __dirname,
+        "/../templates/receipt.template.html"
+      );
+      const rawHtml = fs.readFileSync(templatePath, "utf-8");
+
+      if (!rawHtml) {
+        console.log(templatePath);
+        return next(
+          new AppError(
+            "Error finding reciept html template",
+            StatusCodes.INTERNAL_SERVER_ERROR
+          )
+        );
+      }
+
+      const guestEmail =
+        (reservation.guest &&
+          typeof reservation.guest !== "string" &&
+          (reservation.guest as any).user &&
+          typeof (reservation.guest as any).user !== "string" &&
+          (reservation.guest as any).user.email) ||
+        reservation.guestEmail;
+
+      if (!guestEmail) {
+        throw new AppError(
+          "No guest email available to send receipt.",
+          StatusCodes.INTERNAL_SERVER_ERROR
+        );
+      }
+
+      console.log("ldjfal");
+
+      const finalHtml = rawHtml
+        .replace(/{{receiptId}}/g, String(reciept._id))
+        .replace(/{{date}}/g, reciept.createdAt.toLocaleString())
+        .replace(/{{method}}/g, "Email")
+        .replace(/{{transactionId}}/g, String(transaction._id))
+        .replace(/{{transactionType}}/g, String(transaction.transactionType))
+        .replace(/{{reason}}/g, String(transaction.reason))
+        .replace(/{{reservationId}}/g, String(reservation._id))
+        .replace(/{{status}}/g, String(transaction.status))
+        .replace(/{{amount}}/g, data.amount.toLocaleString());
+
+      await sendEmail(guestEmail, "RESERVATION RECEIPT", "", finalHtml);
+
+      res.status(StatusCodes.OK).send(finalHtml);
+    } catch (err) {
+      return next(err);
+    }
+  }
 );
 
 const showBillAndInvoiceSettleMentData = catchAsync(
@@ -307,4 +487,5 @@ export const invoiceControllers = {
   deleteInvoice,
   settleBillAndInvoice,
   showBillAndInvoiceSettleMentData,
+  settleBillAndInvoiceRedirect,
 };

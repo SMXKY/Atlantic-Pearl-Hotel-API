@@ -8,7 +8,12 @@ const transactionSchema = new mongoose.Schema(
     transactionType: {
       type: String,
       enum: {
-        values: ["bill payment", "refund", "reservation payment"],
+        values: [
+          "bill payment",
+          "refund",
+          "reservation payment",
+          "Bill and Invoice payment",
+        ],
       },
       required: [true, "transaction type required"],
     },

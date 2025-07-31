@@ -6,17 +6,21 @@ import { allPermissions } from "../types/Permissions.type";
 
 export const invoiceRouter = express.Router();
 
-invoiceRouter.route("/bill-and-invoice").get(
+invoiceRouter.route("/bill-and-invoice").post(
   // authControllers.protect,
   // authControllers.restrictTo(allPermissions.invoices.readAll),
   invoiceControllers.showBillAndInvoiceSettleMentData
 );
 
-invoiceRouter.route("/bill-and-invoice/settle").get(
+invoiceRouter.route("/bill-and-invoice/settle").post(
   // authControllers.protect,
   // authControllers.restrictTo(allPermissions.invoices.readAll),
   invoiceControllers.settleBillAndInvoice
 );
+
+invoiceRouter
+  .route("/settlement-redirect")
+  .get(invoiceControllers.settleBillAndInvoiceRedirect);
 
 invoiceRouter
   .route("/")
