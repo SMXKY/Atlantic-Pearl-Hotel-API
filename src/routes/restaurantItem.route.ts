@@ -12,6 +12,10 @@ const upload = multer({ dest: "../upload" });
 export const restaurantItemRouter = express.Router();
 
 restaurantItemRouter
+  .route("/quick-daily-menu-toggle/:id")
+  .patch(restaurantItemControllers.quickUpdateDailyAvailability);
+
+restaurantItemRouter
   .route("/")
   .post(
     authControllers.protect,
