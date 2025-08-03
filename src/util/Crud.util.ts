@@ -15,34 +15,41 @@ export class CRUD {
     this.model = model;
   }
 
-  public async create(body: any, res: Response, req: Request) {
+  public async create(
+    body: any,
+    res: Response,
+    req: Request,
+    log: boolean = true
+  ) {
     const data = await this.model.create(body);
 
-    if (!res.locals.user?._id) {
-      throw new AppError(
-        "Authentication error: user identity missing from session.",
-        StatusCodes.UNAUTHORIZED
+    if (log) {
+      if (!res.locals.user?._id) {
+        throw new AppError(
+          "Authentication error: user identity missing from session.",
+          StatusCodes.UNAUTHORIZED
+        );
+      }
+
+      const user = await UserModel.findById(res.locals.user._id);
+
+      if (!user) {
+        throw new AppError(
+          "User not found in the database during activity logging. The account may have been deleted—check activity logs for details.",
+          StatusCodes.INTERNAL_SERVER_ERROR
+        );
+      }
+
+      logUserActivity(
+        req,
+        res.locals.user._id,
+        `${user.name} created a document in collection: ${this.model.collection.collectionName}, with id: ${data._id}`,
+        this.model.collection.collectionName,
+        data._id,
+        JSON.stringify(data.toObject()),
+        JSON.stringify(data.toObject())
       );
     }
-
-    const user = await UserModel.findById(res.locals.user._id);
-
-    if (!user) {
-      throw new AppError(
-        "User not found in the database during activity logging. The account may have been deleted—check activity logs for details.",
-        StatusCodes.INTERNAL_SERVER_ERROR
-      );
-    }
-
-    logUserActivity(
-      req,
-      res.locals.user._id,
-      `${user.name} created a document in collection: ${this.model.collection.collectionName}, with id: ${data._id}`,
-      this.model.collection.collectionName,
-      data._id,
-      JSON.stringify(data.toObject()),
-      JSON.stringify(data.toObject())
-    );
 
     appResponder(StatusCodes.CREATED, data, res);
   }
@@ -51,7 +58,8 @@ export class CRUD {
     id: string,
     res: Response,
     populate: string[],
-    req: Request
+    req: Request,
+    log: boolean = true
   ) {
     let query = this.model.findById(id);
 
@@ -70,31 +78,33 @@ export class CRUD {
       );
     }
 
-    if (!res.locals.user?._id) {
-      throw new AppError(
-        "Authentication error: user identity missing from session.",
-        StatusCodes.UNAUTHORIZED
+    if (log) {
+      if (!res.locals.user?._id) {
+        throw new AppError(
+          "Authentication error: user identity missing from session.",
+          StatusCodes.UNAUTHORIZED
+        );
+      }
+
+      const user = await UserModel.findById(res.locals.user._id);
+
+      if (!user) {
+        throw new AppError(
+          "User not found in the database during activity logging. The account may have been deleted—check activity logs for details.",
+          StatusCodes.INTERNAL_SERVER_ERROR
+        );
+      }
+
+      await logUserActivity(
+        req,
+        res.locals.user._id,
+        `${user.name} read document in ${this.model.collection.collectionName} with id: ${data._id}`,
+        this.model.collection.collectionName,
+        data._id,
+        JSON.stringify(data.toObject()),
+        JSON.stringify(data.toObject())
       );
     }
-
-    const user = await UserModel.findById(res.locals.user._id);
-
-    if (!user) {
-      throw new AppError(
-        "User not found in the database during activity logging. The account may have been deleted—check activity logs for details.",
-        StatusCodes.INTERNAL_SERVER_ERROR
-      );
-    }
-
-    await logUserActivity(
-      req,
-      res.locals.user._id,
-      `${user.name} read document in ${this.model.collection.collectionName} with id: ${data._id}`,
-      this.model.collection.collectionName,
-      data._id,
-      JSON.stringify(data.toObject()),
-      JSON.stringify(data.toObject())
-    );
 
     appResponder(StatusCodes.OK, data, res);
   }
@@ -105,7 +115,8 @@ export class CRUD {
     defaultPage: number,
     defaultLimit: number,
     populate: string[],
-    defaultSort: string = "-createdAt"
+    defaultSort: string = "-createdAt",
+    log: boolean = true
   ): Promise<void> {
     const queryBuilder = new Query(req.query, this.model.find())
       .filter()
@@ -121,37 +132,42 @@ export class CRUD {
       });
     }
     const data = await finalQuery;
+    if (log) {
+      if (!res.locals.user?._id) {
+        throw new AppError(
+          "Authentication error: user identity missing from session.",
+          StatusCodes.UNAUTHORIZED
+        );
+      }
 
-    if (!res.locals.user?._id) {
-      throw new AppError(
-        "Authentication error: user identity missing from session.",
-        StatusCodes.UNAUTHORIZED
+      const user = await UserModel.findById(res.locals.user._id);
+
+      if (!user) {
+        throw new AppError(
+          "User not found in the database during activity logging. The account may have been deleted—check activity logs for details.",
+          StatusCodes.INTERNAL_SERVER_ERROR
+        );
+      }
+
+      await logUserActivity(
+        req,
+        res.locals.user._id,
+        `${user.name} read all documents in ${this.model.collection.collectionName}`,
+        this.model.collection.collectionName,
+        "",
+        "",
+        ""
       );
     }
-
-    const user = await UserModel.findById(res.locals.user._id);
-
-    if (!user) {
-      throw new AppError(
-        "User not found in the database during activity logging. The account may have been deleted—check activity logs for details.",
-        StatusCodes.INTERNAL_SERVER_ERROR
-      );
-    }
-
-    await logUserActivity(
-      req,
-      res.locals.user._id,
-      `${user.name} read all documents in ${this.model.collection.collectionName}`,
-      this.model.collection.collectionName,
-      "",
-      "",
-      ""
-    );
-
     appResponder(StatusCodes.OK, data, res);
   }
 
-  public async update(id: string, res: Response, req: Request) {
+  public async update(
+    id: string,
+    res: Response,
+    req: Request,
+    log: boolean = true
+  ) {
     const prevData = await this.model.findOne({ _id: id });
     const data = await this.model.findOneAndUpdate({ _id: id }, req.body, {
       new: true,
@@ -165,36 +181,43 @@ export class CRUD {
       );
     }
 
-    if (!res.locals.user?._id) {
-      throw new AppError(
-        "Authentication error: user identity missing from session.",
-        StatusCodes.UNAUTHORIZED
+    if (log) {
+      if (!res.locals.user?._id) {
+        throw new AppError(
+          "Authentication error: user identity missing from session.",
+          StatusCodes.UNAUTHORIZED
+        );
+      }
+
+      const user = await UserModel.findById(res.locals.user._id);
+
+      if (!user) {
+        throw new AppError(
+          "User not found in the database during activity logging. The account may have been deleted—check activity logs for details.",
+          StatusCodes.INTERNAL_SERVER_ERROR
+        );
+      }
+
+      await logUserActivity(
+        req,
+        res.locals.user._id,
+        `${user.name} updated document in ${this.model.collection.collectionName} with id: ${data._id}`,
+        this.model.collection.collectionName,
+        data._id,
+        JSON.stringify(prevData?.toObject()),
+        JSON.stringify(data.toObject())
       );
     }
-
-    const user = await UserModel.findById(res.locals.user._id);
-
-    if (!user) {
-      throw new AppError(
-        "User not found in the database during activity logging. The account may have been deleted—check activity logs for details.",
-        StatusCodes.INTERNAL_SERVER_ERROR
-      );
-    }
-
-    await logUserActivity(
-      req,
-      res.locals.user._id,
-      `${user.name} updated document in ${this.model.collection.collectionName} with id: ${data._id}`,
-      this.model.collection.collectionName,
-      data._id,
-      JSON.stringify(prevData?.toObject()),
-      JSON.stringify(data.toObject())
-    );
 
     appResponder(StatusCodes.OK, data, res);
   }
 
-  public async delete(id: string, res: Response, req: Request) {
+  public async delete(
+    id: string,
+    res: Response,
+    req: Request,
+    log: boolean = true
+  ) {
     const prevData = await this.model.findOne({ _id: id });
     const data = await this.model.findByIdAndDelete(id);
 
@@ -204,32 +227,33 @@ export class CRUD {
         StatusCodes.NOT_FOUND
       );
     }
+    if (log) {
+      if (!res.locals.user?._id) {
+        throw new AppError(
+          "Authentication error: user identity missing from session.",
+          StatusCodes.UNAUTHORIZED
+        );
+      }
 
-    if (!res.locals.user?._id) {
-      throw new AppError(
-        "Authentication error: user identity missing from session.",
-        StatusCodes.UNAUTHORIZED
+      const user = await UserModel.findById(res.locals.user._id);
+
+      if (!user) {
+        throw new AppError(
+          "User not found in the database during activity logging. The account may have been deleted—check activity logs for details.",
+          StatusCodes.INTERNAL_SERVER_ERROR
+        );
+      }
+
+      await logUserActivity(
+        req,
+        res.locals.user._id,
+        `${user.name} deleted document in ${this.model.collection.collectionName} with id: ${prevData?._id}`,
+        this.model.collection.collectionName,
+        prevData?._id,
+        JSON.stringify(prevData?.toObject()),
+        ""
       );
     }
-
-    const user = await UserModel.findById(res.locals.user._id);
-
-    if (!user) {
-      throw new AppError(
-        "User not found in the database during activity logging. The account may have been deleted—check activity logs for details.",
-        StatusCodes.INTERNAL_SERVER_ERROR
-      );
-    }
-
-    await logUserActivity(
-      req,
-      res.locals.user._id,
-      `${user.name} deleted document in ${this.model.collection.collectionName} with id: ${prevData?._id}`,
-      this.model.collection.collectionName,
-      prevData?._id,
-      JSON.stringify(prevData?.toObject()),
-      ""
-    );
 
     appResponder(
       StatusCodes.OK,

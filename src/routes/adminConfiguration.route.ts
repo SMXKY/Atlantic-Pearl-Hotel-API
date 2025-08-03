@@ -177,8 +177,8 @@ adminConfigurationRouter
   .route("/")
   // .post(adminConfigurationControllers.createAdminConfiguration)
   .get(
-    authControllers.protect,
-    authControllers.restrictTo(allPermissions.adminConfigurations.read),
+    // authControllers.protect,
+    // authControllers.restrictTo(allPermissions.adminConfigurations.read),
     adminConfigurationControllers.readAllAdminConfigurations
   );
 

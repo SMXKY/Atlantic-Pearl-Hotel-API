@@ -1,4 +1,4 @@
-import express from "express";
+import express, { NextFunction, Request, Response } from "express";
 
 import { roomControllers } from "../controllers/room.controller";
 import { authControllers } from "../controllers/auth.controller";
@@ -19,16 +19,16 @@ roomRouter
     roomControllers.createRoom
   )
   .get(
-    authControllers.protect,
-    authControllers.restrictTo(allPermissions.rooms.readAll),
+    // authControllers.protect,
+    // authControllers.restrictTo(allPermissions.rooms.readAll),
     roomControllers.readAllRooms
   );
 
 roomRouter
   .route("/:id")
   .get(
-    authControllers.protect,
-    authControllers.restrictTo(allPermissions.rooms.readOne),
+    // authControllers.protect,
+    // authControllers.restrictTo(allPermissions.rooms.readOne),
     roomControllers.readOneRoom
   )
   .patch(

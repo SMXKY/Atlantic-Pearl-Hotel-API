@@ -20,7 +20,7 @@ const readOneTax = catchAsync(
 
 const readAllTaxes = catchAsync(
   async (req: Request, res: Response, next: NextFunction) => {
-    await CRUDTax.readAll(res, req, 1, 100, []);
+    await CRUDTax.readAll(res, req, 1, 100, [], "-createdAt", false);
   }
 );
 

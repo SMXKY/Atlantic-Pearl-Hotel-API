@@ -20,7 +20,15 @@ const readOneAdminConfiguration = catchAsync(
 
 const readAllAdminConfigurations = catchAsync(
   async (req: Request, res: Response, next: NextFunction) => {
-    await CRUDAdminConfiguration.readAll(res, req, 1, 100, []);
+    await CRUDAdminConfiguration.readAll(
+      res,
+      req,
+      1,
+      100,
+      [],
+      "-createdAt",
+      false
+    );
   }
 );
 
