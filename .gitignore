@@ -2,3 +2,4 @@ node_modules/
 .env
 dist
 google-client-secret.json
+.prod.env

@@ -105,6 +105,26 @@ app.get("/", (req: Request, res: Response) => {
 });
 
 app.use(express.json());
+// Whitelist middleware
+const allowedIps = ["123.45.67.89", "98.76.54.32"]; // Replace with your allowed IPs
+
+app.use((req: Request, res: Response, next: NextFunction) => {
+  const clientIp =
+    req.ip || req.connection.remoteAddress || req.headers["x-forwarded-for"];
+
+  // Normalize IP if it comes in IPv6 format with prefix ::ffff:
+  const ip = (clientIp as string).replace("::ffff:", "");
+
+  if (allowedIps.includes(ip)) {
+    next(); // Allowed
+  } else {
+    res.status(403).json({
+      status: "fail",
+      message: `Your IP (${ip}) is not allowed to access this server.`,
+    });
+  }
+});
+
 app.get("/api/v1/verify-email/:token", authControllers.verifyEmail);
 app.use("/api/v1/departments", departmentRouter);
 app.use("/api/v1/employees", employeeRouter);
