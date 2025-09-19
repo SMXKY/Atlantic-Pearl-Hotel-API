@@ -106,7 +106,7 @@ app.get("/", (req: Request, res: Response) => {
 
 app.use(express.json());
 // Whitelist middleware
-const allowedIps = ["123.45.67.89", "98.76.54.32"]; // Replace with your allowed IPs
+const allowedIps = ["123.45.67.89", "98.76.54.32", "127.0.0.1"]; // Replace with your allowed IPs
 
 app.use((req: Request, res: Response, next: NextFunction) => {
   const clientIp =

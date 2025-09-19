@@ -71,6 +71,14 @@ reservationRouter
   );
 
 reservationRouter
+  .route("/search")
+  .get(
+    authControllers.protect,
+    authControllers.restrictTo(allPermissions.reservations.readAll),
+    reservationControllers.searchReservations
+  );
+
+reservationRouter
   .route("/:id")
   .get(
     authControllers.protect,

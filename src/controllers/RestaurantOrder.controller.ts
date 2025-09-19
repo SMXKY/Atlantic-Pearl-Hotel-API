@@ -27,6 +27,8 @@ const createRestaurantOrder = catchAsync(
   async (req: Request, res: Response, next: NextFunction) => {
     const { guestId, cart } = req.body;
 
+    console.log(req.body);
+
     const guest = await GuestModel.findById(guestId);
 
     if (!guestId || !guest) {
@@ -137,19 +139,27 @@ const createRestaurantOrder = catchAsync(
 
 const readOneRestaurantOrder = catchAsync(
   async (req: Request, res: Response, next: NextFunction) => {
-    await CRUDRestaurantOrder.readOne(req.params.id, res, [], req);
+    await CRUDRestaurantOrder.readOne(
+      req.params.id,
+      res,
+      ["guest", "cart"],
+      req
+    );
   }
 );
 
 const readAllRestaurantOrders = catchAsync(
   async (req: Request, res: Response, next: NextFunction) => {
-    await CRUDRestaurantOrder.readAll(res, req, 1, 100, []);
+    await CRUDRestaurantOrder.readAll(res, req, 1, 100, ["guest", "cart"]);
   }
 );
+
 const updateRestaurantOrder = catchAsync(
   async (req: Request, res: Response, next: NextFunction) => {
     const { status, reservationId, guestId } = req.body;
     const { id: orderId } = req.params;
+
+    console.log(req.body);
 
     const order = await RestaurantOrderModel.findById(orderId);
 

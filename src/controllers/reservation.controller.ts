@@ -743,6 +743,53 @@ const reservationCalendar = catchAsync(
   }
 );
 
+const searchReservations = catchAsync(
+  async (req: Request, res: Response, next: NextFunction) => {
+    const { q, filter } = req.query;
+
+    if (!q || typeof q !== "string") {
+      return next(
+        new AppError("Search query `q` is required", StatusCodes.BAD_REQUEST)
+      );
+    }
+
+    // Escape regex chars to prevent regex DoS
+    const safeRegex = q.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    const regex = new RegExp(safeRegex, "i");
+
+    const conditions: any = {
+      $or: [
+        { bookingReference: regex },
+        { guestName: regex },
+        { guestEmail: regex },
+        { guestPhoneNumber: regex },
+      ],
+    };
+
+    // active = only checked-in reservations
+    if (filter === "active") {
+      conditions.status = "checked in"; // adjust to match your schema values
+    }
+
+    const results = await ReservationModel.find(conditions)
+      .select(
+        "bookingReference status checkInDate checkOutDate createdAt guestName guestEmail"
+      )
+      .populate({
+        path: "guest",
+        select: "name email phoneNumber",
+      })
+      .sort({ createdAt: -1 })
+      .limit(10);
+
+    res.status(StatusCodes.OK).json({
+      success: true,
+      count: results.length,
+      data: results,
+    });
+  }
+);
+
 export const reservationControllers = {
   createReservation,
   readOneReservation,
@@ -753,4 +800,5 @@ export const reservationControllers = {
   cancelReservation,
   updatingGuestRooms,
   reservationCalendar,
+  searchReservations,
 };

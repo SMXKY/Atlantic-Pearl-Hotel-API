@@ -245,6 +245,7 @@ reservationSchema.virtual("numberOfNights").get(function (this: IReservation) {
 reservationSchema
   .virtual("totalNightsFromItems")
   .get(function (this: IReservation) {
+    if (!this.items || !Array.isArray(this.items)) return 0;
     const msInDay = 1000 * 60 * 60 * 24;
     const items = this.items as IReservationItem[];
 

@@ -3,6 +3,7 @@ import * as currencyCodes from "currency-codes";
 
 import { Document, Types } from "mongoose";
 import { IUser } from "./User.model";
+import { Query } from "tsoa";
 
 export interface IGuest extends Document {
   user: Types.ObjectId | IUser;
@@ -104,5 +105,13 @@ const guestSchema = new mongoose.Schema(
     toObject: { virtuals: true },
   }
 );
+
+guestSchema.pre<mongoose.Query<any, any>>(/^find/, function (next) {
+  this.populate({
+    path: "user",
+    select: "name email role",
+  });
+  next();
+});
 
 export const GuestModel = mongoose.model<IGuest>("guests", guestSchema);
