@@ -16,7 +16,6 @@ const billSchema = new Schema<IBill>(
     guestId: {
       type: Schema.Types.ObjectId,
       ref: "guests",
-      required: true,
       validate: {
         validator: async (id: mongoose.Types.ObjectId) => {
           const exists = await mongoose.model("guests").exists({ _id: id });

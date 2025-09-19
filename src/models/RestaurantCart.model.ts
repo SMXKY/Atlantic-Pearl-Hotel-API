@@ -1,5 +1,6 @@
 import mongoose, { Schema, model, Types } from "mongoose";
 import { GuestModel } from "./Guest.model";
+import { ReservationModel } from "./Reservation.model";
 
 export interface IRestaurantCart {
   _id?: Types.ObjectId;
@@ -8,6 +9,7 @@ export interface IRestaurantCart {
   createdAt?: Date;
   updatedAt?: Date;
   cartItems: any;
+  reservation: Types.ObjectId;
 }
 
 const RestaurantCartSchema = new Schema<IRestaurantCart>(
@@ -15,13 +17,25 @@ const RestaurantCartSchema = new Schema<IRestaurantCart>(
     guest: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "guests",
-      required: true,
       validate: {
         validator: async (id: mongoose.Types.ObjectId) => {
           const exists = await mongoose.model("guests").exists({ _id: id });
           return exists !== null;
         },
         message: "Guest not found",
+      },
+    },
+    reservation: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "reservations",
+      required: false,
+      validate: {
+        validator: async function (resId: mongoose.Schema.Types.ObjectId) {
+          if (!resId) return false;
+          const exists = await ReservationModel.findById(resId);
+          return exists !== null;
+        },
+        message: "Referenced reservation_id does not exist.",
       },
     },
     status: {

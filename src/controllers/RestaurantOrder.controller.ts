@@ -25,22 +25,18 @@ const CRUDRestaurantOrder: CRUD = new CRUD(RestaurantOrderModel);
 
 const createRestaurantOrder = catchAsync(
   async (req: Request, res: Response, next: NextFunction) => {
-    const { guestId, cart } = req.body;
+    const { guestId, cart, reservationId } = req.body;
 
-    console.log(req.body);
+    const reservation = await ReservationModel.findById(reservationId);
 
-    const guest = await GuestModel.findById(guestId);
-
-    if (!guestId || !guest) {
+    if (!reservationId || !reservation) {
       return next(
         new AppError(
-          "Guest ID is required to create a restaurant order.",
+          "Reservation Id is required to create a restaurant order.",
           StatusCodes.BAD_REQUEST
         )
       );
     }
-
-    console.log("Here is the guest Id", guest._id);
 
     if (!Array.isArray(cart) || cart.length === 0) {
       return next(
@@ -54,7 +50,7 @@ const createRestaurantOrder = catchAsync(
     let totalAmount = 0;
 
     const orderCart = await RestaurantCartModel.create({
-      guest: String(guest._id),
+      reservation: String(reservation._id),
     });
 
     for (const cartItem of cart as ICartItem[]) {
@@ -130,8 +126,8 @@ const createRestaurantOrder = catchAsync(
     }
 
     req.body.cart = orderCart._id;
-    req.body.guest = guest._id;
     req.body.totalAmountInCFA = totalAmount;
+    req.body.reservation = reservation._id;
 
     await CRUDRestaurantOrder.create(req.body, res, req);
   }
@@ -150,18 +146,22 @@ const readOneRestaurantOrder = catchAsync(
 
 const readAllRestaurantOrders = catchAsync(
   async (req: Request, res: Response, next: NextFunction) => {
-    await CRUDRestaurantOrder.readAll(res, req, 1, 100, ["guest", "cart"]);
+    await CRUDRestaurantOrder.readAll(res, req, 1, 100, [
+      "guest",
+      "cart",
+      "reservation",
+      "items",
+    ]);
   }
 );
 
 const updateRestaurantOrder = catchAsync(
   async (req: Request, res: Response, next: NextFunction) => {
-    const { status, reservationId, guestId } = req.body;
+    const { status, guestId } = req.body;
     const { id: orderId } = req.params;
 
-    console.log(req.body);
-
     const order = await RestaurantOrderModel.findById(orderId);
+    const reservationId = order?.reservation;
 
     if (!order) {
       return next(
@@ -173,18 +173,17 @@ const updateRestaurantOrder = catchAsync(
     }
 
     if (status === "delivered") {
-      if (!reservationId || !guestId) {
+      if (!reservationId) {
         return next(
           new AppError(
-            "You must provide both reservationId and guestId to charge the guest for the delivered restaurant order.",
+            "You must provide the reservationId to charge the guest for the delivered restaurant order.",
             StatusCodes.BAD_REQUEST
           )
         );
       }
 
-      const [reservation, guest] = await Promise.all([
+      const [reservation] = await Promise.all([
         ReservationModel.findById(reservationId),
-        GuestModel.findById(guestId).populate("user"),
       ]);
 
       if (!reservation) {
@@ -196,22 +195,12 @@ const updateRestaurantOrder = catchAsync(
         );
       }
 
-      if (!guest) {
-        return next(
-          new AppError(
-            "Guest not found. Unable to charge guest for restaurant order.",
-            StatusCodes.BAD_REQUEST
-          )
-        );
-      }
-
       // Fetch or create the bill
       let bill = await BillModel.findOne({ reservationId });
 
       if (!bill) {
         const [created] = await BillModel.create([
           {
-            guestId: guest._id,
             reservationId: reservation._id,
           },
         ]);
@@ -252,7 +241,7 @@ const updateRestaurantOrder = catchAsync(
       // Create a bill item for the restaurant order
       await BillItemModel.create({
         billId: bill._id,
-        description: `${(guest.user as any).name} ordered restaurant items`,
+        description: `${reservation.bookingReference} ordered restaurant items`,
         category: "restaurant_orders", // enum value
         linkedEntityId: order._id,
         amount: totalAmount,

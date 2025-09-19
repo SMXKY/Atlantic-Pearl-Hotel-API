@@ -1,11 +1,13 @@
 import mongoose, { Schema, model, Types } from "mongoose";
 import { RestaurantCartModel } from "./RestaurantCart.model";
 import { GuestModel } from "./Guest.model";
+import { ReservationModel } from "./Reservation.model";
 
 export interface IRestaurantOrder {
   _id?: Types.ObjectId;
   cart: Types.ObjectId;
   guest: Types.ObjectId;
+  reservation: Types.ObjectId;
   status:
     | "pending"
     | "accepted"
@@ -38,14 +40,19 @@ const RestaurantOrderSchema = new Schema<IRestaurantOrder>(
     guest: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "guests",
+      required: false,
+    },
+    reservation: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "reservations",
       required: true,
       validate: {
-        validator: async function (guestId: mongoose.Schema.Types.ObjectId) {
-          if (!guestId) return false;
-          const exists = await GuestModel.findById(guestId);
+        validator: async function (resId: mongoose.Schema.Types.ObjectId) {
+          if (!resId) return false;
+          const exists = await ReservationModel.findById(resId);
           return exists !== null;
         },
-        message: "Referenced guest_id does not exist.",
+        message: "Referenced reservation_id does not exist.",
       },
     },
     status: {
@@ -77,6 +84,12 @@ const RestaurantOrderSchema = new Schema<IRestaurantOrder>(
     toJSON: { virtuals: true },
   }
 );
+
+RestaurantOrderSchema.virtual("items", {
+  ref: "restaurant_cart_items", // model name of cart items
+  localField: "cart", // field in order pointing to cart
+  foreignField: "cart", // field in cart items pointing back
+});
 
 export const RestaurantOrderModel = model<IRestaurantOrder>(
   "restaurant_orders",
