@@ -17,6 +17,7 @@ import dayjs from "dayjs";
 import { ReservationStatusChangeModel } from "./ReservationStatusChange.model";
 import { io } from "../index";
 import { computeReservationDashboard } from "../util/computeReservationDashboard";
+import { computeAdminDashboard } from "../controllers/content.controller";
 
 interface IRoomEntry {
   room: mongoose.Types.ObjectId;
@@ -797,6 +798,9 @@ reservationSchema.post("save", async function (doc) {
 
     const calendarData = await buildReservationCalendar();
     io.emit("reservationCalendar:update", calendarData);
+
+    const adminDashboard = await computeAdminDashboard();
+    io.emit("updateAdminDashboard", adminDashboard);
   } catch (err) {
     console.error("❌ Error in reservation post-save hook:", err);
   }
@@ -814,6 +818,8 @@ reservationSchema.post("findOneAndUpdate", async function (doc) {
     io.emit("updateDashboard", dashboard);
     const calendarData = await buildReservationCalendar();
     io.emit("reservationCalendar:update", calendarData);
+    const adminDashboard = await computeAdminDashboard();
+    io.emit("updateAdminDashboard", adminDashboard);
   } catch (err) {
     console.error("❌ Error in reservation post-save hook:", err);
   }
@@ -827,6 +833,8 @@ reservationSchema.post("findOneAndDelete", async function (doc) {
     io.emit("updateDashboard", dashboard);
     const calendarData = await buildReservationCalendar();
     io.emit("reservationCalendar:update", calendarData);
+    const adminDashboard = await computeAdminDashboard();
+    io.emit("updateAdminDashboard", adminDashboard);
   } catch (err) {
     console.error("❌ Error in reservation post-save hook:", err);
   }

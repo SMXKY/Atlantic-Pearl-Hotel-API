@@ -6,6 +6,8 @@ import { GuestModel } from "./Guest.model";
 import { ReservationModel } from "./Reservation.model";
 import { AppError } from "../util/AppError.util";
 import { StatusCodes } from "http-status-codes";
+import { computeAdminDashboard } from "../controllers/content.controller";
+import { io } from "../index";
 
 interface ILockUntil {
   until: Date | null;
@@ -230,6 +232,23 @@ roomSchema.pre<Query<IRoom[], IRoom>>(/^find/, function (next) {
     populate: { path: "rates" },
   });
   next();
+});
+
+roomSchema.post("save", async function (doc) {
+  const adminDashboard = await computeAdminDashboard();
+  io.emit("updateAdminDashboard", adminDashboard);
+});
+
+roomSchema.post("findOneAndUpdate", async function (doc) {
+  if (!doc) return;
+  const adminDashboard = await computeAdminDashboard();
+  io.emit("updateAdminDashboard", adminDashboard);
+});
+
+roomSchema.post("findOneAndDelete", async function (doc) {
+  if (!doc) return;
+  const adminDashboard = await computeAdminDashboard();
+  io.emit("updateAdminDashboard", adminDashboard);
 });
 
 export const RoomModel = mongoose.model<IRoom>("rooms", roomSchema);
