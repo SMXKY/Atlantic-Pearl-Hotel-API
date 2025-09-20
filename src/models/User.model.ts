@@ -53,7 +53,7 @@ const userSchema = new mongoose.Schema(
     phoneNumber: {
       type: String,
       required: [true, "Phone number is required."],
-      unique: true,
+      // unique: true,
     },
     password: {
       type: String,

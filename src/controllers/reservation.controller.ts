@@ -20,12 +20,18 @@ import { RecieptModel } from "../models/Reciept.model";
 import { TransactionModel } from "../models/Transaction.model";
 import { expirePay, payout } from "../external-apis/fapshi.api";
 import path from "path";
-import fs from "fs";
+import { promises as promFs } from "fs";
 import { AdminConfigurationModel } from "../models/AdminConfiguration.model";
 import { getGuestDetailsFromReservation } from "../util/getGuestFromReservation.util";
 import { validateReservationItemsAvailability } from "../util/validateReservationItems.util";
 import { BillModel } from "../models/Bill.model";
 import { io } from "../index";
+import { UserModel } from "../models/User.model";
+import { EmployeeModel } from "../models/Employee.model";
+import * as generatePassword from "generate-password";
+import { PhoneNumber } from "libphonenumber-js";
+import { RoleModel } from "../models/Role.model";
+import fs from "fs";
 
 const CRUDReservation: CRUD = new CRUD(ReservationModel);
 
@@ -86,19 +92,29 @@ const readAllReservations = catchAsync(
   }
 );
 
-const updateReservation = catchAsync(
+async function fillTemplate(
+  templatePath: string,
+  replacements: Record<string, string>
+) {
+  let html: string = await promFs.readFile(templatePath, "utf-8");
+  for (const key in replacements) {
+    html = html.replace(new RegExp(`\\[${key}\\]`, "g"), replacements[key]);
+  }
+  return html;
+}
+
+export const updateReservation = catchAsync(
   async (req: Request, res: Response, next: NextFunction) => {
     const reservationId = req.params.id;
 
     // Prevent modification of reservation items through this endpoint
     delete req.body.items;
 
-    // Check-out logic: validate invoice and bill before allowing check-out
+    // -------------------- Check-out logic --------------------
     if (req.body.status === "checked out") {
       const invoice = await InvoiceModel.findOne({
         reservation: reservationId,
       }).lean();
-
       if (!invoice) {
         return next(
           new AppError(
@@ -118,7 +134,6 @@ const updateReservation = catchAsync(
       }
 
       const bill = await BillModel.findOne({ reservationId }).lean();
-
       if (bill?.status === "pending") {
         return next(
           new AppError(
@@ -129,7 +144,135 @@ const updateReservation = catchAsync(
       }
     }
 
-    // Proceed to update reservation
+    // -------------------- Check-in logic --------------------
+    if (req.body.status === "checked in") {
+      const frontEndUrl =
+        process.env.NODE_ENV === "production"
+          ? process.env.FRONT_END_URL_PROD
+          : process.env.FRONT_END_URL_DEV;
+
+      if (!frontEndUrl) {
+        return next(
+          new AppError(
+            "Front-end base URL is missing from environment variables",
+            StatusCodes.INTERNAL_SERVER_ERROR
+          )
+        );
+      }
+
+      const reservation = await ReservationModel.findById(reservationId);
+      if (!reservation) {
+        return next(
+          new AppError(
+            "No such reservation Id in the database",
+            StatusCodes.BAD_REQUEST
+          )
+        );
+      }
+
+      const userExist = await UserModel.findOne({
+        email: reservation.guestEmail,
+      });
+
+      if (userExist) {
+        const guest = await GuestModel.findOne({ user: userExist._id });
+        const employee = await EmployeeModel.findOne({ user: userExist._id });
+
+        if (!guest) {
+          return next(
+            new AppError(
+              "Corresponding Guest account does not exist",
+              StatusCodes.INTERNAL_SERVER_ERROR
+            )
+          );
+        }
+
+        if (employee) {
+          return next(
+            new AppError(
+              "Account is already in use as an employee. Please use a different email for reservation",
+              StatusCodes.BAD_REQUEST
+            )
+          );
+        }
+
+        const emailHtml = await fillTemplate(
+          __dirname + "/../templates/alreadyHaveAnAccount.template.html",
+          {
+            "Guest Name": userExist.name,
+            "Login URL": `${frontEndUrl}/authentication/login`,
+            "Password Reset URL": `${frontEndUrl}/authentication/password-reset`,
+          }
+        );
+
+        await sendEmail(
+          userExist.email,
+          "ALREADY HAVE AN ACCOUNT",
+          "",
+          emailHtml
+        );
+        req.body.guest = guest._id;
+      } else {
+        // Create new guest user
+        const randomGeneratedPassword = generatePassword.generate({
+          length: 8,
+          numbers: true,
+          uppercase: true,
+          lowercase: true,
+          strict: true,
+        });
+
+        const role = await RoleModel.findOne({ name: "guest" });
+        if (!role) {
+          return next(
+            new AppError(
+              "No guest role found on the server",
+              StatusCodes.INTERNAL_SERVER_ERROR
+            )
+          );
+        }
+
+        const newUserData = {
+          name: reservation.guestName,
+          email: reservation.guestEmail,
+          phoneNumber: reservation.guestPhoneNumber,
+          password: randomGeneratedPassword,
+          passwordConfirm: randomGeneratedPassword,
+          role: role._id,
+          userType: "Guest",
+        };
+
+        const newUser = await UserModel.create(newUserData);
+        let guest;
+        try {
+          guest = await GuestModel.create({ ...req.body, user: newUser._id });
+        } catch (err) {
+          await UserModel.findByIdAndDelete(newUser._id);
+          throw err;
+        }
+
+        const emailHtml = await fillTemplate(
+          __dirname + "/../templates/guestCredentials.template.html",
+          {
+            "Guest Name": newUser.name,
+            "Guest Email": newUser.email,
+            "Login URL": `${frontEndUrl}/authentication/login`,
+            "Temporary Password": randomGeneratedPassword,
+          }
+        );
+
+        await sendEmail(
+          newUser.email,
+          "YOUR ATLANTIC PEARL HOTEL LOGIN CREDENTIALS - CHANGE PASSWORD ASAP",
+          "",
+          emailHtml
+        );
+
+        req.body.guest = guest._id;
+      }
+    }
+
+    // -------------------- Update reservation --------------------
     await CRUDReservation.update(reservationId, res, req);
   }
 );
