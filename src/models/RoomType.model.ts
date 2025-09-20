@@ -119,7 +119,7 @@ roomTypeSchema.post("save", async function (doc, next) {
 roomTypeSchema.methods.mutate = async function () {
   const obj = this.toObject();
 
-  const rooms = await RoomModel.find({ type: this._id, status: "free" });
+  const rooms = await RoomModel.find({ type: this._id });
   const allRooms = await RoomModel.find({ type: this._id });
   const images = (await RoomMedia.find({ roomType: this._id }))[0];
   const rates = await RateModel.find({ roomType: this._id });

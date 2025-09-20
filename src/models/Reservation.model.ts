@@ -15,6 +15,8 @@ import { UserModel } from "./User.model";
 const { v4: uuidv4 } = require("uuid");
 import dayjs from "dayjs";
 import { ReservationStatusChangeModel } from "./ReservationStatusChange.model";
+import { io } from "../index";
+import { computeReservationDashboard } from "../util/computeReservationDashboard";
 
 interface IRoomEntry {
   room: mongoose.Types.ObjectId;
@@ -766,6 +768,68 @@ reservationSchema.pre("findOneAndUpdate", function (next) {
   }
 
   next();
+});
+
+async function buildReservationCalendar() {
+  const reservations = await ReservationModel.find({
+    $or: [
+      { status: "confirmed" },
+      { status: "checked in" },
+      { status: "checked out" },
+    ],
+  });
+
+  const data: any[] = [];
+  for (const mutant of reservations) {
+    const unwinded = await mutant.mutateForCalendar();
+    data.push(...unwinded);
+  }
+
+  return data;
+}
+
+reservationSchema.post("save", async function (doc) {
+  try {
+    await autoPopulateReservation(doc);
+    io.emit("newReservation", doc);
+    const dashboard = await computeReservationDashboard();
+    io.emit("updateDashboard", dashboard);
+
+    const calendarData = await buildReservationCalendar();
+    io.emit("reservationCalendar:update", calendarData);
+  } catch (err) {
+    console.error("❌ Error in reservation post-save hook:", err);
+  }
+});
+
+reservationSchema.post("findOneAndUpdate", async function (doc) {
+  if (!doc) return;
+  try {
+    const updatedReservation = await await mongoose
+      .model("reservations")
+      .findById(doc._id);
+
+    io.emit("updateReservation", updatedReservation);
+    const dashboard = await computeReservationDashboard();
+    io.emit("updateDashboard", dashboard);
+    const calendarData = await buildReservationCalendar();
+    io.emit("reservationCalendar:update", calendarData);
+  } catch (err) {
+    console.error("❌ Error in reservation post-save hook:", err);
+  }
+});
+
+reservationSchema.post("findOneAndDelete", async function (doc) {
+  if (!doc) return;
+  try {
+    io.emit("deleteReservation", { id: doc._id });
+    const dashboard = await computeReservationDashboard();
+    io.emit("updateDashboard", dashboard);
+    const calendarData = await buildReservationCalendar();
+    io.emit("reservationCalendar:update", calendarData);
+  } catch (err) {
+    console.error("❌ Error in reservation post-save hook:", err);
+  }
 });
 
 export const ReservationModel = mongoose.model<IReservation>(

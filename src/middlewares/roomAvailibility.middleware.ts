@@ -67,7 +67,7 @@ export const validateReservationItem = catchAsync(
 
         // Check for conflicting reservations in one query, excluding the one being updated
         const conflict = await ReservationModel.findOne({
-          status: { $in: ["pending", "confirmed"] },
+          status: { $in: ["pending", "confirmed", "checked in"] },
           _id: currentResObjectId
             ? { $ne: currentResObjectId }
             : { $exists: true },

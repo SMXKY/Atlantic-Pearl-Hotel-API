@@ -52,7 +52,7 @@ const readAllRooms = catchAsync(
       res,
       req,
       1,
-      100,
+      1000,
       ["building", "assignedTo"],
       "-createdAt",
       false

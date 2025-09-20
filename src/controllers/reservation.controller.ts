@@ -25,6 +25,7 @@ import { AdminConfigurationModel } from "../models/AdminConfiguration.model";
 import { getGuestDetailsFromReservation } from "../util/getGuestFromReservation.util";
 import { validateReservationItemsAvailability } from "../util/validateReservationItems.util";
 import { BillModel } from "../models/Bill.model";
+import { io } from "../index";
 
 const CRUDReservation: CRUD = new CRUD(ReservationModel);
 
@@ -69,7 +70,7 @@ const createReservation = catchAsync(async (req, res, next) => {
     if (reservation?._id) {
       await ReservationModel.findByIdAndDelete(reservation._id);
     }
-    return next(err);
+    throw err;
   }
 });
 
