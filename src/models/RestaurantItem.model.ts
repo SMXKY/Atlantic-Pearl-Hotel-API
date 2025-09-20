@@ -2,6 +2,7 @@ import mongoose, { Schema, model, Types } from "mongoose";
 import { RestaurantItemCategoryModel } from "./RestaurantItemCategory.model";
 import { AppError } from "../util/AppError.util";
 import { StatusCodes } from "http-status-codes";
+import { io } from "../index";
 
 export interface IRestaurantItem {
   _id?: Types.ObjectId;
@@ -137,6 +138,28 @@ RestaurantItemSchema.post("findOneAndDelete", function (doc) {
 });
 
 RestaurantItemSchema.index({ type: 1, isAvailable: 1, availableToday: 1 });
+
+// --- Emissions for RestaurantItem ---
+RestaurantItemSchema.post("save", async function (doc) {
+  applySupportDocTransformation(doc);
+
+  io.emit("restaurantItem:new", doc);
+});
+
+RestaurantItemSchema.post("findOneAndUpdate", async function (doc) {
+  if (!doc) return;
+
+  applySupportDocTransformation(doc);
+
+  io.emit("restaurantItem:update", doc);
+});
+
+RestaurantItemSchema.post("findOneAndDelete", async function (doc) {
+  if (!doc) return;
+
+  applySupportDocTransformation(doc);
+  io.emit("restaurantItem:deleted", { id: doc._id, ...doc.toObject() });
+});
 
 export const RestaurantItemModel = model<IRestaurantItem>(
   "restaurant_items",

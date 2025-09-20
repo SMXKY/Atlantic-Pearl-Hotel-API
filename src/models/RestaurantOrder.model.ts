@@ -2,6 +2,7 @@ import mongoose, { Schema, model, Types } from "mongoose";
 import { RestaurantCartModel } from "./RestaurantCart.model";
 import { GuestModel } from "./Guest.model";
 import { ReservationModel } from "./Reservation.model";
+import { io } from "../index";
 
 export interface IRestaurantOrder {
   _id?: Types.ObjectId;
@@ -89,6 +90,48 @@ RestaurantOrderSchema.virtual("items", {
   ref: "restaurant_cart_items", // model name of cart items
   localField: "cart", // field in order pointing to cart
   foreignField: "cart", // field in cart items pointing back
+});
+
+async function populateRestaurantOrder(doc: any) {
+  if (!doc) return null;
+
+  await doc.populate([
+    { path: "guest" },
+    { path: "cart" },
+    { path: "reservation" },
+    { path: "items" },
+  ]);
+
+  return doc;
+}
+
+RestaurantOrderSchema.post("save", async function (doc) {
+  try {
+    const populatedDoc = await populateRestaurantOrder(doc);
+    io.emit("restaurantOrder:new", populatedDoc);
+  } catch (err) {
+    console.error("Error emitting restaurantOrder:new:", err);
+  }
+});
+
+RestaurantOrderSchema.post("findOneAndUpdate", async function (doc) {
+  try {
+    if (!doc) return;
+    const populatedDoc = await populateRestaurantOrder(doc);
+    io.emit("restaurantOrder:update", populatedDoc);
+  } catch (err) {
+    console.error("Error emitting restaurantOrder:update:", err);
+  }
+});
+
+RestaurantOrderSchema.post("findOneAndDelete", async function (doc) {
+  try {
+    if (!doc) return;
+    const populatedDoc = await populateRestaurantOrder(doc);
+    io.emit("restaurantOrder:delete", populatedDoc);
+  } catch (err) {
+    console.error("Error emitting restaurantOrder:delete:", err);
+  }
 });
 
 export const RestaurantOrderModel = model<IRestaurantOrder>(

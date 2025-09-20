@@ -1,4 +1,5 @@
 import mongoose, { Schema, model, Types } from "mongoose";
+import { io } from "../index";
 
 export interface IRestaurantItemCategory {
   _id?: Types.ObjectId;
@@ -27,6 +28,26 @@ const RestaurantItemCategorySchema = new Schema<IRestaurantItemCategory>(
     toJSON: { virtuals: true },
   }
 );
+
+// --- Socket emissions ---
+RestaurantItemCategorySchema.post("save", async function (doc) {
+  io.emit("restaurantCategory:new", doc);
+});
+
+RestaurantItemCategorySchema.post("findOneAndUpdate", async function (doc) {
+  if (!doc) return;
+
+  const updatedDoc = await RestaurantItemCategoryModel.findById(doc._id);
+  if (updatedDoc) {
+    io.emit("restaurantCategory:update", updatedDoc.toObject());
+  }
+});
+
+RestaurantItemCategorySchema.post("findOneAndDelete", async function (doc) {
+  if (!doc) return;
+
+  io.emit("restaurantCategory:deleted", { id: doc._id, ...doc.toObject() });
+});
 
 export const RestaurantItemCategoryModel = model<IRestaurantItemCategory>(
   "restaurant_item_categories",
