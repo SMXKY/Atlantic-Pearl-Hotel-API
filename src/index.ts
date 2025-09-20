@@ -49,7 +49,12 @@ export const io = new Server(server, {
   cors: { origin: "*" },
 });
 
-const allowedIps = ["123.45.67.89", "98.76.54.32", "127.0.0.1"];
+const allowedIps = [
+  "123.45.67.89",
+  "98.76.54.32",
+  "127.0.0.1",
+  "31.97.113.198",
+];
 
 io.use((socket, next) => {
   const clientIp =

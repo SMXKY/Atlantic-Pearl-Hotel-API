@@ -45,6 +45,8 @@ const createReservation = catchAsync(async (req, res, next) => {
     email = guest.user.email;
   }
 
+  const userExist = await UserModel.findOne({ email });
+
   let reservation;
   try {
     reservation = new ReservationModel(req.body);
