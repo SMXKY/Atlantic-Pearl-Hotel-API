@@ -8,6 +8,8 @@ import { appResponder } from "../util/appResponder.util";
 import { StatusCodes } from "http-status-codes";
 import { AppError } from "../util/AppError.util";
 import { deleteFileFromFTP } from "../external-apis/ftpServer";
+import { ReservationModel } from "../models/Reservation.model";
+import mongoose from "mongoose";
 
 const CRUDRoom: CRUD = new CRUD(RoomModel);
 
@@ -65,27 +67,41 @@ const updateRoom = catchAsync(
     await CRUDRoom.update(req.params.id, res, req);
   }
 );
-
 const deleteRoom = catchAsync(
   async (req: Request, res: Response, next: NextFunction) => {
     if (!req.params.id) {
       return next(
         new AppError(
-          "Room Id is required, as url parameter",
+          "Room Id is required, as URL parameter",
           StatusCodes.BAD_REQUEST
         )
       );
     }
 
     const room = await RoomModel.findById(req.params.id);
-
     if (!room) {
       return next(
         new AppError("No such room Id in the database", StatusCodes.NOT_FOUND)
       );
     }
 
-    // return appResponder(StatusCodes.OK, {}, res);
+    const exists = await ReservationModel.findOne({
+      status: { $in: ["pending", "confirmed", "checked in"] },
+      items: {
+        $elemMatch: {
+          rooms: { $elemMatch: { room: room._id } },
+        },
+      },
+    });
+
+    if (exists) {
+      return next(
+        new AppError(
+          "You may not delete a room tied to a pending, confirmed, or checked in reservation!",
+          StatusCodes.BAD_REQUEST
+        )
+      );
+    }
 
     await CRUDRoom.delete(req.params.id, res, req);
   }
