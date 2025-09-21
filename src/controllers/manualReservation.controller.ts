@@ -58,7 +58,12 @@ const createManualReservation = catchAsync(
         String(invoice._id)
       );
 
-      const html = renderInvoiceHTMLFromTemplate(emailData);
+      let html = renderInvoiceHTMLFromTemplate(emailData);
+
+      html = html.replace(
+        /<div class="highlight-warning">[\s\S]*?<\/div>/g,
+        ""
+      );
 
       if (email) {
         await sendEmail(email, "RESERVATION INVOICE", "", html);

@@ -321,6 +321,28 @@ reservationSchema.methods.calculateTotalPriceAndTax = async function (
 reservationSchema.pre("save", async function (next) {
   if (this.bookingSource !== "online") return next();
 
+  this.depositInCFA = Number(this.depositInCFA);
+
+  if (!this.depositInCFA) {
+    return next(
+      new AppError(
+        "Deposit in CFA is required to make a reservation",
+        StatusCodes.BAD_REQUEST
+      )
+    );
+  }
+
+  if (isNaN(this.depositInCFA)) {
+    return next(
+      new AppError(
+        "deposit in CFAT is not a number!!!",
+        StatusCodes.BAD_REQUEST
+      )
+    );
+  }
+
+  console.log(this.depositInCFA);
+
   const adminConfiguration = await AdminConfigurationModel.findOne();
 
   if (!adminConfiguration) {

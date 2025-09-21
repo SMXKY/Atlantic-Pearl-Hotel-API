@@ -5,231 +5,31 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Atlantic Pearl Hotel & Resort - Receipt</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
-    <style>
-      @import url("https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600&family=Roboto:wght@400;500&display=swap");
-
-      :root {
-        --primary-color: #0a2540; /* deep navy */
-        --accent-color: #d4af37; /* luxury gold */
-        --neutral-light: #fdfcf8; /* cream */
-        --neutral-dark: #4a4a4a;
-        --button-radius: 6px;
-      }
-
-      body {
-        font-family: "Roboto", sans-serif;
-        line-height: 1.6;
-        color: var(--neutral-dark);
-        background-color: var(--neutral-light);
-        padding: 20px;
-        margin: 0;
-      }
-
-      .receipt-container {
+  </head>
+  <body
+    style="
+      margin: 0;
+      padding: 20px;
+      font-family: Roboto, sans-serif;
+      line-height: 1.6;
+      color: #4a4a4a;
+      background-color: #fdfcf8;
+    "
+  >
+    <div
+      id="receipt"
+      style="
         max-width: 600px;
         margin: 0 auto;
-        background: #fff;
+        background: #ffffff;
         border-radius: 12px;
-        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
         overflow: hidden;
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
         border: 1px solid #e6e6e6;
-      }
-
-      .header {
-        background-color: var(--primary-color);
-        color: #fff;
-        padding: 30px;
-        text-align: center;
-        position: relative;
-        font-family: "Playfair Display", serif;
-      }
-
-      .hotel-name {
-        font-size: 26px;
-        font-weight: 600;
-        margin-bottom: 6px;
-      }
-
-      .hotel-tagline {
-        font-size: 14px;
-        opacity: 0.9;
-        font-style: italic;
-        margin-bottom: 12px;
-      }
-
-      .receipt-title {
-        background: rgba(255, 255, 255, 0.15);
-        padding: 8px 20px;
-        border-radius: 20px;
-        display: inline-block;
-        margin-top: 5px;
-        font-weight: 500;
-        font-size: 15px;
-      }
-
-      .content {
-        padding: 32px 28px;
-      }
-
-      .receipt-info {
-        display: flex;
-        justify-content: space-between;
-        margin-bottom: 24px;
-        flex-wrap: wrap;
-        gap: 20px;
-      }
-
-      .info-section {
-        flex: 1;
-        min-width: 180px;
-      }
-
-      .info-label {
-        font-size: 12px;
-        color: #666;
-        text-transform: uppercase;
-        letter-spacing: 0.5px;
-        margin-bottom: 5px;
-        font-weight: 600;
-      }
-
-      .info-value {
-        font-size: 15px;
-        color: var(--primary-color);
-        font-weight: 600;
-      }
-
-      .transaction-details {
-        background: #fafafa;
-        border-radius: 8px;
-        padding: 20px;
-        margin: 30px 0;
-        border-left: 4px solid var(--primary-color);
-      }
-
-      .detail-row {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        padding: 12px 0;
-        border-bottom: 1px solid #e6e6e6;
-      }
-
-      .detail-row:last-child {
-        border-bottom: none;
-        font-weight: 700;
-        font-size: 17px;
-        color: var(--accent-color);
-        margin-top: 8px;
-        padding-top: 16px;
-        border-top: 2px solid var(--primary-color);
-      }
-
-      .detail-label {
-        color: var(--neutral-dark);
-        font-weight: 500;
-      }
-
-      .detail-value {
-        font-weight: 600;
-        color: var(--primary-color);
-      }
-
-      .status-badge {
-        display: inline-block;
-        padding: 6px 12px;
-        border-radius: 20px;
-        font-size: 12px;
-        font-weight: 600;
-        text-transform: uppercase;
-        letter-spacing: 0.5px;
-        background: #dcfce7;
-        color: #166534;
-      }
-
-      /* Note */
-      .print-note {
-        background: #fff8e1;
-        border: 1px solid var(--accent-color);
-        padding: 12px;
-        border-radius: 8px;
-        margin: 20px 0;
-        text-align: center;
-        color: var(--primary-color);
-        font-size: 14px;
-        font-weight: 500;
-      }
-
-      /* Action buttons */
-      .action-buttons {
-        display: flex;
-        gap: 12px;
-        justify-content: center;
-        margin: 20px 0;
-      }
-
-      .action-btn {
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        gap: 8px;
-        padding: 10px 20px;
-        background: var(--primary-color);
-        color: white;
-        border: none;
-        border-radius: var(--button-radius);
-        cursor: pointer;
-        font-size: 14px;
-        font-weight: 500;
-        text-decoration: none;
-        transition: background-color 0.3s ease;
-      }
-
-      .action-btn:hover {
-        background: #0c2b50;
-      }
-
-      @media print {
-        body {
-          background: white;
-          padding: 0;
-        }
-
-        .receipt-container {
-          box-shadow: none;
-          border-radius: 0;
-        }
-
-        .print-note,
-        .action-buttons {
-          display: none !important;
-        }
-      }
-
-      .footer {
-        background: #f5f5f5;
-        padding: 20px;
-        text-align: center;
-        border-top: 1px solid #e6e6e6;
-      }
-
-      .footer-text {
-        color: #666;
-        font-size: 14px;
-        margin-bottom: 8px;
-      }
-
-      .contact-info {
-        color: #4a4a4a;
-        font-size: 13px;
-        line-height: 1.6;
-      }
-    </style>
-  </head>
-  <body>
-    <div class="receipt-container" id="receipt">
+      "
+    >
+      <!-- Header -->
       <div
-        class="header"
         style="
           background-color: #0a2540;
           color: #ffffff;
@@ -238,82 +38,296 @@
           font-family: 'Playfair Display', serif;
         "
       >
-        <div class="hotel-name">Atlantic Pearl Hotel & Resort</div>
-        <div class="hotel-tagline">Where Luxury Meets the Ocean</div>
-        <div class="receipt-title">Payment Receipt</div>
+        <div style="font-size: 26px; font-weight: 600; margin-bottom: 6px">
+          Atlantic Pearl Hotel & Resort
+        </div>
+        <div
+          style="
+            font-size: 14px;
+            opacity: 0.9;
+            font-style: italic;
+            margin-bottom: 12px;
+          "
+        >
+          Where Luxury Meets the Ocean
+        </div>
+        <div
+          style="
+            background: rgba(255, 255, 255, 0.15);
+            padding: 8px 20px;
+            border-radius: 20px;
+            display: inline-block;
+            margin-top: 5px;
+            font-weight: 500;
+            font-size: 15px;
+          "
+        >
+          Payment Receipt
+        </div>
       </div>
 
-      <div class="content">
-        <div class="action-buttons">
-          <button class="action-btn" onclick="printReceipt()">
+      <div style="padding: 32px 28px">
+        <!-- Action Buttons -->
+        <div
+          style="
+            display: flex;
+            gap: 12px;
+            justify-content: center;
+            margin: 20px 0;
+          "
+        >
+          <button
+            onclick="printReceipt()"
+            style="
+              display: inline-flex;
+              align-items: center;
+              justify-content: center;
+              gap: 8px;
+              padding: 10px 20px;
+              background: #0a2540;
+              color: white;
+              border: none;
+              border-radius: 6px;
+              cursor: pointer;
+              font-size: 14px;
+              font-weight: 500;
+              text-decoration: none;
+            "
+          >
             🖨 Print Receipt
           </button>
-          <button class="action-btn" onclick="downloadReceipt()">
+          <button
+            onclick="downloadReceipt()"
+            style="
+              display: inline-flex;
+              align-items: center;
+              justify-content: center;
+              gap: 8px;
+              padding: 10px 20px;
+              background: #0a2540;
+              color: white;
+              border: none;
+              border-radius: 6px;
+              cursor: pointer;
+              font-size: 14px;
+              font-weight: 500;
+              text-decoration: none;
+            "
+          >
             📥 Download PDF
           </button>
         </div>
 
-        <div class="receipt-info">
-          <div class="info-section">
-            <div class="info-label">Receipt ID</div>
-            <div class="info-value">{{receiptId}}</div>
+        <!-- Receipt Info -->
+        <div
+          style="
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 24px;
+            flex-wrap: wrap;
+            gap: 20px;
+          "
+        >
+          <div style="flex: 1; min-width: 180px">
+            <div
+              style="
+                font-size: 12px;
+                color: #666;
+                text-transform: uppercase;
+                letter-spacing: 0.5px;
+                margin-bottom: 5px;
+                font-weight: 600;
+              "
+            >
+              Receipt ID
+            </div>
+            <div style="font-size: 15px; color: #0a2540; font-weight: 600">
+              {{receiptId}}
+            </div>
           </div>
-          <div class="info-section">
-            <div class="info-label">Issue Date</div>
-            <div class="info-value">{{date}}</div>
+          <div style="flex: 1; min-width: 180px">
+            <div
+              style="
+                font-size: 12px;
+                color: #666;
+                text-transform: uppercase;
+                letter-spacing: 0.5px;
+                margin-bottom: 5px;
+                font-weight: 600;
+              "
+            >
+              Issue Date
+            </div>
+            <div style="font-size: 15px; color: #0a2540; font-weight: 600">
+              {{date}}
+            </div>
           </div>
-          <div class="info-section">
-            <div class="info-label">Method</div>
-            <div class="info-value">{{method}}</div>
+          <div style="flex: 1; min-width: 180px">
+            <div
+              style="
+                font-size: 12px;
+                color: #666;
+                text-transform: uppercase;
+                letter-spacing: 0.5px;
+                margin-bottom: 5px;
+                font-weight: 600;
+              "
+            >
+              Method
+            </div>
+            <div style="font-size: 15px; color: #0a2540; font-weight: 600">
+              {{method}}
+            </div>
           </div>
         </div>
 
-        <div class="print-note">
+        <!-- Print Note -->
+        <div
+          style="
+            background: #fff8e1;
+            border: 1px solid #d4af37;
+            padding: 12px;
+            border-radius: 8px;
+            margin: 20px 0;
+            text-align: center;
+            color: #0a2540;
+            font-size: 14px;
+            font-weight: 500;
+          "
+        >
           💡 This receipt can be printed for your records. Use Ctrl+P or Cmd+P
           to print.
         </div>
 
-        <div class="transaction-details">
-          <div class="detail-row">
-            <span class="detail-label">Transaction ID</span>
-            <span class="detail-value">{{transactionId}}</span>
+        <!-- Transaction Details -->
+        <div
+          style="
+            background: #fafafa;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 30px 0;
+            border-left: 4px solid #0a2540;
+          "
+        >
+          <div
+            style="
+              display: flex;
+              justify-content: space-between;
+              align-items: center;
+              padding: 12px 0;
+              border-bottom: 1px solid #e6e6e6;
+            "
+          >
+            <span style="color: #4a4a4a; font-weight: 500">Transaction ID</span>
+            <span style="font-weight: 600; color: #0a2540"
+              >{{transactionId}}</span
+            >
           </div>
-          <div class="detail-row">
-            <span class="detail-label">Transaction Type</span>
-            <span class="detail-value">{{transactionType}}</span>
+          <div
+            style="
+              display: flex;
+              justify-content: space-between;
+              align-items: center;
+              padding: 12px 0;
+              border-bottom: 1px solid #e6e6e6;
+            "
+          >
+            <span style="color: #4a4a4a; font-weight: 500"
+              >Transaction Type</span
+            >
+            <span style="font-weight: 600; color: #0a2540"
+              >{{transactionType}}</span
+            >
           </div>
-          <div class="detail-row">
-            <span class="detail-label">Description</span>
-            <span class="detail-value">{{reason}}</span>
+          <div
+            style="
+              display: flex;
+              justify-content: space-between;
+              align-items: center;
+              padding: 12px 0;
+              border-bottom: 1px solid #e6e6e6;
+            "
+          >
+            <span style="color: #4a4a4a; font-weight: 500">Description</span>
+            <span style="font-weight: 600; color: #0a2540">{{reason}}</span>
           </div>
-          <div class="detail-row">
-            <span class="detail-label">Reservation ID</span>
-            <span class="detail-value">{{reservationId}}</span>
+          <div
+            style="
+              display: flex;
+              justify-content: space-between;
+              align-items: center;
+              padding: 12px 0;
+              border-bottom: 1px solid #e6e6e6;
+            "
+          >
+            <span style="color: #4a4a4a; font-weight: 500">Reservation ID</span>
+            <span style="font-weight: 600; color: #0a2540"
+              >{{reservationId}}</span
+            >
           </div>
-          <div class="detail-row">
-            <span class="detail-label">Payment Status</span>
-            <span class="detail-value">
-              <span class="status-badge">{{status}}</span>
-            </span>
+          <div
+            style="
+              display: flex;
+              justify-content: space-between;
+              align-items: center;
+              padding: 12px 0;
+              border-bottom: 1px solid #e6e6e6;
+            "
+          >
+            <span style="color: #4a4a4a; font-weight: 500">Payment Status</span>
+            <span
+              style="
+                font-weight: 600;
+                color: #0a2540;
+                display: inline-block;
+                padding: 6px 12px;
+                border-radius: 20px;
+                font-size: 12px;
+                text-transform: uppercase;
+                background: #dcfce7;
+                color: #166534;
+              "
+              >{{status}}</span
+            >
           </div>
-          <div class="detail-row">
-            <span class="detail-label">Total Amount</span>
-            <span class="detail-value">{{amount}} FCFA</span>
+          <div
+            style="
+              display: flex;
+              justify-content: space-between;
+              align-items: center;
+              padding-top: 16px;
+              border-top: 2px solid #0a2540;
+              font-weight: 700;
+              font-size: 17px;
+              color: #d4af37;
+              margin-top: 8px;
+            "
+          >
+            <span style="color: #4a4a4a; font-weight: 500">Total Amount</span>
+            <span style="font-weight: 600; color: #0a2540"
+              >{{amount}} FCFA</span
+            >
           </div>
         </div>
       </div>
 
-      <div class="footer">
-        <div class="footer-text">
+      <!-- Footer -->
+      <div
+        style="
+          background: #f5f5f5;
+          padding: 20px;
+          text-align: center;
+          border-top: 1px solid #e6e6e6;
+        "
+      >
+        <div style="color: #666; font-size: 14px; margin-bottom: 8px">
           Thank you for choosing Atlantic Pearl Hotel & Resort
         </div>
-        <div class="contact-info">
+        <div style="color: #4a4a4a; font-size: 13px; line-height: 1.6">
           For inquiries, please contact us at
-          <span style="color: var(--accent-color)"
-            >reservations@atlanticpearl.com</span
+          <span style="color: #d4af37">reservations@atlanticpearl.com</span
           ><br />
-          Phone:
-          <span style="color: var(--accent-color)">+1 (555) 123-4567</span> |
+          Phone: <span style="color: #d4af37">+1 (555) 123-4567</span> |
           Website: www.atlanticpearl.com<br />
           123 Ocean Drive, Paradise Bay, PB 12345
         </div>

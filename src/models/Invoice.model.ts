@@ -211,7 +211,7 @@ InvoiceSchema.pre("validate", async function (next) {
   console.log(baseUrl);
 
   const data = {
-    amount: reservation.depositInCFA,
+    amount: Math.round(reservation.depositInCFA),
     reservationId: String(reservation._id),
   };
 
@@ -221,13 +221,22 @@ InvoiceSchema.pre("validate", async function (next) {
   // throw new AppError(redirectUrl, StatusCodes.CREATED);
 
   const payData: InitiatePayData = {
-    amount: reservation.depositInCFA,
+    amount: Math.round(Number(reservation.depositInCFA)),
     redirectUrl,
     userId: this.reservation.toString(),
     message: "Atlantic Pearl Hotel and Resort, Reservation Deposit", // Optional message shown to user
   };
 
-  const payment = await initiatePay(payData);
+  console.log(payData);
+
+  const payment = await initiatePay(payData).catch((err) => {
+    console.log("Paymentlink error", payment);
+    throw new AppError(
+      "Error createing payment link",
+      StatusCodes.INTERNAL_SERVER_ERROR
+    );
+  });
+
   console.log("PAYMENT", payment);
   this.paymentLink = payment.link;
   this.paymentLinkId = payment.transId;

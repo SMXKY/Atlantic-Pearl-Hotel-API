@@ -4,27 +4,19 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Atlantic Pearl Hotel & Resort - Reservation Expired</title>
-    <style>
-      @import url("https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600&family=Roboto:wght@400;500&display=swap");
-
-      :root {
-        --primary-color: #0a2540; /* deep navy */
-        --accent-color: #d4af37; /* gold */
-        --neutral-light: #fdfcf8; /* cream */
-        --neutral-dark: #4a4a4a;
-        --button-radius: 6px;
-      }
-
-      body {
-        font-family: "Roboto", sans-serif;
-        background-color: var(--neutral-light);
-        color: var(--neutral-dark);
-        margin: 0;
-        padding: 0;
-        line-height: 1.6;
-      }
-
-      .email-container {
+  </head>
+  <body
+    style="
+      margin: 0;
+      padding: 0;
+      background-color: #fdfcf8;
+      font-family: Roboto, sans-serif;
+      color: #4a4a4a;
+      line-height: 1.6;
+    "
+  >
+    <div
+      style="
         width: 100%;
         max-width: 480px;
         margin: 0 auto;
@@ -33,129 +25,10 @@
         overflow: hidden;
         box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
         border: 1px solid #e6e6e6;
-      }
-
-      .header {
-        background-color: var(--primary-color);
-        color: #fff;
-        text-align: center;
-        padding: 32px 24px;
-        font-family: "Playfair Display", serif;
-      }
-
-      .header h1 {
-        font-size: 28px;
-        margin-bottom: 4px;
-        font-weight: 600;
-      }
-
-      .header p {
-        font-size: 14px;
-        font-weight: 300;
-        letter-spacing: 1px;
-        opacity: 0.85;
-      }
-
-      .content {
-        padding: 32px 24px;
-      }
-
-      .greeting {
-        font-size: 20px;
-        font-weight: 500;
-        margin-bottom: 16px;
-      }
-
-      .main-text {
-        font-size: 15px;
-        margin-bottom: 24px;
-        line-height: 1.5;
-      }
-
-      .highlight {
-        color: var(--accent-color);
-        font-weight: 600;
-      }
-
-      .action-section {
-        margin-bottom: 24px;
-        text-align: center;
-      }
-
-      .btn {
-        display: inline-block;
-        text-decoration: none;
-        padding: 12px 24px;
-        border-radius: var(--button-radius);
-        font-weight: 500;
-        font-size: 14px;
-        text-align: center;
-        width: 100%;
-        max-width: 220px;
-        margin: 0 auto;
-        transition: all 0.3s ease;
-        box-sizing: border-box;
-        word-break: break-word;
-      }
-
-      .btn-primary {
-        background-color: var(--primary-color);
-        color: #fff;
-        border: 1px solid var(--primary-color);
-      }
-
-      .btn-primary:hover {
-        background-color: #0c2b50;
-        border-color: #0c2b50;
-      }
-
-      .signature {
-        margin-top: 32px;
-        font-size: 14px;
-        line-height: 1.5;
-      }
-
-      .team-name {
-        font-weight: 600;
-        color: var(--primary-color);
-        font-size: 15px;
-      }
-
-      .footer {
-        background-color: #f5f5f5;
-        color: #666;
-        font-size: 12px;
-        text-align: center;
-        padding: 24px;
-      }
-
-      .footer p {
-        margin: 4px 0;
-      }
-
-      .variable {
-        color: var(--accent-color);
-        font-weight: 600;
-      }
-
-      @media (max-width: 480px) {
-        .email-container {
-          margin: 0 10px;
-          border-radius: 8px;
-        }
-        .content {
-          padding: 24px 16px;
-        }
-        .header {
-          padding: 24px 16px;
-        }
-      }
-    </style>
-  </head>
-  <body>
-    <div class="email-container">
+      "
+    >
+      <!-- Header -->
       <div
-        class="header"
         style="
           background-color: #0a2540;
           color: #ffffff;
@@ -164,49 +37,105 @@
           font-family: 'Playfair Display', serif;
         "
       >
-        <h1>Atlantic Pearl</h1>
-        <p>Hotel & Resort • Limbe</p>
+        <h1 style="font-size: 28px; margin-bottom: 4px; font-weight: 600">
+          Atlantic Pearl
+        </h1>
+        <p
+          style="
+            font-size: 14px;
+            font-weight: 300;
+            letter-spacing: 1px;
+            opacity: 0.85;
+          "
+        >
+          Hotel & Resort • Limbe
+        </p>
       </div>
 
-      <div class="content">
-        <div class="greeting">
-          Dear <span class="variable">[Guest Name]</span>,
+      <!-- Content -->
+      <div style="padding: 32px 24px">
+        <div style="font-size: 20px; font-weight: 500; margin-bottom: 16px">
+          Dear
+          <span style="color: #d4af37; font-weight: 600">[Guest Name]</span>,
         </div>
 
-        <div class="main-text">
+        <div style="font-size: 15px; margin-bottom: 24px; line-height: 1.5">
           We regret to inform you that your reservation
-          <span class="variable">[Reservation Code]</span> has
-          <span class="highlight">expired</span> because the required deposit
-          was not received within the timeframe specified on your invoice.
+          <span style="color: #d4af37; font-weight: 600"
+            >[Reservation Code]</span
+          >
+          has
+          <span style="color: #d4af37; font-weight: 600">expired</span> because
+          the required deposit was not received within the timeframe specified
+          on your invoice.
         </div>
 
-        <div class="main-text">
+        <div style="font-size: 15px; margin-bottom: 24px; line-height: 1.5">
           Unfortunately, this means your room is no longer guaranteed.
         </div>
 
-        <div class="action-section">
-          <a href="[Reservation Link]" class="btn btn-primary">
-            Make a New Reservation
-          </a>
+        <div style="margin-bottom: 24px; text-align: center">
+          <a
+            href="[Reservation Link]"
+            style="
+              display: inline-block;
+              text-decoration: none;
+              padding: 12px 24px;
+              border-radius: 6px;
+              font-weight: 500;
+              font-size: 14px;
+              text-align: center;
+              width: 100%;
+              max-width: 220px;
+              margin: 0 auto;
+              background-color: #0a2540;
+              color: #ffffff;
+              border: 1px solid #0a2540;
+              transition: all 0.3s ease;
+              box-sizing: border-box;
+              word-break: break-word;
+            "
+            >Make a New Reservation</a
+          >
         </div>
 
-        <div class="main-text">
+        <div style="font-size: 15px; margin-bottom: 24px; line-height: 1.5">
           We’d still love to host you. Please feel free to book again at your
           earliest convenience to secure your preferred stay dates.
         </div>
 
-        <div class="signature">
+        <div style="margin-top: 32px; font-size: 14px; line-height: 1.5">
           Warm regards,<br />
-          <span class="team-name">The Atlantic Pearl Team</span>
+          <span style="font-weight: 600; color: #0a2540; font-size: 15px"
+            >The Atlantic Pearl Team</span
+          >
         </div>
       </div>
 
-      <div class="footer">
-        <p><strong>Atlantic Pearl Hotel & Resort</strong></p>
-        <p><span class="variable">South west, Limbe</span>, Limbe</p>
-        <p>
-          Phone: <span class="variable">+237 677 777 777</span> | Email:
-          <span class="variable">atlanticPearlHotel@gmail.com</span>
+      <!-- Footer -->
+      <div
+        style="
+          background-color: #f5f5f5;
+          color: #666;
+          font-size: 12px;
+          text-align: center;
+          padding: 24px;
+        "
+      >
+        <p style="margin: 4px 0">
+          <strong>Atlantic Pearl Hotel & Resort</strong>
+        </p>
+        <p style="margin: 4px 0">
+          <span style="color: #d4af37; font-weight: 600">South west, Limbe</span
+          >, Limbe
+        </p>
+        <p style="margin: 4px 0">
+          Phone:
+          <span style="color: #d4af37; font-weight: 600">+237 677 777 777</span>
+          | Email:
+          <span style="color: #d4af37; font-weight: 600"
+            >atlanticPearlHotel@gmail.com</span
+          >
         </p>
       </div>
     </div>

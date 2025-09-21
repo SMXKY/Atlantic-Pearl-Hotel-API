@@ -258,8 +258,8 @@ roomTypeRouter
 roomTypeRouter
   .route("/:id")
   .get(
-    authControllers.protect,
-    authControllers.restrictTo(allPermissions.roomTypes.readOne),
+    // authControllers.protect,
+    // authControllers.restrictTo(allPermissions.roomTypes.readOne),
     roomTypeControllers.readOneRoomType
   )
   .patch(

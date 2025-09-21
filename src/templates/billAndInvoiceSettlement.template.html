@@ -4,236 +4,344 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Invoice | Atlantic Pearl Hotel & Resort</title>
-    <style>
-      @import url("https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600&family=Roboto:wght@400;500&display=swap");
-
-      :root {
-        --primary-color: #0a2540; /* deep navy */
-        --accent-color: #d4af37; /* gold */
-        --neutral-light: #fdfcf8; /* cream background */
-        --neutral-dark: #4a4a4a; /* default text */
-        --button-radius: 6px;
-      }
-
-      body {
-        margin: 0;
-        padding: 0;
-        background-color: var(--neutral-light);
-        font-family: "Roboto", sans-serif;
-        color: var(--neutral-dark);
-      }
-
-      .container {
-        width: 100%;
-        max-width: 600px;
-        margin: 30px auto;
-        background-color: #fff;
-        border-radius: 12px;
-        overflow: hidden;
-        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
-        border: 1px solid #e6e6e6;
-      }
-
-      /* Header */
-      .header {
-        background-color: var(--primary-color);
-        text-align: center;
-        padding: 28px 20px;
-        color: #fff;
-        font-family: "Playfair Display", serif;
-      }
-      .header h1 {
-        margin: 0;
-        font-size: 26px;
-        font-weight: 600;
-      }
-      .header .issue-date {
-        margin-top: 8px;
-        font-size: 13px;
-        opacity: 0.85;
-        font-family: "Roboto", sans-serif;
-      }
-
-      /* Greeting */
-      .greeting {
-        font-size: 16px;
-        margin: 28px 20px 10px;
-      }
-
-      /* Section titles */
-      .section-title {
-        font-size: 18px;
-        font-weight: 600;
-        font-family: "Playfair Display", serif;
-        margin: 24px 20px 10px;
-        color: var(--primary-color);
-        border-bottom: 1px solid #e6e6e6;
-        padding-bottom: 6px;
-      }
-
-      /* Tables */
-      table {
-        width: calc(100% - 40px);
-        margin: 0 auto 24px;
-        border-collapse: collapse;
-        font-size: 14px;
-      }
-      th,
-      td {
-        padding: 12px;
-        border: 1px solid #e6e6e6;
-        text-align: left;
-      }
-      th {
-        background-color: var(--primary-color);
-        color: #fff;
-        text-transform: uppercase;
-        font-size: 12px;
-        letter-spacing: 0.5px;
-      }
-      td {
-        vertical-align: top;
-      }
-      td strong {
-        color: var(--primary-color);
-      }
-
-      /* Total */
-      .total {
-        text-align: right;
-        font-size: 18px;
-        margin: 20px;
-        font-weight: 600;
-        color: var(--accent-color);
-      }
-
-      /* Buttons */
-      .btn-pay {
-        display: block;
-        width: 220px;
-        margin: 20px auto 40px;
-        text-align: center;
-        background-color: var(--primary-color);
-        color: #fff;
-        text-decoration: none;
-        padding: 14px 0;
-        border-radius: var(--button-radius);
-        font-weight: 500;
-        font-size: 15px;
-        transition: all 0.3s ease;
-      }
-      .btn-pay:hover {
-        background-color: #0c2b50;
-      }
-
-      /* Footer */
-      .footer {
-        background-color: #f5f5f5;
-        padding: 20px;
-        text-align: center;
-        font-size: 12px;
-        color: #666;
-        border-top: 1px solid #e6e6e6;
-      }
-
-      @media (max-width: 480px) {
-        .container {
-          margin: 10px;
-          border-radius: 8px;
-        }
-        table {
-          font-size: 13px;
-        }
-        .total {
-          font-size: 16px;
-        }
-      }
-    </style>
   </head>
-  <body>
-    <div class="container">
-      <!-- Header -->
-      <div
-        class="header"
-        style="
-          background-color: #0a2540;
-          color: #ffffff;
-          text-align: center;
-          padding: 32px 24px;
-          font-family: 'Playfair Display', serif;
-        "
-      >
-        <h1>Atlantic Pearl Hotel & Resort</h1>
-        <div class="issue-date">Issue Date: {{ issueDate }}</div>
-      </div>
+  <body
+    style="
+      margin: 0;
+      padding: 0;
+      background-color: #fdfcf8;
+      font-family: Arial, Helvetica, sans-serif;
+      color: #4a4a4a;
+      line-height: 1.6;
+    "
+  >
+    <table
+      role="presentation"
+      width="100%"
+      cellspacing="0"
+      cellpadding="0"
+      border="0"
+      style="background-color: #fdfcf8; padding: 20px 0"
+    >
+      <tr>
+        <td align="center">
+          <table
+            role="presentation"
+            width="600"
+            cellspacing="0"
+            cellpadding="0"
+            border="0"
+            style="
+              background-color: #ffffff;
+              border: 1px solid #e6e6e6;
+              border-radius: 8px;
+              overflow: hidden;
+              box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+            "
+          >
+            <!-- Header -->
+            <tr>
+              <td
+                align="center"
+                style="
+                  background-color: #0a2540;
+                  color: #ffffff;
+                  text-align: center;
+                  padding: 28px 20px;
+                  font-family: Georgia, serif;
+                "
+              >
+                <h1 style="margin: 0; font-size: 24px; font-weight: 600">
+                  Atlantic Pearl Hotel & Resort
+                </h1>
+                <p style="margin: 8px 0 0; font-size: 13px; opacity: 0.85">
+                  Issue Date: {{ issueDate }}
+                </p>
+              </td>
+            </tr>
 
-      <!-- Greeting -->
-      <p class="greeting">
-        Hello
-        <span style="color: var(--accent-color); font-weight: 600"
-          >{{ guestName }}</span
-        >,<br />
-        Thank you for staying with us. Here is your detailed invoice:
-      </p>
+            <!-- Greeting -->
+            <tr>
+              <td style="padding: 28px 20px; font-size: 15px; color: #4a4a4a">
+                <p style="margin: 0 0 16px">
+                  Hello
+                  <span style="color: #d4af37; font-weight: 600"
+                    >{{ guestName }}</span
+                  >,<br />
+                  Thank you for staying with us. Here is your detailed invoice:
+                </p>
+              </td>
+            </tr>
 
-      <!-- Line Items Section -->
-      <div class="section-title">Room Charges</div>
-      <table>
-        <tr>
-          <th>Invoice Ref</th>
-          <th>Room # / Type</th>
-          <th>Check-In ↔ Check-Out</th>
-          <th>Amount (XAF)</th>
-        </tr>
-        {{#each invoice.lineItems}} {{#each rooms}}
-        <tr>
-          <td>{{../ref}}</td>
-          <td>{{room}}<br /><small>Type: {{../roomType}}</small></td>
-          <td>
-            {{formatDate checkIn}}<br />&mdash;<br />{{formatDate checkOut}}
-          </td>
-          <td style="text-align: right">
-            {{calcNights ../rate checkIn checkOut}}
-          </td>
-        </tr>
-        {{/each}} {{/each}}
-      </table>
+            <!-- Room Charges -->
+            <tr>
+              <td style="padding: 0 20px">
+                <h2
+                  style="
+                    font-size: 18px;
+                    font-weight: 600;
+                    color: #0a2540;
+                    margin: 24px 0 10px;
+                    border-bottom: 1px solid #e6e6e6;
+                    padding-bottom: 6px;
+                    font-family: Georgia, serif;
+                  "
+                >
+                  Room Charges
+                </h2>
+                <table
+                  width="100%"
+                  cellspacing="0"
+                  cellpadding="0"
+                  border="0"
+                  style="
+                    border-collapse: collapse;
+                    font-size: 14px;
+                    margin-bottom: 24px;
+                  "
+                >
+                  <tr>
+                    <th
+                      style="
+                        padding: 10px;
+                        background-color: #0a2540;
+                        color: #ffffff;
+                        font-size: 12px;
+                        text-transform: uppercase;
+                      "
+                    >
+                      Invoice Ref
+                    </th>
+                    <th
+                      style="
+                        padding: 10px;
+                        background-color: #0a2540;
+                        color: #ffffff;
+                        font-size: 12px;
+                        text-transform: uppercase;
+                      "
+                    >
+                      Room # / Type
+                    </th>
+                    <th
+                      style="
+                        padding: 10px;
+                        background-color: #0a2540;
+                        color: #ffffff;
+                        font-size: 12px;
+                        text-transform: uppercase;
+                      "
+                    >
+                      Check-In ↔ Check-Out
+                    </th>
+                    <th
+                      style="
+                        padding: 10px;
+                        background-color: #0a2540;
+                        color: #ffffff;
+                        font-size: 12px;
+                        text-transform: uppercase;
+                      "
+                    >
+                      Amount (XAF)
+                    </th>
+                  </tr>
+                  {{#each invoice.lineItems}} {{#each rooms}}
+                  <tr>
+                    <td style="padding: 10px; border: 1px solid #e6e6e6">
+                      {{../ref}}
+                    </td>
+                    <td style="padding: 10px; border: 1px solid #e6e6e6">
+                      {{room}}<br /><small>Type: {{../roomType}}</small>
+                    </td>
+                    <td style="padding: 10px; border: 1px solid #e6e6e6">
+                      {{formatDate checkIn}}<br />&mdash;<br />{{formatDate
+                      checkOut}}
+                    </td>
+                    <td
+                      style="
+                        padding: 10px;
+                        border: 1px solid #e6e6e6;
+                        text-align: right;
+                      "
+                    >
+                      {{calcNights ../rate checkIn checkOut}}
+                    </td>
+                  </tr>
+                  {{/each}} {{/each}}
+                </table>
+              </td>
+            </tr>
 
-      <!-- Bill Items Section (conditionally displayed) -->
-      {{#if bill.items.length}}
-      <div class="section-title">Additional Charges</div>
-      <table>
-        <tr>
-          <th>Bill Ref</th>
-          <th>Description</th>
-          <th>Date</th>
-          <th>Amount (XAF)</th>
-        </tr>
-        {{#each bill.items}}
-        <tr>
-          <td>{{../bill.ref}}</td>
-          <td>{{description}}</td>
-          <td>{{formatDate createdAt}}</td>
-          <td style="text-align: right">{{formatCurrency amount}}</td>
-        </tr>
-        {{/each}}
-      </table>
-      {{/if}}
+            <!-- Additional Charges -->
+            {{#if bill.items.length}}
+            <tr>
+              <td style="padding: 0 20px">
+                <h2
+                  style="
+                    font-size: 18px;
+                    font-weight: 600;
+                    color: #0a2540;
+                    margin: 24px 0 10px;
+                    border-bottom: 1px solid #e6e6e6;
+                    padding-bottom: 6px;
+                    font-family: Georgia, serif;
+                  "
+                >
+                  Additional Charges
+                </h2>
+                <table
+                  width="100%"
+                  cellspacing="0"
+                  cellpadding="0"
+                  border="0"
+                  style="
+                    border-collapse: collapse;
+                    font-size: 14px;
+                    margin-bottom: 24px;
+                  "
+                >
+                  <tr>
+                    <th
+                      style="
+                        padding: 10px;
+                        background-color: #0a2540;
+                        color: #ffffff;
+                        font-size: 12px;
+                        text-transform: uppercase;
+                      "
+                    >
+                      Bill Ref
+                    </th>
+                    <th
+                      style="
+                        padding: 10px;
+                        background-color: #0a2540;
+                        color: #ffffff;
+                        font-size: 12px;
+                        text-transform: uppercase;
+                      "
+                    >
+                      Description
+                    </th>
+                    <th
+                      style="
+                        padding: 10px;
+                        background-color: #0a2540;
+                        color: #ffffff;
+                        font-size: 12px;
+                        text-transform: uppercase;
+                      "
+                    >
+                      Date
+                    </th>
+                    <th
+                      style="
+                        padding: 10px;
+                        background-color: #0a2540;
+                        color: #ffffff;
+                        font-size: 12px;
+                        text-transform: uppercase;
+                      "
+                    >
+                      Amount (XAF)
+                    </th>
+                  </tr>
+                  {{#each bill.items}}
+                  <tr>
+                    <td style="padding: 10px; border: 1px solid #e6e6e6">
+                      {{../bill.ref}}
+                    </td>
+                    <td style="padding: 10px; border: 1px solid #e6e6e6">
+                      {{description}}
+                    </td>
+                    <td style="padding: 10px; border: 1px solid #e6e6e6">
+                      {{formatDate createdAt}}
+                    </td>
+                    <td
+                      style="
+                        padding: 10px;
+                        border: 1px solid #e6e6e6;
+                        text-align: right;
+                      "
+                    >
+                      {{formatCurrency amount}}
+                    </td>
+                  </tr>
+                  {{/each}}
+                </table>
+              </td>
+            </tr>
+            {{/if}}
 
-      <!-- Total Due -->
-      <div class="total">Total Due: {{formatCurrency total}} XAF</div>
+            <!-- Total Due -->
+            <tr>
+              <td style="padding: 0 20px">
+                <p
+                  style="
+                    margin: 20px 0;
+                    text-align: right;
+                    font-size: 18px;
+                    font-weight: 600;
+                    color: #d4af37;
+                  "
+                >
+                  Total Due: {{formatCurrency total}} XAF
+                </p>
+              </td>
+            </tr>
 
-      <!-- Pay Button -->
-      <a href="{{paymentUrl}}" class="btn-pay">Pay Now</a>
+            <!-- Pay Button -->
+            <tr>
+              <td align="center" style="padding: 0 20px 40px">
+                <a
+                  href="{{paymentUrl}}"
+                  style="
+                    display: inline-block;
+                    text-decoration: none;
+                    padding: 14px 28px;
+                    border-radius: 6px;
+                    font-weight: 500;
+                    font-size: 15px;
+                    background-color: #0a2540;
+                    color: #ffffff;
+                    border: 1px solid #0a2540;
+                    max-width: 220px;
+                    width: 100%;
+                    text-align: center;
+                  "
+                  >Pay Now</a
+                >
+              </td>
+            </tr>
 
-      <!-- Footer -->
-      <div class="footer">
-        If you have any questions, simply reply to this email or call us at
-        <span style="color: var(--accent-color); font-weight: 600"
-          >+237 123 456 789</span
-        >.<br />
-        &copy; 2025 Atlantic Pearl Hotel & Resort. All rights reserved.
-      </div>
-    </div>
+            <!-- Footer -->
+            <tr>
+              <td
+                align="center"
+                style="
+                  background-color: #f5f5f5;
+                  color: #666;
+                  padding: 20px;
+                  font-size: 12px;
+                  border-top: 1px solid #e6e6e6;
+                "
+              >
+                <p style="margin: 4px 0">
+                  If you have any questions, simply reply to this email or call
+                  us at
+                  <span style="color: #d4af37; font-weight: 600"
+                    >+237 123 456 789</span
+                  >.
+                </p>
+                <p style="margin: 4px 0">
+                  © 2025 Atlantic Pearl Hotel & Resort. All rights reserved.
+                </p>
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+    </table>
   </body>
 </html>

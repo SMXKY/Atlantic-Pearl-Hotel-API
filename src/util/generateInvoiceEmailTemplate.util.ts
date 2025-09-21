@@ -197,10 +197,24 @@ export function renderInvoiceHTMLFromTemplate(data: any): string {
   `;
 
   const paymentButton = invoice.paymentLink
-    ? `<p><a href="${invoice.paymentLink}" style="display: inline-block; background-color: #28a745; color: #fff; padding: 10px 20px; text-decoration: none; border-radius: 5px;">Pay Now</a></p>`
+    ? ` <a
+                        href="${invoice.paymentLink}"
+                        target="_blank"
+                        style="
+                          display: inline-block;
+                          text-decoration: none;
+                          background-color: #0a2540;
+                          color: #ffffff;
+                          padding: 14px 28px;
+                          font-size: 15px;
+                          font-weight: 500;
+                          border-radius: 6px;
+                        "
+                        >Pay Now</a
+                      >`
     : "";
 
-  const finalHtml = rawHtml
+  let finalHtml = rawHtml
     .replace(/{{invoiceNumber}}/g, invoice.number)
     .replace(/{{guestName}}/g, guest.name)
     .replace(/{{guestInfo}}/g, guestInfo)
