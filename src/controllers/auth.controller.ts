@@ -329,14 +329,33 @@ const login = catchAsync(
       })
       .lean();
 
-    const guest = await GuestModel.findOne({ user: user._id })
-      .populate({
-        path: "user",
-        populate: { path: "role" },
-      })
-      .lean();
+    const guest = (
+      await GuestModel.aggregate([
+        { $match: { user: user._id } },
+        {
+          $lookup: {
+            from: "users",
+            localField: "user",
+            foreignField: "_id",
+            as: "user",
+          },
+        },
+        { $unwind: "$user" },
+        {
+          $lookup: {
+            from: "roles",
+            localField: "user.role",
+            foreignField: "_id",
+            as: "user.role",
+          },
+        },
+        { $unwind: "$user.role" },
+      ])
+    )[0];
 
-    const data = employee || guest;
+    // console.log(guest);
+
+    const data: any = employee || guest;
 
     if (!data) {
       return next(
@@ -350,6 +369,8 @@ const login = catchAsync(
     const flatenUserData = async () => {
       const { user, ...cleanData } = data;
       const userObj = user as any;
+
+      // console.log("User Object", userObj);
       const role = userObj?.role?.name || null;
 
       const flatUserData = {
