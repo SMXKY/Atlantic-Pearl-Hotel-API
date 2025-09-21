@@ -352,6 +352,37 @@ reservationSchema.pre("save", async function (next) {
   next();
 });
 
+//avoid employee and client email clashes
+reservationSchema.pre("save", async function (next) {
+  try {
+    if (!this.isNew && !this.isModified("guestEmail")) {
+      return next();
+    }
+
+    const email = this.guestEmail;
+    const userExist = await UserModel.findOne({ email });
+
+    if (!userExist) {
+      return next(); // no conflict, continue
+    }
+
+    const employeeExist = await EmployeeModel.findOne({ user: userExist._id });
+
+    if (employeeExist) {
+      return next(
+        new AppError(
+          "Employee account already exists with this email, please use a different email for this reservation",
+          StatusCodes.BAD_REQUEST
+        )
+      );
+    }
+
+    next();
+  } catch (err: any) {
+    next(err);
+  }
+});
+
 reservationSchema.post("save", async function (this: IReservation) {
   if (this.bookingSource !== "online") return;
   if (this.status !== "pending") return;
