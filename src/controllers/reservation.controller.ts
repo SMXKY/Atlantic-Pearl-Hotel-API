@@ -46,6 +46,20 @@ const createReservation = catchAsync(async (req, res, next) => {
   }
 
   const userExist = await UserModel.findOne({ email });
+  let employeeExist = null;
+
+  if (userExist) {
+    employeeExist = await EmployeeModel.findOne({ user: userExist._id });
+  }
+
+  if (userExist && employeeExist) {
+    return next(
+      new AppError(
+        "Employee account already exists with this email, please use a different email for this reservation",
+        StatusCodes.BAD_REQUEST
+      )
+    );
+  }
 
   let reservation;
   try {

@@ -7,35 +7,39 @@ export const sendEmail = async (
   html: string
 ) => {
   if (process.env.NODE_ENV == "production") {
-    const transporter = nodemailer.createTransport({
-      service: String(process.env.EMAIL_SERVICE),
-      auth: {
-        user: String(process.env.EMAIL_AUTH_USER),
-        pass: String(process.env.EMAIL_AUTH_PASSWORD),
-      },
-      tls: {
-        rejectUnauthorized: false, // Disable certificate validation (insecure)
-      },
-    });
+    try {
+      const transporter = nodemailer.createTransport({
+        service: String(process.env.EMAIL_SERVICE),
+        auth: {
+          user: String(process.env.EMAIL_AUTH_USER),
+          pass: String(process.env.EMAIL_AUTH_PASSWORD),
+        },
+        tls: {
+          rejectUnauthorized: false, // Disable certificate validation (insecure)
+        },
+      });
 
-    const mailOptions = {
-      from: process.env.EMAIL_AUTH_USER,
-      to,
-      subject,
-      text,
-      html,
-    };
+      const mailOptions = {
+        from: process.env.EMAIL_AUTH_USER,
+        to,
+        subject,
+        text,
+        html,
+      };
 
-    await transporter.sendMail(mailOptions, (error, info) => {
-      if (error) {
-        return console.log("Error:", error);
-      }
-      console.log("Email sent successfully!");
-      console.log("Message ID:", info.messageId);
-      console.log("Full info:", info);
-    });
+      await transporter.sendMail(mailOptions, (error, info) => {
+        if (error) {
+          return console.log("Error:", error);
+        }
+        console.log("Email sent successfully!");
+        console.log("Message ID:", info.messageId);
+        console.log("Full info:", info);
+      });
 
-    console.log(`Email sent to ${to} successfully.`);
+      console.log(`Email sent to ${to} successfully.`);
+    } catch (err) {
+      console.log(err);
+    }
   } else {
     const transporter = nodemailer.createTransport({
       host: "sandbox.smtp.mailtrap.io",
