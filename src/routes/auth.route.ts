@@ -707,3 +707,13 @@ authRouter
     ),
     authControllers.activateAndDeactivateUserAccounts
   );
+authRouter
+  .route("/change-password")
+  .post(authControllers.protect, authControllers.changePassword);
+authRouter
+  .route("/change-credentials")
+  .patch(
+    authControllers.protect,
+    authControllers.restrictTo(allPermissions.users.updatePassword),
+    authControllers.adminChangeUserCredentials
+  );

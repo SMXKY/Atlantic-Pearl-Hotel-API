@@ -1061,6 +1061,189 @@ const logOut = catchAsync(
   }
 );
 
+const changePassword = catchAsync(
+  async (req: Request, res: Response, next: NextFunction) => {
+    const { currentPassword, newPassword, newPasswordConfirm } = req.body;
+    const user = res.locals.user;
+
+    // Get user with password field
+    const userWithPassword = await UserModel.findById(user._id).select(
+      "+password"
+    );
+
+    if (!userWithPassword) {
+      return next(
+        new AppError(
+          "User no longer exists in the database.",
+          StatusCodes.NOT_FOUND
+        )
+      );
+    }
+
+    // Check if user has a password (might be Google auth user)
+    if (!userWithPassword.password) {
+      return next(
+        new AppError(
+          "This account uses Google authentication. Password change not available.",
+          StatusCodes.BAD_REQUEST
+        )
+      );
+    }
+
+    // Validate input
+    if (!currentPassword || !newPassword || !newPasswordConfirm) {
+      return next(
+        new AppError(
+          "Please provide current password, new password and password confirmation",
+          StatusCodes.BAD_REQUEST
+        )
+      );
+    }
+
+    // Check if current password is correct
+    const isCurrentPasswordCorrect = await bcrypt.compare(
+      currentPassword,
+      userWithPassword.password
+    );
+
+    if (!isCurrentPasswordCorrect) {
+      return next(
+        new AppError("Current password is incorrect", StatusCodes.UNAUTHORIZED)
+      );
+    }
+
+    // Validate new password
+    if (newPassword.length < 8) {
+      return next(
+        new AppError(
+          "New password must be at least 8 characters long",
+          StatusCodes.BAD_REQUEST
+        )
+      );
+    }
+
+    if (newPassword !== newPasswordConfirm) {
+      return next(
+        new AppError(
+          "New password and confirmation do not match",
+          StatusCodes.BAD_REQUEST
+        )
+      );
+    }
+
+    // Hash new password
+    const hashedPassword = await bcrypt.hash(newPassword, 12);
+
+    // Update password and passwordChangedAt
+    await UserModel.findByIdAndUpdate(
+      user._id,
+      {
+        password: hashedPassword,
+        passWordChangedAt: new Date(),
+      },
+      { new: true, runValidators: true }
+    );
+
+    appResponder(
+      StatusCodes.OK,
+      { message: "Password changed successfully" },
+      res
+    );
+  }
+);
+
+const adminChangeUserCredentials = catchAsync(
+  async (req: Request, res: Response, next: NextFunction) => {
+    const { userId, email, newPassword } = req.body;
+
+    // Validate input
+    if (!userId || !email || !newPassword) {
+      return next(
+        new AppError(
+          "Please provide userId, email and new password",
+          StatusCodes.BAD_REQUEST
+        )
+      );
+    }
+
+    // Find user
+    const user = await UserModel.findById(userId);
+
+    if (!user) {
+      return next(
+        new AppError(
+          "No user found with the provided ID",
+          StatusCodes.NOT_FOUND
+        )
+      );
+    }
+
+    // Check if new email already exists (if email is being changed)
+    if (email !== user.email) {
+      const emailExists = await UserModel.exists({
+        email,
+        _id: { $ne: userId },
+      });
+      if (emailExists) {
+        return next(
+          new AppError(
+            "Email address is already in use",
+            StatusCodes.BAD_REQUEST
+          )
+        );
+      }
+    }
+
+    // Validate new password
+    if (newPassword.length < 8) {
+      return next(
+        new AppError(
+          "New password must be at least 8 characters long",
+          StatusCodes.BAD_REQUEST
+        )
+      );
+    }
+
+    // Hash new password
+    const hashedPassword = await bcrypt.hash(newPassword, 12);
+
+    // Update user credentials
+    await UserModel.findByIdAndUpdate(
+      userId,
+      {
+        email,
+        password: hashedPassword,
+        passWordChangedAt: new Date(),
+      },
+      { new: true, runValidators: true }
+    );
+
+    // Send email to user about the change
+    try {
+      const emailTemplate = `<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Atlantic Pearl Hotel & Resort - Updated Account Details</title></head><body style="font-family:'Roboto',sans-serif;background-color:#fdfcf8;color:#4a4a4a;margin:0;padding:0;line-height:1.6"><div style="width:100%;max-width:480px;margin:0 auto;background-color:#fff;border-radius:12px;overflow:hidden;box-shadow:0 8px 24px rgba(0,0,0,.08);border:1px solid #e6e6e6"><div style="background-color:#0a2540;color:#fff;text-align:center;padding:32px 24px;font-family:'Playfair Display',serif"><h1 style="font-size:28px;margin-bottom:4px;font-weight:600">Atlantic Pearl</h1><p style="font-size:14px;font-weight:300;letter-spacing:1px;opacity:.85;margin:0">Hotel & Resort • Limbe</p></div><div style="padding:32px 24px"><div style="font-size:20px;font-weight:500;margin-bottom:16px">Hello <span style="color:#d4af37;font-weight:600">${user.name}</span>,</div><div style="font-size:15px;margin-bottom:24px">Your account credentials have been updated by an administrator. Here are your new login details:</div><div style="background-color:#faf8f3;border-left:4px solid #d4af37;padding:16px 20px;border-radius:8px;margin-bottom:24px;font-family:'Roboto',sans-serif"><p style="margin:8px 0;font-weight:500;font-size:14px">Email: <span style="color:#d4af37;font-weight:600">${email}</span></p><p style="margin:8px 0;font-weight:500;font-size:14px">Password: <span style="color:#d4af37;font-weight:600">${newPassword}</span></p></div><a href="${process.env.FRONT_END_URL}/login" style="display:inline-block;text-decoration:none;padding:12px 24px;border-radius:6px;font-weight:500;font-size:14px;text-align:center;width:100%;box-sizing:border-box;transition:all .3s ease;word-break:break-word;margin-bottom:16px;background-color:#0a2540;color:#fff;border:1px solid #0a2540">Login to Your Account</a><div style="font-size:13px;color:#4a4a4a;margin-top:8px;line-height:1.4">For your security, we strongly recommend changing your password after logging in. Never share your password with anyone.</div><div style="margin-top:32px;font-size:14px;line-height:1.5">Warm regards,<br><span style="font-weight:600;color:#0a2540;font-size:15px">The Atlantic Pearl Team</span></div></div><div style="background-color:#f5f5f5;color:#666;font-size:12px;text-align:center;padding:24px"><p style="margin:4px 0"><strong>Atlantic Pearl Hotel & Resort</strong></p><p style="margin:4px 0"><span style="color:#d4af37;font-weight:600">South West</span>, Limbe</p><p style="margin:4px 0">Phone: <span style="color:#d4af37;font-weight:600">+237 677 877 888</span> | Email: <span style="color:#d4af37;font-weight:600">atlanticPearlHotel@gmail.com</span></p></div></div></body></html>`;
+
+      await sendEmail(
+        email,
+        "Account Credentials Updated - Atlantic Pearl Hotel",
+        "Your account credentials have been updated by an administrator.",
+        emailTemplate
+      );
+    } catch (error) {
+      console.error("Failed to send email notification:", error);
+      // Continue execution even if email fails
+    }
+
+    appResponder(
+      StatusCodes.OK,
+      {
+        message: "User credentials updated successfully",
+        note: "New credentials have been sent to user's email",
+      },
+      res
+    );
+  }
+);
+
 export const authControllers = {
   createEmployeeAccount,
   signIn,
@@ -1077,4 +1260,6 @@ export const authControllers = {
   changeUserRole,
   verifyGoogleAuthCookie,
   logOut,
+  changePassword,
+  adminChangeUserCredentials,
 };
