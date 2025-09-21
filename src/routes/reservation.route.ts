@@ -593,3 +593,156 @@ reservationRouter
  *       500:
  *         description: Server error
  */
+/**
+ * @swagger
+ * /api/reservations/search:
+ *   get:
+ *     summary: Search reservations
+ *     description: Search for reservations by booking reference, guest name, or email. Optimized for typeahead/autocomplete.
+ *     tags:
+ *       - Reservations
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: q
+ *         schema:
+ *           type: string
+ *           minimum: 2
+ *           maximum: 100
+ *         required: true
+ *         description: Search query string (booking reference, guest name, or email)
+ *       - in: query
+ *         name: filter
+ *         schema:
+ *           type: string
+ *           enum: [active, all]
+ *         default: all
+ *         description: Filter results by reservation status
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *           maximum: 50
+ *         default: 10
+ *         description: Maximum number of results to return
+ *     responses:
+ *       200:
+ *         description: Successful search results
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       _id:
+ *                         type: string
+ *                         example: "507f1f77bcf86cd799439011"
+ *                       bookingReference:
+ *                         type: string
+ *                         example: "RES-2024-0001"
+ *                       status:
+ *                         type: string
+ *                         enum: [checked in, checked out, confirmed, cancelled]
+ *                         example: "checked in"
+ *                       checkInDate:
+ *                         type: string
+ *                         format: date-time
+ *                         example: "2024-04-15T14:00:00Z"
+ *                       checkOutDate:
+ *                         type: string
+ *                         format: date-time
+ *                         example: "2024-04-18T12:00:00Z"
+ *                       guest:
+ *                         type: object
+ *                         properties:
+ *                           _id:
+ *                             type: string
+ *                             example: "507f1f77bcf86cd799439012"
+ *                           user:
+ *                             type: object
+ *                             properties:
+ *                               _id:
+ *                                 type: string
+ *                                 example: "507f1f77bcf86cd799439013"
+ *                               name:
+ *                                 type: string
+ *                                 example: "John Doe"
+ *                               email:
+ *                                 type: string
+ *                                 format: email
+ *                                 example: "john.doe@example.com"
+ *       400:
+ *         description: Bad request
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: false
+ *                 error:
+ *                   type: string
+ *                   example: "ValidationError"
+ *                 message:
+ *                   type: string
+ *                   example: "Search query must be at least 2 characters"
+ *       401:
+ *         description: Unauthorized
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: false
+ *                 error:
+ *                   type: string
+ *                   example: "UnauthorizedError"
+ *                 message:
+ *                   type: string
+ *                   example: "Authentication required"
+ *       429:
+ *         description: Too many requests
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: false
+ *                 error:
+ *                   type: string
+ *                   example: "RateLimitError"
+ *                 message:
+ *                   type: string
+ *                   example: "Too many requests. Please try again later."
+ */
+
+/**
+ * @swagger
+ * components:
+ *   securitySchemes:
+ *     bearerAuth:
+ *       type: http
+ *       scheme: bearer
+ *       bearerFormat: JWT
+ */
+
+/**
+ * @swagger
+ * tags:
+ *   name: Reservations
+ *   description: Reservation management endpoints
+ */

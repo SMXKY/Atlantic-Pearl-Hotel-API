@@ -832,6 +832,7 @@ reservationSchema.post("save", async function (doc) {
 
     const adminDashboard = await computeAdminDashboard();
     io.emit("updateAdminDashboard", adminDashboard);
+    io.emit("updateReservation", doc);
   } catch (err) {
     console.error("❌ Error in reservation post-save hook:", err);
   }

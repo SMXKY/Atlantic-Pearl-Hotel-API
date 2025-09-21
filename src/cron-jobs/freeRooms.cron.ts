@@ -6,6 +6,19 @@ import cron from "node-cron";
 import { AppError } from "../util/AppError.util";
 import { StatusCodes } from "http-status-codes";
 import { AdminConfigurationModel } from "../models/AdminConfiguration.model";
+import { sendEmail } from "../util/sendEmail.util";
+import { promises as fs } from "fs";
+
+async function fillTemplate(
+  templatePath: string,
+  replacements: Record<string, string>
+) {
+  let html: string = await fs.readFile(templatePath, "utf-8");
+  for (const key in replacements) {
+    html = html.replace(new RegExp(`\\[${key}\\]`, "g"), replacements[key]);
+  }
+  return html;
+}
 
 export const freeRoomsCronJob = () => {
   cron.schedule("* * * * *", async () => {
@@ -42,6 +55,34 @@ export const freeRoomsCronJob = () => {
             // Optionally update reservation payment status to expired
             reservation.status = "expired";
             await reservation.save();
+
+            const frontEndUrl =
+              process.env.NODE_ENV === "production"
+                ? process.env.FRONT_END_URL_PROD
+                : process.env.FRONT_END_URL_DEV;
+
+            if (!frontEndUrl) {
+              throw new AppError(
+                "Front-end base URL is missing from environment variables",
+                StatusCodes.INTERNAL_SERVER_ERROR
+              );
+            }
+
+            const emailHtml = await fillTemplate(
+              __dirname + "/../templates/notPayedOnTime.template.html",
+              {
+                "Guest Name": String(reservation.guestName),
+                "Reservation Code": reservation.bookingReference,
+                "Reservation Link": `${frontEndUrl}/landing/rooms`,
+              }
+            );
+
+            await sendEmail(
+              String(reservation.guestEmail),
+              "Reservation Expired",
+              "",
+              emailHtml
+            );
           }
         }
 
@@ -125,6 +166,34 @@ const freeRoomsOnReservationCompletion = async () => {
             }
           }
         }
+
+        const frontEndUrl =
+          process.env.NODE_ENV === "production"
+            ? process.env.FRONT_END_URL_PROD
+            : process.env.FRONT_END_URL_DEV;
+
+        if (!frontEndUrl) {
+          throw new AppError(
+            "Front-end base URL is missing from environment variables",
+            StatusCodes.INTERNAL_SERVER_ERROR
+          );
+        }
+
+        const emailHtml = await fillTemplate(
+          __dirname + "/../templates/expiredReservation.template.html",
+          {
+            "Guest Name": String(reservation.guestName),
+            "Reservation Code": reservation.bookingReference,
+            "Reservation Link": `${frontEndUrl}/landing/rooms`,
+          }
+        );
+
+        await sendEmail(
+          String(reservation.guestEmail),
+          "Reservation Expired – Action Required",
+          "",
+          emailHtml
+        );
       }
 
       if (shouldSave) {
@@ -138,7 +207,7 @@ const freeRoomsOnReservationCompletion = async () => {
 
 export const freeRoomsOnReserationStatus = () => {
   cron.schedule("* * * * * ", async () => {
-    // console.log("Running the Free rooms on reservation cron job.🔯");
+    console.log("Running the Free rooms on reservation cron job.🔯");
     await freeRoomsOnReservationCompletion();
   });
 };

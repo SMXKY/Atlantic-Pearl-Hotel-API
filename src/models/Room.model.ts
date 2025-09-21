@@ -237,6 +237,7 @@ roomSchema.pre<Query<IRoom[], IRoom>>(/^find/, function (next) {
 roomSchema.post("save", async function (doc) {
   const adminDashboard = await computeAdminDashboard();
   io.emit("updateAdminDashboard", adminDashboard);
+  io.emit("updateReservation", doc);
 });
 
 roomSchema.post("findOneAndUpdate", async function (doc) {

@@ -1,10 +1,12 @@
 import mongoose, { Schema, Document, Model } from "mongoose";
 import { ParkingSpotModel } from "./ParkingSpot.model";
 import { GuestModel } from "./Guest.model";
+import { ReservationModel } from "./Reservation.model";
 
 export interface IParkingReservation extends Document {
   guest: mongoose.Types.ObjectId;
   spot: mongoose.Types.ObjectId;
+  reservation: mongoose.Types.ObjectId;
   reservedFrom: Date;
   reservedTo: Date;
   checkInTime?: Date;
@@ -24,6 +26,18 @@ const parkingReservationSchema: Schema<IParkingReservation> = new Schema(
           return exists !== null;
         },
         message: "Guest ID not found in the database.",
+      },
+    },
+    reservation: {
+      type: Schema.Types.ObjectId,
+      ref: "reservations",
+      required: true,
+      validate: {
+        validator: async function (id: mongoose.Types.ObjectId) {
+          const exists = await ReservationModel.exists({ _id: id });
+          return exists !== null;
+        },
+        message: "Reservation ID not found in the database.",
       },
     },
     spot: {
