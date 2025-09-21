@@ -820,6 +820,52 @@ async function buildReservationCalendar() {
   return data;
 }
 
+reservationSchema.pre("save", async function (next) {
+  try {
+    if (!this.items || this.items.length === 0) {
+      return next(
+        new AppError(
+          "Reservation must include at least one reservation item.",
+          StatusCodes.BAD_REQUEST
+        )
+      );
+    }
+
+    const roomTypeIds = this.items.map((item) => item.roomType);
+    const roomTypes = await RoomTypeModel.find({
+      _id: { $in: roomTypeIds },
+    });
+
+    if (roomTypes.length !== roomTypeIds.length) {
+      return next(
+        new AppError(
+          "One or more selected room types do not exist.",
+          StatusCodes.BAD_REQUEST
+        )
+      );
+    }
+
+    // Calculate max allowed guests
+    const maxAllowedGuest = roomTypes.reduce(
+      (sum, rt) => sum + (rt.maxNumberOfGuest || 0),
+      0
+    );
+
+    if (this.numberOfGuest > maxAllowedGuest) {
+      return next(
+        new AppError(
+          `Guest limit exceeded: reservation has ${this.numberOfGuest}, but the selected room types allow a maximum of ${maxAllowedGuest}.`,
+          StatusCodes.BAD_REQUEST
+        )
+      );
+    }
+
+    next();
+  } catch (err: any) {
+    return next(err);
+  }
+});
+
 reservationSchema.post("save", async function (doc) {
   try {
     await autoPopulateReservation(doc);
