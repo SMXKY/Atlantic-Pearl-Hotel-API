@@ -12,6 +12,7 @@ import { AdminConfigurationModel } from "../models/AdminConfiguration.model";
 import { RoomModel } from "../models/Room.model";
 import { RoomTypeAmenitiesModel } from "../models/RoomTypeAmenity.model";
 import { RoomTypeReviewModel } from "../models/RoomTypeReview.model";
+import { logUserActivity } from "../util/logUserActivity.util";
 
 const CRUDRoomType: CRUD = new CRUD(RoomTypeModel);
 
@@ -61,6 +62,16 @@ const createRoomType = catchAsync(
     } catch (err) {
       return next(err); // Pass error to global error handler
     }
+
+    logUserActivity(
+      req,
+      String(res.locals.user._id),
+      `${res.locals.user.name} created a room type`,
+      "roomTypes",
+      String(roomType._id),
+      "",
+      JSON.stringify(roomType)
+    );
 
     appResponder(StatusCodes.OK, roomType, res);
   }

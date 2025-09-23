@@ -113,7 +113,7 @@ async function populateRestaurantOrder(doc: any) {
   return doc;
 }
 
-export async function notifyRestaurantOrder(
+async function notifyRestaurantOrder(
   doc: any,
   guestMessage: string,
   staffMessage: string

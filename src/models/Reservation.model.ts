@@ -18,6 +18,10 @@ import { ReservationStatusChangeModel } from "./ReservationStatusChange.model";
 import { io } from "../index";
 import { computeReservationDashboard } from "../util/computeReservationDashboard";
 import { computeAdminDashboard } from "../controllers/content.controller";
+import { allPermissions } from "../types/Permissions.type";
+import { sendNotification } from "../util/sendNotification.util";
+import { getIdsFromPermissions } from "../util/sendNotification.util";
+import { NotificationType } from "./Notification.model";
 
 interface IRoomEntry {
   room: mongoose.Types.ObjectId;
@@ -938,6 +942,103 @@ reservationSchema.post("findOneAndDelete", async function (doc) {
   } catch (err) {
     console.error("❌ Error in reservation post-save hook:", err);
   }
+});
+
+async function notifyStaffOnReservationCreate(reservation: IReservation) {
+  try {
+    // Get staff IDs who have permission to manage reservations
+    const staffIds = await getIdsFromPermissions(
+      allPermissions.reservations.update // adjust if your permission name differs
+    );
+
+    if (!staffIds || staffIds.length === 0) return;
+
+    await sendNotification({
+      userIds: staffIds,
+      title: "New Reservation Created",
+      message: `A new reservation (${reservation.bookingReference}) has been made.`,
+      type: NotificationType.RESERVATION,
+      entityRef: { model: "reservations", id: reservation._id },
+      redirectUrl: `/reservations/${reservation._id}`,
+      isGlobal: false,
+    });
+  } catch (err) {
+    console.error("❌ Error sending staff notification:", err);
+  }
+}
+
+// --------------------------
+// POST SAVE HOOK
+// --------------------------
+reservationSchema.post("save", async function (doc: IReservation) {
+  try {
+    await notifyStaffOnReservationCreate(doc);
+  } catch (err) {
+    console.error("❌ Error in post-save hook:", err);
+  }
+});
+
+async function notifyOnReservationStatusUpdate(reservation: IReservation) {
+  try {
+    // Only notify if status is checked in or checked out
+    if (!["checked in", "checked out"].includes(reservation.status)) return;
+
+    // Fetch guest user
+    const guest = await GuestModel.findById(reservation.guest).populate("user");
+    if (!guest?.user) {
+      console.warn("Guest user not found for reservation:", reservation._id);
+      return;
+    }
+
+    const guestName = reservation.guestName || (guest.user as any).name;
+    const guestId = (guest.user as any)._id.toString();
+
+    // Build messages
+    const guestMessage =
+      reservation.status === "checked in"
+        ? `Hi ${guestName}, you have successfully checked in for your reservation ${reservation.bookingReference}.`
+        : `Hi ${guestName}, you have successfully checked out from your reservation ${reservation.bookingReference}.`;
+
+    const staffMessage =
+      reservation.status === "checked in"
+        ? `${guestName} has checked in for reservation ${reservation.bookingReference}.`
+        : `${guestName} has checked out from reservation ${reservation.bookingReference}.`;
+
+    // Notify guest
+    await sendNotification({
+      userIds: [guestId],
+      title: "Reservation Status Update",
+      message: guestMessage,
+      type: NotificationType.RESERVATION,
+      entityRef: { model: "reservations", id: reservation._id },
+      redirectUrl: `/reservations/${reservation._id}`,
+      isGlobal: false,
+    });
+
+    // Notify staff
+    const staffIds = await getIdsFromPermissions(
+      allPermissions.reservations.readAll
+    );
+    if (staffIds.length > 0) {
+      await sendNotification({
+        userIds: staffIds,
+        title: "Reservation Status Update",
+        message: staffMessage,
+        type: NotificationType.RESERVATION,
+        entityRef: { model: "reservations", id: reservation._id },
+        redirectUrl: `/reservations/${reservation._id}`,
+        isGlobal: false,
+      });
+    }
+  } catch (err) {
+    console.error("❌ Error sending reservation status notifications:", err);
+  }
+}
+
+// POST UPDATE HOOK
+reservationSchema.post("findOneAndUpdate", async function (doc: IReservation) {
+  if (!doc) return;
+  await notifyOnReservationStatusUpdate(doc);
 });
 
 export const ReservationModel = mongoose.model<IReservation>(

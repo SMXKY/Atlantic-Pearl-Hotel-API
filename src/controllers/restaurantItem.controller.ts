@@ -8,6 +8,7 @@ import { appResponder } from "../util/appResponder.util";
 import { StatusCodes } from "http-status-codes";
 import { AppError } from "../util/AppError.util";
 import { appendFile } from "fs";
+import { logUserActivity } from "../util/logUserActivity.util";
 
 const CRUDRestaurantItem: CRUD = new CRUD(RestaurantItemModel);
 
@@ -28,6 +29,15 @@ const createRestaurantItem = catchAsync(
 
     await restaurantItem.save();
 
+    logUserActivity(
+      req,
+      String(res.locals.user._id),
+      `${res.locals.use.name} created a new restraurant Item`,
+      "restaurant_items",
+      restaurantItem._id.toString(),
+      "",
+      JSON.stringify(restaurantItem)
+    );
     appResponder(StatusCodes.OK, { restaurantItem }, res);
   }
 );
@@ -71,6 +81,8 @@ const quickUpdateDailyAvailability = catchAsync(
 
     const item = await RestaurantItemModel.findById(id);
 
+    const itemBefore = { ...item?.toObject() };
+
     if (!item) {
       return next(
         new AppError(
@@ -82,6 +94,16 @@ const quickUpdateDailyAvailability = catchAsync(
 
     item.availableToday = !item.availableToday;
     await item.save();
+
+    logUserActivity(
+      req,
+      String(res.locals.user._id),
+      `${res.locals.use.name} toggle restaurant item availability`,
+      "restaurant_items",
+      item._id.toString(),
+      JSON.stringify(itemBefore),
+      JSON.stringify(item)
+    );
 
     appResponder(
       StatusCodes.OK,

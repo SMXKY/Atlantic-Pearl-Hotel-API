@@ -13,6 +13,7 @@ import { StatusCodes } from "http-status-codes";
 import { AppError } from "../util/AppError.util";
 import { TransactionModel } from "../models/Transaction.model";
 import { RecieptModel } from "../models/Reciept.model";
+import { logUserActivity } from "../util/logUserActivity.util";
 
 //manual reservation the front end has to send status:confirmed,
 // Create Manual Reservation
@@ -68,6 +69,16 @@ const createManualReservation = catchAsync(
       if (email) {
         await sendEmail(email, "RESERVATION INVOICE", "", html);
       }
+
+      logUserActivity(
+        req,
+        String(res.locals.user._id),
+        `${res.locals.user.name} created a reservation for guest: ${reservation.guestName}.`,
+        "reservations",
+        reservation._id.toString(),
+        "",
+        JSON.stringify(reservation)
+      );
 
       appResponder(
         StatusCodes.OK,

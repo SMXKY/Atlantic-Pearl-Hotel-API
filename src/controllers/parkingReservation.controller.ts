@@ -13,6 +13,7 @@ import { BillModel } from "../models/Bill.model";
 import { ParkingSectionModel } from "../models/ParkingSection.model";
 import { appResponder } from "../util/appResponder.util";
 import mongoose from "mongoose";
+import { logUserActivity } from "../util/logUserActivity.util";
 
 const CRUDParkingReservation: CRUD = new CRUD(ParkingReservationModel);
 
@@ -93,6 +94,24 @@ export const createParkingReservation = catchAsync(
       if (!["reserved", "occupied"].includes(status)) {
         throw new AppError(
           "Invalid reservation status.",
+          StatusCodes.BAD_REQUEST
+        );
+      }
+
+      const overlappingReservation = await ParkingReservationModel.findOne({
+        spot: spotId,
+        status: { $in: ["reserved", "active"] }, // only consider active/reserved spots
+        $or: [
+          {
+            reservedFrom: { $lt: reservedTo },
+            reservedTo: { $gt: reservedFrom },
+          },
+        ],
+      });
+
+      if (overlappingReservation) {
+        throw new AppError(
+          "This parking spot is already reserved for the selected time period.",
           StatusCodes.BAD_REQUEST
         );
       }
@@ -179,9 +198,18 @@ export const createParkingReservation = catchAsync(
       });
 
       // Update spot status
-      spot.status = status;
-      await spot.save();
+      // spot.status = status;
+      // await spot.save();
 
+      logUserActivity(
+        req,
+        String(res.locals.user._id),
+        `${res.locals.user.name} created a parking reservation.`,
+        "parking_reservations",
+        String(parkingReservation._id),
+        "",
+        JSON.stringify(parkingReservation)
+      );
       // Send response
       appResponder(StatusCodes.CREATED, parkingReservation.toObject(), res);
     } catch (err) {

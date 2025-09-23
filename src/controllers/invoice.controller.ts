@@ -23,6 +23,7 @@ import { sendEmail } from "../util/sendEmail.util";
 import { RecieptModel } from "../models/Reciept.model";
 import path from "path";
 import fs from "fs";
+import { logUserActivity } from "../util/logUserActivity.util";
 
 const CRUDInvoice: CRUD = new CRUD(InvoiceModel);
 
@@ -222,6 +223,16 @@ const settleBillAndInvoice = catchAsync(
     }
 
     const emailHTML = await renderInvoiceEmail(emailData);
+
+    logUserActivity(
+      req,
+      String(res.locals.user._id),
+      `${res.locals.user.name} initiated bill settlement for ${reservation.guestName}.`,
+      "reservations",
+      reservation._id.toString(),
+      "",
+      ""
+    );
 
     await sendEmail(
       reservation.guestEmail,

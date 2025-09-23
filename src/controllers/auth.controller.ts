@@ -15,6 +15,7 @@ import { RoleModel } from "../models/Role.model";
 import { GoogleUserPayload } from "../types/googleUserPayload";
 import { getUserPermissions } from "../util/getUserPermissions";
 import crypto from "crypto";
+import { logUserActivity } from "../util/logUserActivity.util";
 
 const signToken = (userId: string) => {
   const jwtSecret = process.env.JWT_SECRETE;
@@ -67,6 +68,16 @@ const createEmployeeAccount = catchAsync(
           "Your Account Password - Atlantic Pearl Hotel and Resort",
           `Dear employee, please find your account password below.`,
           `<b>Keep you password Confidential</b><br><p>Your account password: ${employeePassword}</p>`
+        );
+
+        logUserActivity(
+          req,
+          String(res.locals.user._id),
+          `${res.locals.user.name} created an employee`,
+          "employees",
+          data._id.toString(),
+          "",
+          JSON.stringify(data)
         );
 
         appResponder(
@@ -382,6 +393,16 @@ const login = catchAsync(
 
       return flatUserData;
     };
+
+    logUserActivity(
+      req,
+      user._id.toString(),
+      `${user.name} logged in`,
+      "users",
+      data._id,
+      "",
+      ""
+    );
 
     appResponder(
       StatusCodes.OK,
@@ -1061,10 +1082,22 @@ const changeUserRole = catchAsync(
   async (req: Request, res: Response, next: NextFunction) => {
     const userId = req.params.id;
 
-    await UserModel.findByIdAndUpdate(
+    const before = await UserModel.findById(userId);
+
+    const data = await UserModel.findByIdAndUpdate(
       userId,
       { role: req.body.role },
       { runValidators: true, new: true }
+    );
+
+    logUserActivity(
+      req,
+      String(res.locals.user._id),
+      `${res.locals.user.name} changed the role for user: ${userId}`,
+      "users",
+      userId,
+      JSON.stringify(before),
+      JSON.stringify(data)
     );
 
     appResponder(
@@ -1165,6 +1198,16 @@ const changePassword = catchAsync(
       { new: true, runValidators: true }
     );
 
+    logUserActivity(
+      req,
+      String(res.locals.user._id),
+      `${res.locals.user.name} changed thier password.`,
+      "users",
+      String(res.locals.user._id),
+      "",
+      ""
+    );
+
     appResponder(
       StatusCodes.OK,
       { message: "Password changed successfully" },
@@ -1253,6 +1296,16 @@ const adminChangeUserCredentials = catchAsync(
       console.error("Failed to send email notification:", error);
       // Continue execution even if email fails
     }
+
+    logUserActivity(
+      req,
+      String(res.locals.user._id),
+      `${res.locals.user.name} changed guest credentials for ${user.name}.`,
+      "users",
+      user._id.toString(),
+      "",
+      ""
+    );
 
     appResponder(
       StatusCodes.OK,

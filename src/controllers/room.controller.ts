@@ -10,6 +10,7 @@ import { AppError } from "../util/AppError.util";
 import { deleteFileFromFTP } from "../external-apis/ftpServer";
 import { ReservationModel } from "../models/Reservation.model";
 import mongoose from "mongoose";
+import { logUserActivity } from "../util/logUserActivity.util";
 
 const CRUDRoom: CRUD = new CRUD(RoomModel);
 
@@ -30,6 +31,15 @@ const createRoom = catchAsync(
 
     await room.save();
 
+    logUserActivity(
+      req,
+      String(res.locals.user._id),
+      `${res.locals.user.name} created a room`,
+      "rooms",
+      room._id.toString(),
+      "",
+      JSON.stringify(room)
+    );
     appResponder(StatusCodes.OK, { room }, res);
     // await CRUDRoom.create(req.body, res, req);
   }

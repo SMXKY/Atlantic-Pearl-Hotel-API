@@ -1,12 +1,12 @@
 import * as mongoose from "mongoose";
 import { UserModel } from "./User.model";
+import { io } from "../index";
 
 const activityLogSchema = new mongoose.Schema(
   {
     user: {
       type: mongoose.Types.ObjectId,
       ref: "users",
-      required: true,
       validate: {
         validator: async function (id: mongoose.Types.ObjectId) {
           const exists = await UserModel.exists({ _id: id });
@@ -52,6 +52,26 @@ const activityLogSchema = new mongoose.Schema(
     toObject: { virtuals: true },
   }
 );
+
+export async function populateActivityLog(doc: any) {
+  if (!doc) return null;
+
+  // Populate user
+  const populatedDoc = await doc.populate({
+    path: "user",
+  });
+
+  return populatedDoc || doc;
+}
+
+activityLogSchema.post("save", async function (doc) {
+  try {
+    const populatedDoc = await populateActivityLog(doc);
+    io.emit("actitiviryLog:new", populatedDoc);
+  } catch (err) {
+    console.error("Error emitting restaurantOrder:new:", err);
+  }
+});
 
 export const ActivityLogModel = mongoose.model(
   "activityLogs",
