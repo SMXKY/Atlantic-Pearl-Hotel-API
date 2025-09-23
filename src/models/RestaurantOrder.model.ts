@@ -3,6 +3,14 @@ import { RestaurantCartModel } from "./RestaurantCart.model";
 import { GuestModel } from "./Guest.model";
 import { ReservationModel } from "./Reservation.model";
 import { io } from "../index";
+import { StatusCodes } from "http-status-codes";
+import { AppError } from "../util/AppError.util";
+import {
+  getIdsFromPermissions,
+  sendNotification,
+} from "../util/sendNotification.util";
+import { NotificationType } from "./Notification.model";
+import { allPermissions } from "../types/Permissions.type";
 
 export interface IRestaurantOrder {
   _id?: Types.ObjectId;
@@ -105,10 +113,79 @@ async function populateRestaurantOrder(doc: any) {
   return doc;
 }
 
+export async function notifyRestaurantOrder(
+  doc: any,
+  guestMessage: string,
+  staffMessage: string
+) {
+  // 1. Fetch guest with user
+  // console.log(orderDoc);
+  const orderDoc = doc.toObject();
+  // console.log(orderDoc);
+  const guest = await GuestModel.findById(
+    orderDoc.reservation?.guest?._id
+  ).populate("user");
+  if (!guest?.user) {
+    throw new AppError(
+      "Guest or associated user not found",
+      StatusCodes.INTERNAL_SERVER_ERROR
+    );
+  }
+
+  // 2. Notify guest
+  await sendNotification({
+    userIds: [(guest.user as any)._id.toString()],
+    title: "Restaurant Notification",
+    message: `${(guest.user as any).name}${guestMessage}`,
+    type: NotificationType.RESTAURANT,
+    entityRef: { model: "restaurant_orders", id: orderDoc._id },
+    redirectUrl: `/restaurant`,
+    isGlobal: false,
+  });
+
+  // 3. Build frontend URL
+  const frontEndUrl =
+    process.env.NODE_ENV === "production"
+      ? process.env.FRONT_END_URL_PROD
+      : process.env.FRONT_END_URL_DEV;
+
+  if (!frontEndUrl) {
+    throw new AppError(
+      "Front-end base URL is missing from env",
+      StatusCodes.INTERNAL_SERVER_ERROR
+    );
+  }
+
+  // 4. Get staff IDs from permissions
+  const staffIds = await getIdsFromPermissions(
+    allPermissions.restaurantOrders.update
+  );
+
+  console.log(staffIds);
+
+  // 5. Notify staff
+  if (staffIds.length > 0) {
+    await sendNotification({
+      userIds: staffIds,
+      title: "Restaurant Order",
+      message: `${(guest.user as any).name}${staffMessage}`,
+      type: NotificationType.RESTAURANT,
+      entityRef: { model: "restaurant_orders", id: orderDoc._id },
+      redirectUrl: `${frontEndUrl}/restaurant`,
+      isGlobal: false,
+    });
+  }
+}
+
 RestaurantOrderSchema.post("save", async function (doc) {
   try {
     const populatedDoc = await populateRestaurantOrder(doc);
     io.emit("restaurantOrder:new", populatedDoc);
+    notifyRestaurantOrder(
+      doc,
+      " your restaurant order has been successfully placed. We’ll notify you as soon as it’s ready for delivery.",
+      " submitted an order. Kitchen and delivery teams, please take necessary action."
+    );
   } catch (err) {
     console.error("Error emitting restaurantOrder:new:", err);
   }
@@ -117,10 +194,20 @@ RestaurantOrderSchema.post("save", async function (doc) {
 RestaurantOrderSchema.post("findOneAndUpdate", async function (doc) {
   try {
     if (!doc) return;
+
     const populatedDoc = await populateRestaurantOrder(doc);
     io.emit("restaurantOrder:update", populatedDoc);
+
+    if (doc.status === "ready") {
+      notifyRestaurantOrder(
+        doc,
+        " your restaurant order is ready and will be delivered shortly. Enjoy your meal!.",
+        "'s order has been completed and is ready for delivery."
+      );
+    }
   } catch (err) {
     console.error("Error emitting restaurantOrder:update:", err);
+    // optionally log to external service (Sentry, etc.)
   }
 });
 

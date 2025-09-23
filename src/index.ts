@@ -74,6 +74,15 @@ io.use((socket, next) => {
 io.on("connection", (socket) => {
   console.log(`Client connected: ${socket.id} (${socket.handshake.address})`);
 
+  // Example: client sends their userId in handshake auth
+  const userId = socket.handshake.auth.userId;
+
+  if (userId) {
+    socket.join(userId.toString()); // private room for this user
+    console.log(`User ${userId} joined their private room`);
+  }
+
+  // Keep your existing joinRoom logic
   socket.on("joinRoom", (roomId) => {
     socket.join(roomId);
     console.log(`Client ${socket.id} joined room ${roomId}`);
