@@ -32,17 +32,52 @@ export const createDefaultDocuments = async () => {
     const permissionsExist = await PermissionModel.countDocuments();
     if (permissionsExist > 0) return;
 
-    const defaultPermissions: string[] = [];
-    Object.values(allPermissions).forEach((group) => {
-      defaultPermissions.push(...Object.values(group));
+    type PermItem = { name: string; module?: string; submodule?: string };
+    const items: PermItem[] = [];
+
+    // allPermissions may define permissions either:
+    // 1) as top-level keys (readOne, readAll, ...) plus module/submodule (user's current example)
+    // 2) or as { module, submodule, permissions: { ... } } (other refactor shapes)
+    Object.values(allPermissions).forEach((group: any) => {
+      const module = group.module;
+      const submodule = group.submodule;
+
+      // Case A: nested under `permissions`
+      if (group.permissions && typeof group.permissions === "object") {
+        Object.values(group.permissions).forEach((val) => {
+          if (typeof val === "string")
+            items.push({ name: val, module, submodule });
+        });
+        return;
+      }
+
+      // Case B: flat shape (module, submodule, and permission keys at same level)
+      Object.keys(group).forEach((key) => {
+        if (key === "module" || key === "submodule") return;
+        const val = (group as any)[key];
+        if (typeof val === "string")
+          items.push({ name: val, module, submodule });
+      });
     });
 
-    for (const permission of defaultPermissions) {
+    for (const p of items) {
+      // double-check exists (safe if createDefaultPermissions accidentally runs twice)
+      const exists = await PermissionModel.findOne({ name: p.name }).lean();
+      if (exists) {
+        console.log(`⚠️ Permission already exists, skipping: ${p.name}`);
+        continue;
+      }
+
       await PermissionModel.create({
-        name: permission,
+        name: p.name,
         description: "Default system permission",
+        module: p.module ?? null,
+        submodule: p.submodule ?? null,
       });
-      console.log(`✅ Created default permission: ${permission}`);
+
+      console.log(
+        `✅ Created default permission: ${p.name} (module: ${p.module}, submodule: ${p.submodule})`
+      );
     }
   };
 
