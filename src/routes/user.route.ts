@@ -3,8 +3,11 @@ import express from "express";
 import { userControllers } from "../controllers/user.controller";
 import { authControllers } from "../controllers/auth.controller";
 import { allPermissions } from "../types/Permissions.type";
+import multer from "multer";
+import { handleFilesMiddleware } from "../middlewares/handleFiles.middleware";
 
 export const userRouter = express.Router();
+const upload = multer({ dest: "../upload" });
 
 userRouter
   .route("/")
@@ -17,6 +20,14 @@ userRouter
     authControllers.protect,
     authControllers.restrictTo(allPermissions.users.readAll),
     userControllers.readAllUsers
+  );
+
+userRouter
+  .route("/search")
+  .get(
+    authControllers.protect,
+    authControllers.restrictTo(allPermissions.users.readAll),
+    userControllers.searchUsers
   );
 
 userRouter
@@ -34,6 +45,20 @@ userRouter
     authControllers.restrictTo(allPermissions.users.updatePassword),
     userControllers.updateUserRole
   );
+
+userRouter
+  .route("/profile-picture/:id")
+  .patch(
+    authControllers.protect,
+    upload.array("img", 1),
+    handleFilesMiddleware,
+    userControllers.modifyProfilePicture
+  );
+
+userRouter
+  .route("/me")
+  .get(authControllers.protect, userControllers.readMe)
+  .patch(authControllers.protect, userControllers.updateMe);
 
 userRouter
   .route("/:id")

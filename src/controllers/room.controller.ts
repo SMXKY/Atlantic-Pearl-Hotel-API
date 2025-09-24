@@ -7,7 +7,6 @@ import { handleFileUploads } from "../external-apis/ftpServer";
 import { appResponder } from "../util/appResponder.util";
 import { StatusCodes } from "http-status-codes";
 import { AppError } from "../util/AppError.util";
-import { deleteFileFromFTP } from "../external-apis/ftpServer";
 import { ReservationModel } from "../models/Reservation.model";
 import mongoose from "mongoose";
 import { logUserActivity } from "../util/logUserActivity.util";

@@ -114,12 +114,6 @@ const userSchema = new mongoose.Schema(
     },
     profilePictureUrl: {
       type: String,
-      validate: {
-        validator: function (url: string) {
-          return validator.isURL(url);
-        },
-        message: "Invalid URL format",
-      },
     },
     role: {
       type: mongoose.Types.ObjectId,
@@ -262,5 +256,47 @@ userSchema.methods.getAllRoles = async function (): Promise<string> {
 
   return roleNames.join(", ");
 };
+
+const applySupportDocTransformation = (docOrDocs: any) => {
+  const baseUrl = process.env.FTP_BASE_URL;
+  if (!baseUrl) {
+    throw new AppError(
+      "No ftp base url in config file.",
+      StatusCodes.INTERNAL_SERVER_ERROR
+    );
+  }
+
+  const transform = (doc: any) => {
+    if (
+      doc &&
+      doc.profilePictureUrl &&
+      !doc.profilePictureUrl.startsWith("https://")
+    ) {
+      doc.profilePictureUrl = baseUrl + doc.profilePictureUrl;
+    }
+  };
+
+  if (Array.isArray(docOrDocs)) {
+    docOrDocs.forEach(transform);
+  } else {
+    transform(docOrDocs);
+  }
+};
+
+userSchema.post("find", function (docs) {
+  applySupportDocTransformation(docs);
+});
+
+userSchema.post("findOne", function (doc) {
+  applySupportDocTransformation(doc);
+});
+
+userSchema.post("findOneAndUpdate", function (doc) {
+  applySupportDocTransformation(doc);
+});
+
+userSchema.post("findOneAndDelete", function (doc) {
+  applySupportDocTransformation(doc);
+});
 
 export const UserModel = mongoose.model("users", userSchema);

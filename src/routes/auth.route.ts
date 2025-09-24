@@ -684,7 +684,11 @@ export const authRouter = express.Router();
 //TODO: In production ensure create employee is protected, and restricted
 authRouter
   .route("/create-employee")
-  .post(authControllers.createEmployeeAccount);
+  .post(
+    authControllers.protect,
+    authControllers.restrictTo(allPermissions.users.create),
+    authControllers.createEmployeeAccount
+  );
 
 authRouter.route("/sign-in").post(authControllers.signIn);
 authRouter.route("/login").post(authControllers.login);
@@ -709,7 +713,7 @@ authRouter
   );
 authRouter
   .route("/change-password")
-  .post(authControllers.protect, authControllers.changePassword);
+  .patch(authControllers.protect, authControllers.changePassword);
 authRouter
   .route("/change-credentials")
   .patch(

@@ -331,36 +331,65 @@ function verifyFile(
   });
 }
 
-export function deleteFileFromFTP(fileUrl: string): Promise<void> {
+export function deleteFilesFromFTP(urls: string[]): Promise<void> {
   return new Promise((resolve, reject) => {
-    // 1) Validate and extract the remote path:
-    if (!fileUrl.startsWith(config.remoteUrlBase)) {
-      return reject(
-        new Error(`URL does not match FTP base URL: ${config.remoteUrlBase}`)
-      );
-    }
-    // Remove the base URL prefix to get the remote filename + any sub‑paths
-    const relativePath = fileUrl.slice(config.remoteUrlBase.length);
-    // Build the full remote path in posix format
-    const remotePath = path.posix.join(config.remoteDir, relativePath);
-
-    // 2) Create and connect FTP client
     const client = new Client();
+
     client.on("ready", () => {
-      // 3) Delete the file
-      client.delete(remotePath, (err) => {
-        client.end(); // always close connection
-        if (err) {
+      const filesToDelete: string[] = [];
+
+      // Step 1: Validate and extract FTP paths
+      for (const fileUrl of urls) {
+        if (!fileUrl.startsWith(config.remoteUrlBase)) {
           return reject(
-            new Error(`Failed to delete ${remotePath}: ${err.message}`)
+            new AppError(
+              `URL does not match FTP base URL: ${fileUrl}`,
+              StatusCodes.BAD_REQUEST
+            )
           );
         }
-        resolve();
-      });
+
+        const relativePath = fileUrl.slice(config.remoteUrlBase.length);
+        const remotePath = path.posix.join("", relativePath);
+        filesToDelete.push(remotePath);
+      }
+
+      // Step 2: Delete each file and confirm deletion
+      const deleteNext = () => {
+        if (filesToDelete.length === 0) {
+          client.end();
+          return resolve();
+        }
+
+        const currentFile = filesToDelete.shift();
+        if (!currentFile) return deleteNext();
+
+        client.delete(currentFile, (err) => {
+          if (err) {
+            client.end();
+            return reject(
+              new AppError(
+                `Failed to delete file from FTP: ${currentFile}`,
+                StatusCodes.INTERNAL_SERVER_ERROR
+              )
+            );
+          }
+
+          console.log(`✅ Deleted: ${currentFile}`);
+          deleteNext(); // continue
+        });
+      };
+
+      deleteNext();
     });
 
     client.on("error", (err) => {
-      reject(new Error(`FTP client error: ${err.message}`));
+      reject(
+        new AppError(
+          `FTP client error: ${err.message}`,
+          StatusCodes.BAD_GATEWAY
+        )
+      );
     });
 
     client.connect({

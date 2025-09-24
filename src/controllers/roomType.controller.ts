@@ -135,6 +135,16 @@ const readOneRoomType = catchAsync(
       },
     };
 
+    logUserActivity(
+      req,
+      String(res.locals.user._id),
+      `${res.locals.user.name} read one room type id: ${roomType._id}`,
+      "roomTypes",
+      String(roomType._id),
+      "",
+      JSON.stringify(roomType)
+    );
+
     appResponder(StatusCodes.OK, data, res);
   }
 );

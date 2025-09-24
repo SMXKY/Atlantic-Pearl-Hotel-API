@@ -8,6 +8,10 @@ import { AppError } from "../util/AppError.util";
 import { StatusCodes } from "http-status-codes";
 import { appResponder } from "../util/appResponder.util";
 import { logUserActivity } from "../util/logUserActivity.util";
+import {
+  deleteFilesFromFTP,
+  handleFileUploads,
+} from "../external-apis/ftpServer";
 
 const CRUDUser: CRUD = new CRUD(UserModel);
 
@@ -62,6 +66,48 @@ const updateUser = catchAsync(
     delete req.body.password;
 
     await CRUDUser.update(req.params.id, res, req);
+  }
+);
+
+const readMe = catchAsync(
+  async (req: Request, res: Response, next: NextFunction) => {
+    await CRUDUser.readOne(String(res.locals.user._id), res, ["role"], req);
+  }
+);
+
+const updateMe = catchAsync(
+  async (req: Request, res: Response, next: NextFunction) => {
+    if (req.body.password) {
+      return next(
+        new AppError(
+          "You cannot update user passwords, on this route.",
+          StatusCodes.BAD_REQUEST
+        )
+      );
+    }
+
+    if (req.body.isActive) {
+      return next(
+        new AppError(
+          "You cannot activate user accounts on this route.",
+          StatusCodes.BAD_REQUEST
+        )
+      );
+    }
+
+    if (req.body.role) {
+      return next(
+        new AppError(
+          "You cannot update user role on this route.",
+          StatusCodes.BAD_REQUEST
+        )
+      );
+    }
+
+    req.body.password = undefined;
+    delete req.body.password;
+
+    await CRUDUser.update(String(res.locals.user._id), res, req);
   }
 );
 
@@ -184,6 +230,128 @@ const updateUserRole = catchAsync(
   }
 );
 
+interface SearchQuery {
+  q?: string;
+  gender?: string;
+  userType?: string;
+  limit?: string;
+}
+
+export const searchUsers = async (
+  req: Request<{}, {}, {}, SearchQuery>,
+  res: Response
+) => {
+  try {
+    const { q, gender, userType, limit = "10" } = req.query;
+
+    const filter: any = { userType: userType || "Guest" };
+
+    if (q) {
+      filter.$or = [
+        { name: { $regex: q, $options: "i" } },
+        { email: { $regex: q, $options: "i" } },
+      ];
+    }
+
+    if (gender) {
+      filter.gender = gender;
+    }
+
+    const users = await UserModel.find(filter)
+      .limit(parseInt(limit))
+      .select("name email phoneNumber gender profilePictureUrl isVerified");
+
+    const count = await UserModel.countDocuments(filter);
+
+    res.status(200).json({ success: true, data: users, count });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ success: false, error: "Search failed" });
+  }
+};
+
+const modifyProfilePicture = catchAsync(
+  async (req: Request, res: Response, next: NextFunction) => {
+    const { id } = req.params;
+
+    if (!id) {
+      return next(
+        new AppError(
+          "User ID is required in request parameters as /:id",
+          StatusCodes.BAD_REQUEST
+        )
+      );
+    }
+
+    const user = await UserModel.findById(id);
+
+    if (!user) {
+      return next(
+        new AppError(
+          "User Id does not exist in the database",
+          StatusCodes.NOT_FOUND
+        )
+      );
+    }
+
+    if (String(user._id) !== String(res.locals.user._id)) {
+      return next(
+        new AppError(
+          "You may only update your own profile picture",
+          StatusCodes.UNAUTHORIZED
+        )
+      );
+    }
+
+    const { NODE_ENV, FTP_BASE_URL } = process.env;
+
+    if (!NODE_ENV || !FTP_BASE_URL) {
+      return next(
+        new AppError(
+          "Environment variables for FTP base url and NODE_ENV must be set",
+          StatusCodes.INTERNAL_SERVER_ERROR
+        )
+      );
+    }
+
+    const fileUrls = await handleFileUploads(req, 20, [
+      ".png",
+      ".jpg",
+      ".jpeg",
+    ]);
+
+    if (!fileUrls || fileUrls.length === 0) {
+      return next(
+        new AppError(
+          "A profile picture file is required",
+          StatusCodes.BAD_REQUEST
+        )
+      );
+    }
+
+    // keep old pic reference before overwriting
+    const oldProfilePic = user.profilePictureUrl;
+
+    // update user profile picture
+    user.profilePictureUrl = fileUrls[0];
+    await user.save();
+
+    // delete old picture (not the new one)
+    if (NODE_ENV === "production" && oldProfilePic) {
+      await deleteFilesFromFTP([oldProfilePic]);
+    }
+
+    appResponder(
+      StatusCodes.OK,
+      {
+        message: "Profile picture updated successfully",
+        url: FTP_BASE_URL + user.profilePictureUrl,
+      },
+      res
+    );
+  }
+);
+
 export const userControllers = {
   createUser,
   readOneUser,
@@ -192,4 +360,8 @@ export const userControllers = {
   deleteUser,
   updatePassword,
   updateUserRole,
+  searchUsers,
+  modifyProfilePicture,
+  readMe,
+  updateMe,
 };
