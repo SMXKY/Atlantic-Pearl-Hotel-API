@@ -4,6 +4,7 @@ import { RoleModel } from "../models/Role.model";
 import { RolePermissionModel } from "../models/RolePermission.model";
 import { allPermissions } from "../types/Permissions.type";
 import { AdminConfigurationModel } from "../models/AdminConfiguration.model";
+import { RestaurantConfigModel } from "../models/RestaurantConfig.model";
 
 export const createDefaultDocuments = async (forceUpdate = false) => {
   const createDefaultRoles = async () => {
@@ -243,6 +244,36 @@ export const createDefaultDocuments = async (forceUpdate = false) => {
     }
   };
 
+  const createDefaultRestaurantConfig = async () => {
+    const configExists = await RestaurantConfigModel.countDocuments();
+    if (configExists > 0 && !forceUpdate) {
+      console.log(`ℹ️ Restaurant configuration already exists.`);
+      return;
+    }
+
+    const defaultConfig = {
+      breakfastStart: "06:00",
+      breakfastEnd: "10:00",
+      lunchStart: "12:00",
+      lunchEnd: "15:00",
+      dinnerStart: "18:00",
+      dinnerEnd: "22:00",
+
+      maxBreakfastPerRoom: 1,
+      maxLunchPerRoom: 1,
+      maxDinnerPerRoom: 1,
+    };
+
+    if (configExists && forceUpdate) {
+      await RestaurantConfigModel.deleteMany({});
+      await RestaurantConfigModel.create(defaultConfig);
+      console.log(`🔄 Updated restaurant configurations.`);
+    } else {
+      await RestaurantConfigModel.create(defaultConfig);
+      console.log(`✅ Created default restaurant configurations.`);
+    }
+  };
+
   try {
     console.log("🚀 Starting default documents creation...");
 
@@ -251,6 +282,7 @@ export const createDefaultDocuments = async (forceUpdate = false) => {
     await createDefaultRolePermissions();
     await createDefaultTaxes();
     await createDefaultAdminConfigurations();
+    await createDefaultRestaurantConfig();
 
     console.log("✅ Default documents creation completed!");
 

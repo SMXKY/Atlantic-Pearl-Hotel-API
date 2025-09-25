@@ -73,6 +73,7 @@ export const SUBMODULES = {
   RESTAURANT_CART_ITEMS: "Cart Items",
   RESTAURANT_ORDERS: "Orders",
   MEAL_COMBOS: "Meal Combos",
+  RESTAURANT_CONFIG: "Rules",
 } as const;
 
 // export const allPermissions = {
@@ -753,5 +754,11 @@ export const allPermissions = {
     delete: "can_delete_restaurant_restaurant_order",
     update: "can_update_restaurant_restaurant_order",
     create: "can_create_restaurant_restaurant_order",
+  },
+  restaurantConfig: {
+    module: "Restaurant",
+    submodule: "Rules",
+    readOne: "can_read_restaurant_config",
+    update: "can_update_restaurant_config",
   },
 } as const;
