@@ -66,11 +66,11 @@ const rateSchema = new mongoose.Schema(
           - AI: All Inclusive (All meals + selected drinks)`,
       ],
     },
-    occupancy: {
-      type: Number,
-      default: 2,
-      min: [1, "Occupancy must be at least 1 person"],
-    },
+    // occupancy: {
+    //   type: Number,
+    //   default: 2,
+    //   min: [1, "Occupancy must be at least 1 person"],
+    // },
     isActive: {
       type: Boolean,
       default: true,

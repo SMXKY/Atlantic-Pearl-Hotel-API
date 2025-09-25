@@ -48,6 +48,7 @@ import { restaurantItemRouter } from "./routes/restaurantItem.route";
 import { restaurantItemCategoryRouter } from "./routes/restaurantItemCategory.route";
 import { restaurantOrderRouter } from "./routes/restaurantOrder.route";
 import { notificationRouter } from "./routes/notification.route";
+import { mealComboRouter } from "./routes/mealCombo.route";
 
 export const app = express();
 
@@ -172,6 +173,7 @@ app.use("/api/v1/restaurant-items", restaurantItemRouter);
 app.use("/api/v1/restaurant-item-categories", restaurantItemCategoryRouter);
 app.use("/api/v1/restaurant-orders", restaurantOrderRouter);
 app.use("/api/v1/notifications", notificationRouter);
+app.use("/api/v1/meal-combos", mealComboRouter);
 
 const swaggerSpec = swaggerJSDoc({
   definition: {

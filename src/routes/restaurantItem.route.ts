@@ -13,7 +13,11 @@ export const restaurantItemRouter = express.Router();
 
 restaurantItemRouter
   .route("/quick-daily-menu-toggle/:id")
-  .patch(restaurantItemControllers.quickUpdateDailyAvailability);
+  .patch(
+    authControllers.protect,
+    authControllers.restrictTo(allPermissions.restaurantItems.update),
+    restaurantItemControllers.quickUpdateDailyAvailability
+  );
 
 restaurantItemRouter
   .route("/")

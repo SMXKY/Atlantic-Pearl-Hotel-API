@@ -72,6 +72,7 @@ export const SUBMODULES = {
   RESTAURANT_CARTS: "Carts",
   RESTAURANT_CART_ITEMS: "Cart Items",
   RESTAURANT_ORDERS: "Orders",
+  MEAL_COMBOS: "Meal Combos",
 } as const;
 
 // export const allPermissions = {
@@ -698,6 +699,16 @@ export const allPermissions = {
     delete: "can_delete_restaurant_item_category_item",
     update: "can_update_restaurant_item_category_item",
     create: "can_create_restaurant_item_category_item",
+  },
+
+  mealCombos: {
+    module: "Restaurant",
+    submodule: "Meal Combos",
+    readOne: "can_read_meal_combos_item",
+    readAll: "can_read_all_meal_combos_items",
+    delete: "can_delete_meal_combos_item",
+    update: "can_update_meal_combos_item",
+    create: "can_create_meal_combos_item",
   },
 
   restaurantItems: {

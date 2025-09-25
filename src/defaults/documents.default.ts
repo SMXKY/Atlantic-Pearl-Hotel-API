@@ -5,11 +5,8 @@ import { RolePermissionModel } from "../models/RolePermission.model";
 import { allPermissions } from "../types/Permissions.type";
 import { AdminConfigurationModel } from "../models/AdminConfiguration.model";
 
-export const createDefaultDocuments = async () => {
+export const createDefaultDocuments = async (forceUpdate = false) => {
   const createDefaultRoles = async () => {
-    const rolesExist = await RoleModel.countDocuments();
-    if (rolesExist > 0) return;
-
     const defaultRoles = [
       {
         name: "super admin",
@@ -22,27 +19,26 @@ export const createDefaultDocuments = async () => {
       { name: "guest", description: "Has access to user routes" },
     ];
 
-    for (const role of defaultRoles) {
-      await RoleModel.create(role);
-      console.log(`✅ Created default role: ${role.name}`);
+    for (const roleData of defaultRoles) {
+      const exists = await RoleModel.findOne({ name: roleData.name });
+      if (!exists) {
+        await RoleModel.create(roleData);
+        console.log(`✅ Created default role: ${roleData.name}`);
+      } else if (forceUpdate) {
+        await RoleModel.updateOne({ name: roleData.name }, roleData);
+        console.log(`🔄 Updated role: ${roleData.name}`);
+      }
     }
   };
 
   const createDefaultPermissions = async () => {
-    const permissionsExist = await PermissionModel.countDocuments();
-    if (permissionsExist > 0) return;
-
     type PermItem = { name: string; module?: string; submodule?: string };
     const items: PermItem[] = [];
 
-    // allPermissions may define permissions either:
-    // 1) as top-level keys (readOne, readAll, ...) plus module/submodule (user's current example)
-    // 2) or as { module, submodule, permissions: { ... } } (other refactor shapes)
     Object.values(allPermissions).forEach((group: any) => {
       const module = group.module;
       const submodule = group.submodule;
 
-      // Case A: nested under `permissions`
       if (group.permissions && typeof group.permissions === "object") {
         Object.values(group.permissions).forEach((val) => {
           if (typeof val === "string")
@@ -51,7 +47,6 @@ export const createDefaultDocuments = async () => {
         return;
       }
 
-      // Case B: flat shape (module, submodule, and permission keys at same level)
       Object.keys(group).forEach((key) => {
         if (key === "module" || key === "submodule") return;
         const val = (group as any)[key];
@@ -60,51 +55,118 @@ export const createDefaultDocuments = async () => {
       });
     });
 
+    let created = 0;
+    let updated = 0;
+    let skipped = 0;
+
     for (const p of items) {
-      // double-check exists (safe if createDefaultPermissions accidentally runs twice)
-      const exists = await PermissionModel.findOne({ name: p.name }).lean();
-      if (exists) {
-        console.log(`⚠️ Permission already exists, skipping: ${p.name}`);
-        continue;
+      const exists = await PermissionModel.findOne({ name: p.name });
+
+      if (!exists) {
+        await PermissionModel.create({
+          name: p.name,
+          description: "Default system permission",
+          module: p.module ?? null,
+          submodule: p.submodule ?? null,
+        });
+        created++;
+        console.log(
+          `✅ Created permission: ${p.name} (module: ${p.module}, submodule: ${p.submodule})`
+        );
+      } else if (forceUpdate) {
+        await PermissionModel.updateOne(
+          { name: p.name },
+          {
+            description: "Default system permission",
+            module: p.module ?? null,
+            submodule: p.submodule ?? null,
+          }
+        );
+        updated++;
+        console.log(`🔄 Updated permission: ${p.name}`);
+      } else {
+        skipped++;
       }
-
-      await PermissionModel.create({
-        name: p.name,
-        description: "Default system permission",
-        module: p.module ?? null,
-        submodule: p.submodule ?? null,
-      });
-
-      console.log(
-        `✅ Created default permission: ${p.name} (module: ${p.module}, submodule: ${p.submodule})`
-      );
     }
+
+    console.log(
+      `📊 Permissions - Created: ${created}, Updated: ${updated}, Skipped: ${skipped}`
+    );
+    return { created, updated, skipped };
   };
 
   const createDefaultRolePermissions = async () => {
-    const existing = await RolePermissionModel.countDocuments();
-    if (existing > 0) return;
-
     const superAdmin = await RoleModel.findOne({ name: "super admin" });
-    const permissions = await PermissionModel.find();
+    if (!superAdmin) {
+      console.log("❌ Super admin role not found, skipping role permissions");
+      return;
+    }
 
-    if (!superAdmin) return;
+    const allPermissions = await PermissionModel.find();
 
-    for (const permission of permissions) {
+    const existingRolePermissions = await RolePermissionModel.find({
+      role: superAdmin._id,
+    }).populate("permission");
+
+    const validRolePermissions = existingRolePermissions.filter(
+      (rp) => rp.permission !== null
+    );
+    const orphanedRolePermissions = existingRolePermissions.filter(
+      (rp) => rp.permission === null
+    );
+
+    if (orphanedRolePermissions.length > 0) {
+      await RolePermissionModel.deleteMany({
+        _id: { $in: orphanedRolePermissions.map((rp) => rp._id) },
+      });
+      console.log(
+        `🗑️ Cleaned up ${orphanedRolePermissions.length} orphaned role permissions.`
+      );
+    }
+
+    const existingPermissionIds = validRolePermissions.map((rp) =>
+      (rp.permission as any)._id.toString()
+    );
+
+    const permissionsToAdd = allPermissions.filter(
+      (permission) => !existingPermissionIds.includes(permission._id.toString())
+    );
+
+    let created = 0;
+    for (const permission of permissionsToAdd) {
       await RolePermissionModel.create({
         role: superAdmin._id,
         permission: permission._id,
       });
+      created++;
     }
 
-    console.log(`✅ Mapped all permissions to super admin role.`);
+    if (created > 0) {
+      console.log(`✅ Added ${created} new permissions to super admin role.`);
+    } else {
+      console.log(`ℹ️ All permissions already mapped to super admin role.`);
+    }
+
+    if (forceUpdate) {
+      const validPermissionIds = allPermissions.map((p) => p._id.toString());
+      const orphanedRolePermissions = validRolePermissions.filter(
+        (rp) =>
+          !validPermissionIds.includes((rp.permission as any)._id.toString())
+      );
+
+      if (orphanedRolePermissions.length > 0) {
+        await RolePermissionModel.deleteMany({
+          _id: { $in: orphanedRolePermissions.map((rp) => rp._id) },
+        });
+        console.log(
+          `🗑️ Removed ${orphanedRolePermissions.length} orphaned role permissions.`
+        );
+      }
+    }
   };
 
   const createDefaultTaxes = async () => {
-    const taxesExist = await TaxModel.countDocuments();
-    if (taxesExist > 0) return;
-
-    await TaxModel.create([
+    const defaultTaxes = [
       {
         name: "Value Added Tax",
         percentage: 19.25,
@@ -117,16 +179,31 @@ export const createDefaultDocuments = async () => {
         taxType: "amount",
         protected: true,
       },
-    ]);
+    ];
 
-    console.log(`✅ Created default taxes.`);
+    let created = 0;
+    for (const taxData of defaultTaxes) {
+      const exists = await TaxModel.findOne({ name: taxData.name });
+      if (!exists) {
+        await TaxModel.create(taxData);
+        created++;
+        console.log(`✅ Created tax: ${taxData.name}`);
+      }
+    }
+
+    if (created === 0) {
+      console.log(`ℹ️ All default taxes already exist.`);
+    }
   };
 
   const createDefaultAdminConfigurations = async () => {
     const configExists = await AdminConfigurationModel.countDocuments();
-    if (configExists > 0) return;
+    if (configExists > 0 && !forceUpdate) {
+      console.log(`ℹ️ Admin configuration already exists.`);
+      return;
+    }
 
-    await AdminConfigurationModel.create({
+    const defaultConfig = {
       reservations: {
         minimumDepositPercentage: {
           value: 20,
@@ -154,17 +231,36 @@ export const createDefaultDocuments = async () => {
           description: "No smoking. Pets allowed. Quiet hours after 10 PM.",
         },
       },
-    });
+    };
 
-    console.log(`✅ Created default admin configurations.`);
+    if (configExists && forceUpdate) {
+      await AdminConfigurationModel.deleteMany({});
+      await AdminConfigurationModel.create(defaultConfig);
+      console.log(`🔄 Updated admin configurations.`);
+    } else {
+      await AdminConfigurationModel.create(defaultConfig);
+      console.log(`✅ Created default admin configurations.`);
+    }
   };
 
-  // Run all setups in parallel for better performance
-  await Promise.all([
-    createDefaultRoles(),
-    createDefaultPermissions(),
-    createDefaultRolePermissions(),
-    createDefaultTaxes(),
-    createDefaultAdminConfigurations(),
-  ]);
+  try {
+    console.log("🚀 Starting default documents creation...");
+
+    await createDefaultRoles();
+    const permissionStats = await createDefaultPermissions();
+    await createDefaultRolePermissions();
+    await createDefaultTaxes();
+    await createDefaultAdminConfigurations();
+
+    console.log("✅ Default documents creation completed!");
+
+    return {
+      success: true,
+      permissionStats,
+      forceUpdate,
+    };
+  } catch (error) {
+    console.error("❌ Error creating default documents:", error);
+    throw error;
+  }
 };

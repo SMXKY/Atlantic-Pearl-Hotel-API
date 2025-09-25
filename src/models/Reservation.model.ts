@@ -80,6 +80,7 @@ export interface IReservation extends mongoose.Document {
   depositInCFA: number;
   calculateTotalPriceAndTax(): Promise<PriceAndTax>;
   mutateForCalendar(): Promise<any>[];
+  hasRoom(roomId: mongoose.Types.ObjectId | string): boolean;
 }
 
 const reservationSchema = new mongoose.Schema<IReservation>(
@@ -212,6 +213,18 @@ const reservationSchema = new mongoose.Schema<IReservation>(
   },
   { timestamps: true, toJSON: { virtuals: true }, toObject: { virtuals: true } }
 );
+
+reservationSchema.methods.hasRoom = function (
+  roomId: mongoose.Types.ObjectId | string
+): boolean {
+  const roomIdStr = roomId.toString();
+
+  return this.items.some((item: IReservationItem) =>
+    item.rooms.some(
+      (roomEntry: IRoomEntry) => roomEntry.room.toString() === roomIdStr
+    )
+  );
+};
 
 reservationSchema.pre("validate", async function (next) {
   if (this.bookingReference) return next();

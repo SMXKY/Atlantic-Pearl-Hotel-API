@@ -32,7 +32,7 @@ const createRestaurantItem = catchAsync(
     logUserActivity(
       req,
       String(res.locals.user._id),
-      `${res.locals.use.name} created a new restraurant Item`,
+      `${res.locals.user.name} created a new restraurant Item`,
       "restaurant_items",
       restaurantItem._id.toString(),
       "",
@@ -98,7 +98,7 @@ const quickUpdateDailyAvailability = catchAsync(
     logUserActivity(
       req,
       String(res.locals.user._id),
-      `${res.locals.use.name} toggle restaurant item availability`,
+      `${res.locals.user.name} toggle restaurant item availability`,
       "restaurant_items",
       item._id.toString(),
       JSON.stringify(itemBefore),

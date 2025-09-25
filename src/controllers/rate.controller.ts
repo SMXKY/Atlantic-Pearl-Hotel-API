@@ -14,13 +14,13 @@ const createRate = catchAsync(
 
 const readOneRate = catchAsync(
   async (req: Request, res: Response, next: NextFunction) => {
-    await CRUDRate.readOne(req.params.id, res, [], req);
+    await CRUDRate.readOne(req.params.id, res, [], req, false);
   }
 );
 
 const readAllRates = catchAsync(
   async (req: Request, res: Response, next: NextFunction) => {
-    await CRUDRate.readAll(res, req, 1, 100, []);
+    await CRUDRate.readAll(res, req, 1, 100, [], "-createdAt", false);
   }
 );
 

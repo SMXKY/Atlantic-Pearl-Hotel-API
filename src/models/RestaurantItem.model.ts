@@ -99,6 +99,52 @@ const RestaurantItemSchema = new Schema<IRestaurantItem>(
   }
 );
 
+// --- Pre-save hook to enforce unique name (case-insensitive) ---
+RestaurantItemSchema.pre("save", async function (next) {
+  const doc = this as IRestaurantItem & mongoose.Document;
+
+  // Skip if name hasn't changed
+  if (!doc.isModified("name")) return next();
+
+  const existing = await RestaurantItemModel.findOne({
+    name: new RegExp(`^${doc.name}$`, "i"), // case-insensitive
+    _id: { $ne: doc._id }, // exclude self (important for updates)
+  });
+
+  if (existing) {
+    return next(
+      new AppError(
+        `A restaurant item with the name "${doc.name}" already exists.`,
+        StatusCodes.BAD_REQUEST
+      )
+    );
+  }
+
+  next();
+});
+
+RestaurantItemSchema.pre("findOneAndUpdate", async function (next) {
+  const update: any = this.getUpdate();
+
+  if (!update || !update.name) return next();
+
+  const existing = await RestaurantItemModel.findOne({
+    name: new RegExp(`^${update.name}$`, "i"),
+    _id: { $ne: this.getQuery()._id }, // exclude the doc being updated
+  });
+
+  if (existing) {
+    return next(
+      new AppError(
+        `A restaurant item with the name "${update.name}" already exists.`,
+        StatusCodes.BAD_REQUEST
+      )
+    );
+  }
+
+  next();
+});
+
 const applySupportDocTransformation = (docOrDocs: any) => {
   const baseUrl = process.env.FTP_BASE_URL;
   if (!baseUrl) {
