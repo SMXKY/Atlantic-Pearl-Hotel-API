@@ -127,23 +127,23 @@ const freeRoomsOnReservationCompletion = async () => {
       let shouldSave = false;
 
       // Auto-checkout
-      if (reservation.status === "checked in" && reservation.checkOutDate) {
-        if (reservation.checkOutDate.getTime() <= now.getTime()) {
-          reservation.status = "checked out";
-          shouldSave = true;
+      // if (reservation.status === "checked in" && reservation.checkOutDate) {
+      //   if (reservation.checkOutDate.getTime() <= now.getTime()) {
+      //     reservation.status = "expired";
+      //     shouldSave = true;
 
-          // Free rooms
-          for (const item of reservation.items) {
-            for (const roomEntry of item.rooms) {
-              await RoomModel.findByIdAndUpdate(
-                roomEntry.room,
-                { status: "free" },
-                { runValidators: true }
-              );
-            }
-          }
-        }
-      }
+      //     // Free rooms
+      //     for (const item of reservation.items) {
+      //       for (const roomEntry of item.rooms) {
+      //         await RoomModel.findByIdAndUpdate(
+      //           roomEntry.room,
+      //           { status: "free" },
+      //           { runValidators: true }
+      //         );
+      //       }
+      //     }
+      //   }
+      // }
 
       // No-show logic
       if (reservation.status === "confirmed" && reservation.checkInDate) {

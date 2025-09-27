@@ -11,10 +11,11 @@ export interface IMealRedemption extends Document {
   mealType: "breakfast" | "lunch" | "dinner";
   redeemedAt: Date;
   redeemedBy: Types.ObjectId;
-  charged: boolean;
   createdAt: Date;
   updatedAt: Date;
   room: Types.ObjectId;
+  order: Types.ObjectId;
+  charged: boolean;
 }
 
 const MealRedemptionSchema = new Schema<IMealRedemption>(
@@ -48,6 +49,11 @@ const MealRedemptionSchema = new Schema<IMealRedemption>(
       ref: "users",
       required: true,
     },
+    order: {
+      type: Schema.Types.ObjectId,
+      ref: "restaurant_orders",
+      required: true,
+    },
     charged: {
       type: Boolean,
       default: false,
@@ -73,7 +79,7 @@ MealRedemptionSchema.pre("validate", async function (next) {
   const redemption = this as IMealRedemption;
 
   const [reservation, combo, user, room] = await Promise.all([
-    ReservationModel.findById(redemption.reservation).lean(),
+    ReservationModel.findById(redemption.reservation),
     MealComboModel.findById(redemption.combo).lean(),
     UserModel.findById(redemption.redeemedBy).lean(),
     RoomModel.findById(redemption.room),
@@ -94,26 +100,6 @@ MealRedemptionSchema.pre("validate", async function (next) {
 
   if (combo.mealType !== "all" && combo.mealType !== redemption.mealType) {
     throw new Error(`Combo is not available for ${redemption.mealType}`);
-  }
-
-  const startOfDay = new Date(redemption.redeemedAt);
-  startOfDay.setUTCHours(0, 0, 0, 0);
-  const endOfDay = new Date(redemption.redeemedAt);
-  endOfDay.setUTCHours(23, 59, 59, 999);
-
-  const existing = await mongoose
-    .model<IMealRedemption>("meal_redemptions")
-    .findOne({
-      reservation: redemption.reservation,
-      mealType: redemption.mealType,
-      redeemedAt: { $gte: startOfDay, $lte: endOfDay },
-    })
-    .lean();
-
-  if (existing) {
-    throw new Error(
-      `${redemption.mealType} already redeemed for this reservation today`
-    );
   }
 
   next();

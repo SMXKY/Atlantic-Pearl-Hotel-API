@@ -29,6 +29,7 @@ export interface IRestaurantOrder {
   addedToGuestBill: boolean;
   createdAt?: Date;
   updatedAt?: Date;
+  isRedeemedMeal?: boolean;
 }
 
 const RestaurantOrderSchema = new Schema<IRestaurantOrder>(
@@ -85,6 +86,11 @@ const RestaurantOrderSchema = new Schema<IRestaurantOrder>(
     addedToGuestBill: {
       type: Boolean,
       default: false,
+    },
+    isRedeemedMeal: {
+      type: Boolean,
+      default: false,
+      immutable: true,
     },
   },
   {

@@ -3,19 +3,26 @@ import { RestaurantItemModel } from "./RestaurantItem.model";
 import { AppError } from "../util/AppError.util";
 import { StatusCodes } from "http-status-codes";
 import { io } from "../index";
+import { IRestaurantItem } from "./RestaurantItem.model";
 
 export interface IMealCombo extends Document {
   code: string;
   name: string;
   description?: string;
-  items: Types.ObjectId[];
+  items: (Types.ObjectId | IRestaurantItem)[];
   mealType: "breakfast" | "lunch" | "dinner" | "all";
-  isAvalableToday: boolean;
+  availableToday: boolean;
+  isAvailable: boolean;
   isActive: boolean;
+  img: string;
   createdAt: Date;
   updatedAt: Date;
-  img: string;
-  availableToday: boolean;
+  priceInCFA?: number;
+  prepTimeInMinutes?: number;
+  calculateTotals(): Promise<{
+    totalPriceInCFA: number;
+    totalPrepTimeInMinutes: number;
+  }>;
 }
 
 const MealComboSchema = new Schema<IMealCombo>(
@@ -59,6 +66,10 @@ const MealComboSchema = new Schema<IMealCombo>(
     availableToday: {
       type: Boolean,
       default: false,
+    },
+    isAvailable: {
+      type: Boolean,
+      default: true,
     },
   },
   {
@@ -164,6 +175,35 @@ MealComboSchema.post("findOneAndDelete", async function (doc) {
   applySupportDocTransformation(doc);
   io.emit("mealCombo:deleted", { id: doc._id, ...doc.toObject() });
 });
+
+MealComboSchema.methods.calculateTotals = async function () {
+  const combo = this as IMealCombo;
+
+  const items = await RestaurantItemModel.find(
+    { _id: { $in: combo.items } },
+    { priceInCFA: 1, prepTimeInMinutes: 1 }
+  ).lean();
+
+  if (!items || items.length === 0) {
+    return { totalPriceInCFA: 0, totalPrepTimeInMinutes: 0 };
+  }
+
+  const totalPriceInCFA = items.reduce(
+    (sum, item) => sum + (item.priceInCFA || 0),
+    0
+  );
+
+  const totalPrepTimeInMinutes = items.reduce(
+    (sum, item) => sum + (item.prepTimeInMinutes || 0),
+    0
+  );
+
+  return {
+    totalPriceInCFA,
+    totalPrepTimeInMinutes,
+    itemsCount: items.length,
+  };
+};
 
 export const MealComboModel = mongoose.model<IMealCombo>(
   "meal_combos",

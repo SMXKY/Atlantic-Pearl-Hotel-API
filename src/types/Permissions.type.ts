@@ -74,6 +74,7 @@ export const SUBMODULES = {
   RESTAURANT_ORDERS: "Orders",
   MEAL_COMBOS: "Meal Combos",
   RESTAURANT_CONFIG: "Rules",
+  MEALE_REDEMPTION: "Meal Redemptions",
 } as const;
 
 // export const allPermissions = {
@@ -760,5 +761,12 @@ export const allPermissions = {
     submodule: "Rules",
     readOne: "can_read_restaurant_config",
     update: "can_update_restaurant_config",
+  },
+  mealRedemptions: {
+    module: "Restaurant",
+    submodule: "Meal Redemptions",
+    create: "can_create_meal_redemption",
+    readOne: "can_read_meal_redemption",
+    readAll: "can_read_all_meal_redemptions",
   },
 } as const;

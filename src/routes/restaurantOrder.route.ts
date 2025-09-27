@@ -20,6 +20,22 @@ restaurantOrderRouter
   );
 
 restaurantOrderRouter
+  .route("/meal-redemption-dashboard")
+  .get(
+    authControllers.protect,
+    authControllers.restrictTo(allPermissions.mealRedemptions.readAll),
+    RestaurantOrderControllers.redemptionDashboard
+  );
+
+restaurantOrderRouter
+  .route("/meal-redemption")
+  .post(
+    authControllers.protect,
+    authControllers.restrictTo(allPermissions.mealRedemptions.create),
+    RestaurantOrderControllers.redeemMeal
+  );
+
+restaurantOrderRouter
   .route("/:id")
   .get(
     authControllers.protect,

@@ -215,13 +215,16 @@ const reservationSchema = new mongoose.Schema<IReservation>(
 );
 
 reservationSchema.methods.hasRoom = function (
-  roomId: mongoose.Types.ObjectId | string
-): boolean {
+  roomId: string | mongoose.Types.ObjectId
+) {
   const roomIdStr = roomId.toString();
 
   return this.items.some((item: IReservationItem) =>
     item.rooms.some(
-      (roomEntry: IRoomEntry) => roomEntry.room.toString() === roomIdStr
+      (roomEntry: IRoomEntry) =>
+        (roomEntry.room._id
+          ? roomEntry.room._id.toString()
+          : roomEntry.room.toString()) === roomIdStr
     )
   );
 };

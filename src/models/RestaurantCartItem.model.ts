@@ -1,15 +1,18 @@
 import mongoose, { Schema, model, Types } from "mongoose";
 import { RestaurantCartModel } from "./RestaurantCart.model";
-import { RestaurantItemModel } from "./RestaurantItem.model";
 
 export interface IRestaurantCartItem {
   _id?: Types.ObjectId;
   cart: Types.ObjectId;
-  item: Types.ObjectId;
+
+  referenceId: Types.ObjectId; // dynamic reference
+  itemType: "restaurant_items" | "restaurant_combos"; // scalable enum
+
   name_snapshot: string;
   priceSnapShotInCFA: number;
   quantity: number;
   prepTimeSnapshot: number;
+
   createdAt?: Date;
   updatedAt?: Date;
 }
@@ -17,51 +20,35 @@ export interface IRestaurantCartItem {
 const RestaurantCartItemSchema = new Schema<IRestaurantCartItem>(
   {
     cart: {
-      type: mongoose.Schema.Types.ObjectId,
+      type: Schema.Types.ObjectId,
       ref: "restaurant_carts",
       required: true,
       validate: {
-        validator: async function (cartId: mongoose.Schema.Types.ObjectId) {
+        validator: async function (cartId: Types.ObjectId): Promise<boolean> {
           if (!cartId) return false;
           const exists = await RestaurantCartModel.exists({ _id: cartId });
           return exists !== null;
         },
         message: "Referenced cart_id does not exist.",
-      },
+      } as any,
     },
-    item: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "restaurant_items",
+
+    referenceId: {
+      type: Schema.Types.ObjectId,
       required: true,
-      validate: {
-        validator: async function (itemId: Types.ObjectId) {
-          if (!itemId) return false;
-          const exists = await RestaurantItemModel.exists({ _id: itemId });
-          return exists !== null;
-        },
-        message: "Referenced item_id does not exist.",
-      },
+      refPath: "itemType",
     },
-    name_snapshot: {
+
+    itemType: {
       type: String,
       required: true,
-      trim: true,
+      enum: ["restaurant_items", "restaurant_combos"],
     },
-    priceSnapShotInCFA: {
-      type: Number,
-      required: true,
-      min: 0,
-    },
-    quantity: {
-      type: Number,
-      required: true,
-      min: 1,
-    },
-    prepTimeSnapshot: {
-      type: Number,
-      required: true,
-      min: 0,
-    },
+
+    name_snapshot: { type: String, required: true, trim: true },
+    priceSnapShotInCFA: { type: Number, required: true, min: 0 },
+    quantity: { type: Number, required: true, min: 1 },
+    prepTimeSnapshot: { type: Number, required: true, min: 0 },
   },
   {
     timestamps: true,
@@ -69,6 +56,10 @@ const RestaurantCartItemSchema = new Schema<IRestaurantCartItem>(
     toJSON: { virtuals: true },
   }
 );
+
+// Indexes for speed
+RestaurantCartItemSchema.index({ cart: 1 });
+RestaurantCartItemSchema.index({ itemType: 1, referenceId: 1 });
 
 export const RestaurantCartItemModel = model<IRestaurantCartItem>(
   "restaurant_cart_items",

@@ -50,7 +50,25 @@ const readOneMealCombo = catchAsync(
 
 const readAllMealCombos = catchAsync(
   async (req: Request, res: Response, next: NextFunction) => {
-    await CRUDMealCombo.readAll(res, req, 1, 100, ["items"]);
+    const combos = await MealComboModel.find().populate("items").lean();
+
+    const combosWithTotals = combos.map((combo) => {
+      if (!combo.items)
+        return { ...combo, priceInCFA: 0, prepTimeInMinutes: 0 };
+
+      const priceInCFA = combo.items.reduce(
+        (sum: number, item: any) => sum + (item.priceInCFA || 0),
+        0
+      );
+      const prepTimeInMinutes = combo.items.reduce(
+        (sum: number, item: any) => sum + (item.prepTimeInMinutes || 0),
+        0
+      );
+
+      return { ...combo, priceInCFA, prepTimeInMinutes };
+    });
+
+    appResponder(StatusCodes.OK, combosWithTotals, res);
   }
 );
 

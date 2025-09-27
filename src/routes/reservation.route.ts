@@ -79,6 +79,14 @@ reservationRouter
   );
 
 reservationRouter
+  .route("/by-email")
+  .get(
+    authControllers.protect,
+    authControllers.restrictTo(allPermissions.reservations.readAll),
+    reservationControllers.getCheckedInReservationsByEmail
+  );
+
+reservationRouter
   .route("/:id")
   .get(
     authControllers.protect,

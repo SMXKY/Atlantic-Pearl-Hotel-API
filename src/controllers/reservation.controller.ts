@@ -928,6 +928,48 @@ const searchReservations = catchAsync(
   }
 );
 
+const getCheckedInReservationsByEmail = catchAsync(
+  async (req: Request, res: Response, next: NextFunction) => {
+    const { guestEmail } = req.query;
+
+    if (!guestEmail) {
+      return next(
+        new AppError(
+          "Guest email is required to fetch reservations.",
+          StatusCodes.BAD_REQUEST
+        )
+      );
+    }
+
+    const reservations = await ReservationModel.find({
+      guestEmail,
+      status: "checked in",
+    })
+      .populate("guest")
+      .populate({
+        path: "items.roomType",
+      })
+      .populate({
+        path: "items.rate",
+      })
+      .populate({
+        path: "items.rooms.room",
+      })
+      .lean();
+
+    if (!reservations || reservations.length === 0) {
+      return next(
+        new AppError(
+          "No checked-in reservations found for this email.",
+          StatusCodes.NOT_FOUND
+        )
+      );
+    }
+
+    appResponder(StatusCodes.OK, reservations, res);
+  }
+);
+
 export const reservationControllers = {
   createReservation,
   readOneReservation,
@@ -939,4 +981,5 @@ export const reservationControllers = {
   updatingGuestRooms,
   reservationCalendar,
   searchReservations,
+  getCheckedInReservationsByEmail,
 };
