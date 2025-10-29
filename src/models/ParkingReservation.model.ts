@@ -8,12 +8,14 @@ import { allPermissions } from "../types/Permissions.type";
 import { sendNotification } from "../util/sendNotification.util";
 import { NotificationType } from "./Notification.model";
 import { getIdsFromPermissions } from "../util/sendNotification.util";
+import { RoomModel } from "./Room.model";
 import { io } from "../index";
 
 export interface IParkingReservation extends Document {
   guest: mongoose.Types.ObjectId;
   spot: mongoose.Types.ObjectId;
   reservation: mongoose.Types.ObjectId;
+  room: mongoose.Types.ObjectId;
   reservedFrom: Date;
   reservedTo: Date;
   checkInTime?: Date;
@@ -33,6 +35,19 @@ const parkingReservationSchema: Schema<IParkingReservation> = new Schema(
           return exists !== null;
         },
         message: "Guest ID not found in the database.",
+      },
+    },
+    room: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "rooms",
+      required: true,
+      validate: {
+        validator: async function (resId: mongoose.Schema.Types.ObjectId) {
+          if (!resId) return false;
+          const exists = await RoomModel.findById(resId);
+          return exists !== null;
+        },
+        message: "Referenced room id does not exist.",
       },
     },
     reservation: {

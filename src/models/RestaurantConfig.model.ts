@@ -48,7 +48,6 @@ const restaurantConfigSchema = new Schema<IRestaurantConfig>(
       type: String,
       required: true,
     },
-
     maxBreakfastPerRoom: {
       type: Number,
       default: 1,

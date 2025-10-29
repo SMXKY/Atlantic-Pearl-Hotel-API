@@ -30,6 +30,11 @@ import { RateModel } from "../models/Rate.model";
 import mongoose from "mongoose";
 import { logUserActivity } from "../util/logUserActivity.util";
 import { appResponder } from "../util/appResponder.util";
+import { StationModel } from "../models/Station.model";
+import {
+  transactionCodes,
+  TransactionModel,
+} from "../models/Transaction.model";
 
 const CRUDRestaurantOrder: CRUD = new CRUD(RestaurantOrderModel);
 
@@ -41,13 +46,33 @@ interface ICartItem {
 
 export const createRestaurantOrder = catchAsync(
   async (req: Request, res: Response, next: NextFunction) => {
-    const { cart, reservationId } = req.body;
+    const { cart, reservationId, roomId } = req.body;
+
+    const room = await RoomModel.findById(roomId);
+
+    if (!roomId || !room) {
+      return next(
+        new AppError(
+          "Room Id requried to create an order.",
+          StatusCodes.BAD_REQUEST
+        )
+      );
+    }
 
     const reservation = await ReservationModel.findById(reservationId);
     if (!reservationId || !reservation) {
       return next(
         new AppError(
           "Reservation Id is required to create a restaurant order.",
+          StatusCodes.BAD_REQUEST
+        )
+      );
+    }
+
+    if (!reservation.hasRoom(room._id)) {
+      return next(
+        new AppError(
+          "This room Id does not be long to this reservation.",
           StatusCodes.BAD_REQUEST
         )
       );
@@ -243,6 +268,7 @@ export const createRestaurantOrder = catchAsync(
     req.body.cart = orderCart._id;
     req.body.totalAmountInCFA = totalAmount;
     req.body.reservation = reservation._id;
+    req.body.room = room._id;
 
     // --- Delegate to CRUD order handler ---
     await CRUDRestaurantOrder.create(req.body, res, req);
@@ -273,7 +299,7 @@ const readAllRestaurantOrders = catchAsync(
 
 const updateRestaurantOrder = catchAsync(
   async (req: Request, res: Response, next: NextFunction) => {
-    const { status, guestId } = req.body;
+    const { status, guestId, stationId } = req.body;
     const { id: orderId } = req.params;
 
     const order = await RestaurantOrderModel.findById(orderId);
@@ -311,6 +337,25 @@ const updateRestaurantOrder = catchAsync(
     }
 
     if (status === "delivered") {
+      // if (!stationId) {
+      //   return next(
+      //     new AppError(
+      //       "Station Id required to update resturant order to dillivered.",
+      //       StatusCodes.BAD_REQUEST
+      //     )
+      //   );
+      // }
+      // const station = await StationModel.findById(stationId);
+
+      // if (!station) {
+      //   return next(
+      //     new AppError(
+      //       "Statioid not found in the database.",
+      //       StatusCodes.NOT_FOUND
+      //     )
+      //   );
+      // }
+
       if (!reservationId) {
         return next(
           new AppError(
@@ -383,6 +428,33 @@ const updateRestaurantOrder = catchAsync(
         category: "restaurant_orders", // enum value
         linkedEntityId: order._id,
         amount: totalAmount,
+      });
+
+      const today = new Date();
+      const formattedDate = `${String(today.getDate()).padStart(
+        2,
+        "0"
+      )}${String(today.getMonth() + 1).padStart(2, "0")}${today.getFullYear()}`;
+      const formattedTime = `${String(today.getHours()).padStart(
+        2,
+        "0"
+      )}:${String(today.getMinutes()).padStart(2, "0")}`;
+
+      await TransactionModel.create({
+        transactionType: "restuarant order",
+        reason: `${reservation.guestName} was dillivered thier restaurant order of Id: ${order._id}`,
+        amountInCFA: totalAmount,
+        reservation: reservation._id,
+        guest: reservation.guest,
+        room: order.room,
+        transactionDate: formattedDate,
+        transactionTime: formattedTime,
+        trancode: transactionCodes.foodCharge,
+        referenceDoc: {
+          id: order._id,
+          collection: "restaurant_orders",
+        },
+        isCharge: true,
       });
     }
 

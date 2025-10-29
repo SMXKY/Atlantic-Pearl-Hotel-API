@@ -9,7 +9,7 @@ export interface IGuest extends Document {
   user: Types.ObjectId | IUser;
   countryOfResidence?: string;
   preferedCurrency?: string;
-  preferedLanguage?: "English" | "French";
+  preferedLanguage?: "ENG" | "THA" | "CHN" | "FR";
   isLoyaltyProgramMember?: boolean;
   guestTag?: string;
   guestType:
@@ -58,10 +58,10 @@ const guestSchema = new mongoose.Schema(
       preferedLanguage: {
         type: String,
         enum: {
-          values: ["English", "French"],
+          values: ["ENG", "THA", "CHN", "FR"],
           message: "Not a supported language",
         },
-        default: "English",
+        default: "ENG",
       },
       isLoyaltyProgramMember: {
         type: Boolean,

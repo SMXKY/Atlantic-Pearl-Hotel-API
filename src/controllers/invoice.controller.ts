@@ -13,7 +13,7 @@ import {
   expirePay,
   initiatePay,
   InitiatePayData,
-} from "../external-apis/fapshi.api";
+} from "../services/fapshi.api";
 import { TransactionModel } from "../models/Transaction.model";
 import {
   EmailData,

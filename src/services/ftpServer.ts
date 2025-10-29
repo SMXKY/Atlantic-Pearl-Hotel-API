@@ -295,7 +295,7 @@ export const handleFileUploads = (
   });
 
   // Delegate to production or development handler
-  if (process.env.NODE_ENV === "production") {
+  if (true) {
     return handleFileUploadsProduction(req);
   } else {
     return handleFileUploadsDevelopment(req);

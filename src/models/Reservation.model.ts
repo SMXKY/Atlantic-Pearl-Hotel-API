@@ -8,7 +8,7 @@ import { EmployeeModel } from "./Employee.model";
 import { DiscountModel } from "./Discount.model";
 import { RateModel } from "./Rate.model";
 import { RoomTypeModel } from "./RoomType.model";
-import { RoomModel } from "./Room.model";
+import { IRoom, RoomModel } from "./Room.model";
 import { TaxModel } from "./Tax.model";
 import { AdminConfigurationModel } from "./AdminConfiguration.model";
 import { UserModel } from "./User.model";
@@ -22,14 +22,16 @@ import { allPermissions } from "../types/Permissions.type";
 import { sendNotification } from "../util/sendNotification.util";
 import { getIdsFromPermissions } from "../util/sendNotification.util";
 import { NotificationType } from "./Notification.model";
+import { StationModel } from "./Station.model";
+import { iptv } from "../services/iptv.api";
 
 interface IRoomEntry {
-  room: mongoose.Types.ObjectId;
+  room: mongoose.Types.ObjectId | IRoom;
   checkIn: Date;
   checkOut: Date;
 }
 
-interface IReservationItem {
+export interface IReservationItem {
   roomType: mongoose.Types.ObjectId;
   rate: mongoose.Types.ObjectId;
   rooms: IRoomEntry[];
@@ -81,6 +83,14 @@ export interface IReservation extends mongoose.Document {
   calculateTotalPriceAndTax(): Promise<PriceAndTax>;
   mutateForCalendar(): Promise<any>[];
   hasRoom(roomId: mongoose.Types.ObjectId | string): boolean;
+  checkInStation: mongoose.Types.ObjectId;
+  checkOutStation: mongoose.Types.ObjectId;
+  roomUpdateStation: mongoose.Types.ObjectId;
+  preferedLanguage: "ENG" | "THA" | "CHN" | "FR";
+  wifi: {
+    name: string;
+    password: string;
+  };
 }
 
 const reservationSchema = new mongoose.Schema<IReservation>(
@@ -90,6 +100,53 @@ const reservationSchema = new mongoose.Schema<IReservation>(
       required: [true, "Booking reference is required to create reservation"],
       unique: true,
       immutable: true,
+    },
+    checkInStation: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "stations",
+      // required: [true, "Check-in station required."],
+      validate: {
+        validator: async function (id: mongoose.Schema.Types.ObjectId) {
+          return (await StationModel.exists({ _id: id })) !== null;
+        },
+        message: "Invalid station Id in reservation.",
+      },
+    },
+    checkOutStation: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "stations",
+      validate: {
+        validator: async function (id: mongoose.Schema.Types.ObjectId) {
+          return (await StationModel.exists({ _id: id })) !== null;
+        },
+        message: "Invalid station Id in reservation.",
+      },
+    },
+    roomUpdateStation: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "stations",
+      validate: {
+        validator: async function (id: mongoose.Schema.Types.ObjectId) {
+          return (await StationModel.exists({ _id: id })) !== null;
+        },
+        message: "Invalid station Id in reservation.",
+      },
+    },
+    preferedLanguage: {
+      type: String,
+      enum: {
+        values: ["ENG", "THA", "CHN", "FR"],
+        message: "Not a supported language",
+      },
+      default: "ENG",
+    },
+    wifi: {
+      name: {
+        type: String,
+      },
+      password: {
+        type: String,
+      },
     },
     status: {
       type: String,
@@ -597,6 +654,17 @@ reservationSchema.pre("findOneAndUpdate", async function (next) {
     );
   }
 
+  if (
+    !currentReservation.wifi ||
+    !currentReservation.wifi.name ||
+    !currentReservation.wifi.password
+  ) {
+    throw new AppError(
+      "Reservation wifi details must be included to mark it as cheked in.",
+      StatusCodes.BAD_REQUEST
+    );
+  }
+
   const now = dayjs();
   const checkIn = dayjs(currentReservation.checkInDate);
   const checkOut = dayjs(currentReservation.checkOutDate);
@@ -1055,6 +1123,26 @@ async function notifyOnReservationStatusUpdate(reservation: IReservation) {
 reservationSchema.post("findOneAndUpdate", async function (doc: IReservation) {
   if (!doc) return;
   await notifyOnReservationStatusUpdate(doc);
+});
+
+reservationSchema.post("findOneAndUpdate", async function (doc: IReservation) {
+  if (!doc || process.env.IPTV !== "true") return;
+
+  const newStatus = doc.status;
+
+  if (newStatus === "checked in") {
+    await iptv.checkIn(String(doc._id));
+  }
+});
+
+reservationSchema.post("findOneAndUpdate", async function (doc: IReservation) {
+  if (!doc || process.env.IPTV !== "true") return;
+
+  const newStatus = doc.status;
+
+  if (newStatus === "checked out") {
+    await iptv.checkOut(String(doc._id));
+  }
 });
 
 export const ReservationModel = mongoose.model<IReservation>(

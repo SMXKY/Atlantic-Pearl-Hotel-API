@@ -62,13 +62,11 @@ reservationRouter
     authControllers.restrictTo(allPermissions.reservations.cancel),
     reservationControllers.cancelReservation
   );
-reservationRouter
-  .route("/update-rooms/:id")
-  .patch(
-    authControllers.protect,
-    authControllers.restrictTo(allPermissions.reservations.updateRooms),
-    reservationControllers.updatingGuestRooms
-  );
+reservationRouter.route("/update-rooms/:id").patch(
+  // authControllers.protect,
+  // authControllers.restrictTo(allPermissions.reservations.updateRooms),
+  reservationControllers.updatingGuestRooms
+);
 
 reservationRouter
   .route("/search")

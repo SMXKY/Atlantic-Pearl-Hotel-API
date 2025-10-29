@@ -8,10 +8,7 @@ import { AppError } from "../util/AppError.util";
 import { StatusCodes } from "http-status-codes";
 import { appResponder } from "../util/appResponder.util";
 import { logUserActivity } from "../util/logUserActivity.util";
-import {
-  deleteFilesFromFTP,
-  handleFileUploads,
-} from "../external-apis/ftpServer";
+import { deleteFilesFromFTP, handleFileUploads } from "../services/ftpServer";
 
 const CRUDUser: CRUD = new CRUD(UserModel);
 

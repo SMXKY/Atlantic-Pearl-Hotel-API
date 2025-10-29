@@ -18,7 +18,7 @@ import {
 import * as mongoose from "mongoose";
 import { RecieptModel } from "../models/Reciept.model";
 import { TransactionModel } from "../models/Transaction.model";
-import { expirePay, payout } from "../external-apis/fapshi.api";
+import { expirePay, payout } from "../services/fapshi.api";
 import path from "path";
 import { promises as promFs } from "fs";
 import { AdminConfigurationModel } from "../models/AdminConfiguration.model";
@@ -32,6 +32,8 @@ import * as generatePassword from "generate-password";
 import { PhoneNumber } from "libphonenumber-js";
 import { RoleModel } from "../models/Role.model";
 import fs from "fs";
+import { ReservationSnapshotModel } from "../models/ReservationSnapShot.model";
+import { iptv } from "../services/iptv.api";
 
 const CRUDReservation: CRUD = new CRUD(ReservationModel);
 
@@ -154,6 +156,15 @@ export const updateReservation = catchAsync(
         );
       }
 
+      if (!req.body.wifi || !req.body.wifi.name || !req.body.wifi.password) {
+        return next(
+          new AppError(
+            "Guest may not be checked in without thier wifi credentials",
+            StatusCodes.INTERNAL_SERVER_ERROR
+          )
+        );
+      }
+
       const reservation = await ReservationModel.findById(reservationId);
       if (!reservation) {
         return next(
@@ -239,7 +250,11 @@ export const updateReservation = catchAsync(
         const newUser = await UserModel.create(newUserData);
         let guest;
         try {
-          guest = await GuestModel.create({ ...req.body, user: newUser._id });
+          guest = await GuestModel.create({
+            ...req.body,
+            user: newUser._id,
+            preferedLanguage: reservation.preferedLanguage,
+          });
         } catch (err) {
           await UserModel.findByIdAndDelete(newUser._id);
           throw err;
@@ -265,6 +280,8 @@ export const updateReservation = catchAsync(
         req.body.guest = guest._id;
       }
     }
+
+    //Send update to IPTV:
 
     // -------------------- Update reservation --------------------
     await CRUDReservation.update(reservationId, res, req);
@@ -698,94 +715,83 @@ const cancelReservation = catchAsync(
 
 const updatingGuestRooms = catchAsync(
   async (req: Request, res: Response, next: NextFunction) => {
-    if (!req.params.id || !req.body?.reservationItems) {
-      return next(
-        new AppError(
-          "Invalid request. Reservation ID and new reservation items are required.",
-          StatusCodes.BAD_REQUEST
-        )
+    const { id: reservationId } = req.params;
+    const { reservationItems, station } = req.body;
+
+    if (!reservationId || !reservationItems) {
+      throw new AppError(
+        "Invalid request. Reservation ID and new reservation items are required.",
+        StatusCodes.BAD_REQUEST
       );
     }
 
-    const reservationId = req.params.id;
-    const { reservationItems } = req.body;
-
-    const reservation = await ReservationModel.findById(reservationId);
+    const reservation = await ReservationModel.findById(reservationId)
+      .populate("guest")
+      .populate("items.roomType")
+      .populate("items.rate")
+      .populate("items.rooms.room");
 
     if (!reservation) {
-      return next(new AppError("Reservation not found", StatusCodes.NOT_FOUND));
+      throw new AppError("Reservation not found", StatusCodes.NOT_FOUND);
     }
 
-    if (reservation.status !== "confirmed") {
-      return next(
-        new AppError(
-          "Only confirmed reservations can be updated",
-          StatusCodes.BAD_REQUEST
-        )
+    if (reservation.status !== "checked in") {
+      throw new AppError(
+        "Only checked-in reservations can be updated.",
+        StatusCodes.BAD_REQUEST
       );
     }
 
     if (!reservation.checkInDate || !reservation.checkOutDate) {
-      return next(
-        new AppError(
-          "Cannot find reservaton check in or check out date.",
-          StatusCodes.INTERNAL_SERVER_ERROR
-        )
+      throw new AppError(
+        "Cannot find reservation check-in or check-out date.",
+        StatusCodes.INTERNAL_SERVER_ERROR
       );
     }
 
-    reservationItems.forEach((item: any) => {
-      item.rooms.forEach((room: any) => {
+    const snapshot = await ReservationSnapshotModel.create({
+      reservation: reservation._id,
+      operation: "before_rooms_update",
+      state: JSON.stringify(reservation.toObject()),
+    });
+
+    for (const item of reservationItems) {
+      for (const room of item.rooms) {
         const roomCheckIn = new Date(room.checkIn);
         const roomCheckOut = new Date(room.checkOut);
         const resCheckIn = reservation.checkInDate as Date;
         const resCheckOut = reservation.checkOutDate as Date;
 
-        // 1. Room check-in must be on or after reservation check-in
         if (roomCheckIn < resCheckIn) {
-          return next(
-            new AppError(
-              "Room check-in date cannot be before the reservation check-in date.",
-              StatusCodes.BAD_REQUEST
-            )
+          throw new AppError(
+            "Room check-in date cannot be before the reservation check-in date.",
+            StatusCodes.BAD_REQUEST
           );
         }
 
-        // 2. Room check-out must be on or before reservation check-out
         if (roomCheckOut > resCheckOut) {
-          return next(
-            new AppError(
-              "Room check-out date cannot be after the reservation check-out date.",
-              StatusCodes.BAD_REQUEST
-            )
+          throw new AppError(
+            "Room check-out date cannot be after the reservation check-out date.",
+            StatusCodes.BAD_REQUEST
           );
         }
 
-        // 3. Room check-out must be after check-in
         if (roomCheckOut <= roomCheckIn) {
-          return next(
-            new AppError(
-              "Room check-out date must be after its check-in date.",
-              StatusCodes.BAD_REQUEST
-            )
+          throw new AppError(
+            "Room check-out date must be after its check-in date.",
+            StatusCodes.BAD_REQUEST
           );
         }
-      });
-    });
+      }
+    }
 
     const validateRooms = await validateReservationItemsAvailability(
       reservationItems
     );
-
-    console.log(validateRooms);
-
     if (!validateRooms.ok) {
-      console.log(validateRooms);
-      return next(
-        new AppError(
-          validateRooms.invalidItems[0].reason,
-          StatusCodes.BAD_REQUEST
-        )
+      throw new AppError(
+        validateRooms.invalidItems[0].reason,
+        StatusCodes.BAD_REQUEST
       );
     }
 
@@ -793,18 +799,18 @@ const updatingGuestRooms = catchAsync(
 
     try {
       reservation.items = reservationItems;
+      reservation.roomUpdateStation = station;
       await reservation.save();
 
       const invoice = await InvoiceModel.findOne({
         reservation: reservationId,
       });
-
       if (!invoice) {
         reservation.items = previousItems;
         await reservation.save();
-
-        return next(
-          new AppError("Associated invoice not found", StatusCodes.NOT_FOUND)
+        throw new AppError(
+          "Associated invoice not found.",
+          StatusCodes.NOT_FOUND
         );
       }
 
@@ -814,26 +820,21 @@ const updatingGuestRooms = catchAsync(
       const guest = await getGuestDetailsFromReservation(
         reservation._id.toString()
       );
-
-      if (!guest || !guest.email) {
+      if (!guest?.email) {
         reservation.items = previousItems;
         await reservation.save();
-
         invoice.isRoomUpdate = false;
         await invoice.save();
-
-        return next(
-          new AppError(
-            "Guest email not found",
-            StatusCodes.INTERNAL_SERVER_ERROR
-          )
+        throw new AppError(
+          "Guest email not found.",
+          StatusCodes.INTERNAL_SERVER_ERROR
         );
       }
 
-      const emailHtml = await renderInvoiceHTMLFromTemplate(
-        invoice._id.toString()
-      );
-
+      const emailHtml = await renderInvoiceHTMLFromTemplate({
+        invoice,
+        reservation,
+      });
       await sendEmail(
         guest.email,
         "Updated Invoice for Your Reservation",
@@ -841,21 +842,42 @@ const updatingGuestRooms = catchAsync(
         emailHtml
       );
 
+      await ReservationSnapshotModel.create({
+        reservation: reservation._id,
+        operation: "after_rooms_update",
+        state: JSON.stringify(reservation.toObject()),
+      });
+
+      if (process.env.IPTV === "true") {
+        console.log("sending...");
+        await iptv.roomMove(String(reservation._id), String(snapshot._id));
+      }
+
       return appResponder(
         StatusCodes.OK,
         {
-          message: "Reservation and invoice updated, email sent.",
-          reservation,
-          invoice,
+          message:
+            "Reservation and invoice updated successfully. Email sent to guest.",
+          reservation: reservation.toObject(),
+          invoice: invoice.toObject(),
         },
         res
       );
-    } catch (err) {
-      // Manual rollback of reservation items if anything fails
+    } catch (err: any) {
+      console.error("Room update error:", err);
+
       reservation.items = previousItems;
       await reservation.save();
 
-      return next(err);
+      const invoice = await InvoiceModel.findOne({
+        reservation: reservationId,
+      });
+      if (invoice) {
+        invoice.isRoomUpdate = false;
+        await invoice.save();
+      }
+
+      throw err;
     }
   }
 );
@@ -910,9 +932,6 @@ const searchReservations = catchAsync(
     }
 
     const results = await ReservationModel.find(conditions)
-      .select(
-        "bookingReference status checkInDate checkOutDate createdAt guestName guestEmail"
-      )
       .populate({
         path: "guest",
         select: "name email phoneNumber",

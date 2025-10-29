@@ -3,7 +3,7 @@ import { NextFunction, Request, Response } from "express";
 import { catchAsync } from "../util/catchAsync";
 import { CRUD } from "../util/Crud.util";
 import { RoomModel } from "../models/Room.model";
-import { handleFileUploads } from "../external-apis/ftpServer";
+import { handleFileUploads } from "../services/ftpServer";
 import { appResponder } from "../util/appResponder.util";
 import { StatusCodes } from "http-status-codes";
 import { AppError } from "../util/AppError.util";
@@ -76,6 +76,7 @@ const updateRoom = catchAsync(
     await CRUDRoom.update(req.params.id, res, req);
   }
 );
+
 const deleteRoom = catchAsync(
   async (req: Request, res: Response, next: NextFunction) => {
     if (!req.params.id) {

@@ -49,6 +49,8 @@ const roomSchema = new mongoose.Schema(
       trim: true,
       uppercase: true,
       required: [true, "Room number is required."],
+      minlength: 1,
+      maxlength: 5,
     },
     floorNumber: {
       type: Number,

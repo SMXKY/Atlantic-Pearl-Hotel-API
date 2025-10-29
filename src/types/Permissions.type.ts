@@ -75,6 +75,7 @@ export const SUBMODULES = {
   MEAL_COMBOS: "Meal Combos",
   RESTAURANT_CONFIG: "Rules",
   MEALE_REDEMPTION: "Meal Redemptions",
+  STATIONS: "Stations",
 } as const;
 
 // export const allPermissions = {
@@ -499,6 +500,17 @@ export const allPermissions = {
     delete: "can_delete_room",
     update: "can_update_room",
     create: "can_create_room",
+  },
+
+  stations: {
+    module: "Property Management",
+    submodule: "Stations",
+
+    readOne: "can_read_station",
+    readAll: "can_read_all_stations",
+    delete: "can_delete_station",
+    update: "can_update_station",
+    create: "can_create_station",
   },
 
   roomTypes: {

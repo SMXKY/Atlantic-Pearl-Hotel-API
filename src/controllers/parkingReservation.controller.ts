@@ -14,14 +14,27 @@ import { ParkingSectionModel } from "../models/ParkingSection.model";
 import { appResponder } from "../util/appResponder.util";
 import mongoose from "mongoose";
 import { logUserActivity } from "../util/logUserActivity.util";
+import { RoomModel } from "../models/Room.model";
+import {
+  transactionCodes,
+  TransactionModel,
+} from "../models/Transaction.model";
+import { StationModel } from "../models/Station.model";
 
 const CRUDParkingReservation: CRUD = new CRUD(ParkingReservationModel);
 
 export const createParkingReservation = catchAsync(
   async (req: Request, res: Response, next: NextFunction) => {
     try {
-      let { spotId, reservedFrom, reservedTo, status, reservationId } =
-        req.body;
+      let {
+        spotId,
+        reservedFrom,
+        reservedTo,
+        status,
+        reservationId,
+        roomId,
+        stationId,
+      } = req.body;
 
       // Validate presence of required fields
       const requiredFields = [
@@ -30,6 +43,8 @@ export const createParkingReservation = catchAsync(
         "reservedFrom",
         "reservedTo",
         "status",
+        "roomId",
+        "stationId",
       ];
       for (const field of requiredFields) {
         if (!req.body[field]) {
@@ -42,8 +57,42 @@ export const createParkingReservation = catchAsync(
 
       // Fetch reservation by ID
       const reservation = await ReservationModel.findById(reservationId);
+      const room = await RoomModel.findById(roomId);
+      const station = await StationModel.findById(stationId);
       if (!reservation) {
-        return next("Reservation Id does not exist in the database");
+        return next(
+          new AppError(
+            "Reservation Id does not exist in the database",
+            StatusCodes.BAD_REQUEST
+          )
+        );
+      }
+
+      if (!room) {
+        return next(
+          new AppError(
+            "Room Id does not exist in the database",
+            StatusCodes.BAD_REQUEST
+          )
+        );
+      }
+
+      // if (!station) {
+      //   return next(
+      //     new AppError(
+      //       "Station Id does not exist in the database",
+      //       StatusCodes.BAD_REQUEST
+      //     )
+      //   );
+      // }
+
+      if (!reservation.hasRoom(room._id)) {
+        return next(
+          new AppError(
+            "This room Id does not be long to this reservation.",
+            StatusCodes.BAD_REQUEST
+          )
+        );
       }
 
       if (reservation.status !== "checked in") {
@@ -184,6 +233,7 @@ export const createParkingReservation = catchAsync(
         reservedTo,
         status,
         reservation: reservationId,
+        room: room._id,
       });
 
       // Create bill item with correct enum category
@@ -200,6 +250,35 @@ export const createParkingReservation = catchAsync(
       // Update spot status
       // spot.status = status;
       // await spot.save();
+
+      const today = new Date();
+      const formattedDate = `${String(today.getDate()).padStart(
+        2,
+        "0"
+      )}${String(today.getMonth() + 1).padStart(2, "0")}${today.getFullYear()}`;
+      const formattedTime = `${String(today.getHours()).padStart(
+        2,
+        "0"
+      )}:${String(today.getMinutes()).padStart(2, "0")}:${String(
+        today.getSeconds()
+      ).padStart(2, "0")}`;
+
+      await TransactionModel.create({
+        transactionType: "parking reservation",
+        reason: `${reservation.guestName} make a parking reservation Id: ${parkingReservation._id}`,
+        amountInCFA: totalAmount,
+        reservation: reservation._id,
+        guest: reservation.guest,
+        room: parkingReservation.room,
+        transactionDate: formattedDate,
+        transactionTime: formattedTime,
+        trancode: transactionCodes.foodCharge,
+        referenceDoc: {
+          id: parkingReservation._id,
+          collection: "parking_reservations",
+        },
+        isCharge: true,
+      });
 
       logUserActivity(
         req,

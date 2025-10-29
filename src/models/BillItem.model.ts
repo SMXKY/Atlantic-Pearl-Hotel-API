@@ -43,11 +43,11 @@ const billItemSchema = new Schema<IBillItem>(
     category: {
       type: String,
       enum: Object.keys(allowedCategories),
-      required: true,
+      // required: true,
     },
     linkedEntityId: {
       type: Schema.Types.ObjectId,
-      required: true,
+      // required: true,
     },
   },
   {

@@ -3,7 +3,7 @@ import { NextFunction, Request, Response } from "express";
 import { catchAsync } from "../util/catchAsync";
 import { CRUD } from "../util/Crud.util";
 import { RestaurantItemModel } from "../models/RestaurantItem.model";
-import { handleFileUploads } from "../external-apis/ftpServer";
+import { handleFileUploads } from "../services/ftpServer";
 import { appResponder } from "../util/appResponder.util";
 import { StatusCodes } from "http-status-codes";
 import { AppError } from "../util/AppError.util";

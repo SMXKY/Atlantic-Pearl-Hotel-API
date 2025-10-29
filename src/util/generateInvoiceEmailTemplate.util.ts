@@ -1,5 +1,9 @@
-import { InvoiceModel } from "../models/Invoice.model";
-import { ReservationModel } from "../models/Reservation.model";
+import { IInvoice, InvoiceModel } from "../models/Invoice.model";
+import {
+  IReservation,
+  IReservationItem,
+  ReservationModel,
+} from "../models/Reservation.model";
 import { RoomTypeModel } from "../models/RoomType.model";
 import { RateModel } from "../models/Rate.model";
 import { IUser } from "../models/User.model";
@@ -120,6 +124,7 @@ import path from "path";
 import { AdminConfigurationModel } from "../models/AdminConfiguration.model";
 import { AppError } from "./AppError.util";
 import { StatusCodes } from "http-status-codes";
+import { IGuest } from "models/Guest.model";
 
 export function renderInvoiceHTMLFromTemplate(data: any): string {
   const templatePath = path.join(
@@ -128,42 +133,70 @@ export function renderInvoiceHTMLFromTemplate(data: any): string {
   );
   const rawHtml = fs.readFileSync(templatePath, "utf-8");
 
-  const { guest, invoice, reservation, time } = data;
-
-  console.log(time, "TIME");
+  const {
+    guest,
+    invoice,
+    reservation,
+    time = new Date(),
+  } = data as {
+    guest: IGuest;
+    invoice: IInvoice;
+    reservation: IReservation;
+    time: any;
+  };
 
   const guestInfo = `
     <ul>
-      <li><strong>Name:</strong> ${guest.name}</li>
-      <li><strong>Email:</strong> ${guest.email}</li>
-      <li><strong>Phone:</strong> ${guest.phone}</li>
-      <li><strong>Country:</strong> ${guest.country}</li>
+      <li><strong>Name:</strong> ${reservation?.guestName}</li>
+      <li><strong>Email:</strong> ${reservation?.guestEmail}</li>
+      <li><strong>Phone:</strong> ${reservation?.guestPhoneNumber}</li>
     </ul>
   `;
 
   const reservationInfo = `
     <ul>
-      <li><strong>Reference:</strong> ${reservation.reference}</li>
-      <li><strong>Check-In:</strong> ${reservation.checkIn}</li>
-      <li><strong>Check-Out:</strong> ${reservation.checkOut}</li>
-      <li><strong>Guests:</strong> ${reservation.numberOfGuests}</li>
+      <li><strong>Reference:</strong> ${reservation.bookingReference}</li>
+      <li><strong>Check-In:</strong> ${reservation.checkInDate}</li>
+      <li><strong>Check-Out:</strong> ${reservation.checkOutDate}</li>
+      <li><strong>Guests:</strong> ${reservation.numberOfGuest}</li>
       <li><strong>Booking Source:</strong> ${reservation.bookingSource}</li>
       <li><strong>Payment Method:</strong> ${reservation.paymentMethod}</li>
       <li><strong>Special Request:</strong> ${reservation.specialRequest}</li>
     </ul>
   `;
 
-  const roomDetailsHtml = reservation.roomDetails
-    .map(
-      (room: any) => `
-        <tr>
-          <td style="padding: 8px; border: 1px solid #ccc;">${room.roomType}</td>
-          <td style="padding: 8px; border: 1px solid #ccc;">${room.rate}</td>
-          <td style="padding: 8px; border: 1px solid #ccc; text-align: center;">${room.quantity}</td>
-          <td style="padding: 8px; border: 1px solid #ccc; text-align: center;">${room.nights}</td>
-        </tr>
-      `
-    )
+  const roomDetailsHtml = reservation.items
+    .map((item: IReservationItem) => {
+      const roomTypeName =
+        typeof item.roomType === "object" && (item.roomType as any)?.name
+          ? (item.roomType as any).name
+          : String(item.roomType);
+
+      const rateName =
+        typeof item.rate === "object" && (item.rate as any)?.name
+          ? (item.rate as any).name
+          : String(item.rate);
+
+      const quantity = item.rooms?.length ?? item.quantity ?? 0;
+
+      // If you want to calculate nights for each room individually
+      const nights = item.rooms?.[0]
+        ? Math.ceil(
+            (item.rooms[0].checkOut.getTime() -
+              item.rooms[0].checkIn.getTime()) /
+              (1000 * 60 * 60 * 24) || 0
+          )
+        : 0;
+
+      return `
+      <tr>
+        <td style="padding: 8px; border: 1px solid #ccc;">${roomTypeName}</td>
+        <td style="padding: 8px; border: 1px solid #ccc;">${rateName}</td>
+        <td style="padding: 8px; border: 1px solid #ccc; text-align: center;">${quantity}</td>
+        <td style="padding: 8px; border: 1px solid #ccc; text-align: center;">${nights}</td>
+      </tr>
+    `;
+    })
     .join("");
 
   const roomSummary = `
@@ -186,13 +219,13 @@ export function renderInvoiceHTMLFromTemplate(data: any): string {
   const invoiceSummary = `
     <h3>Invoice Summary</h3>
     <ul>
-      <li><strong>Issued At:</strong> ${invoice.issuedAt}</li>
-      <li><strong>Due Date:</strong> ${invoice.dueDate}</li>
+      <li><strong>Issued At:</strong> ${invoice?.issuedAt}</li>
+      <li><strong>Due Date:</strong> ${invoice?.dueDate}</li>
       <li><strong>Net Amount:</strong> ${invoice.netAmount}</li>
       <li><strong>Tax:</strong> ${invoice.taxAmount}</li>
-      <li><strong>Initial Deposit:</strong> ${reservation.initialDeposit}</li>
-      <li><strong>Total:</strong> <strong style="color: #28a745;">${invoice.total}</strong></li>
-      <li><strong>Status:</strong> ${invoice.status}</li>
+      <li><strong>Initial Deposit:</strong> ${reservation.depositInCFA}</li>
+      <li><strong>Total:</strong> <strong style="color: #28a745;">${invoice?.grandTotal.toLocaleString()}</strong></li>
+      <li><strong>Status:</strong> ${invoice.paymentStatus}</li>
     </ul>
   `;
 
@@ -215,8 +248,8 @@ export function renderInvoiceHTMLFromTemplate(data: any): string {
     : "";
 
   let finalHtml = rawHtml
-    .replace(/{{invoiceNumber}}/g, invoice.number)
-    .replace(/{{guestName}}/g, guest.name)
+    .replace(/{{invoiceNumber}}/g, invoice.invoiceNumber)
+    .replace(/{{guestName}}/g, String(reservation.guestName))
     .replace(/{{guestInfo}}/g, guestInfo)
     .replace(/{{reservationInfo}}/g, reservationInfo)
     .replace(/{{roomSummary}}/g, roomSummary)

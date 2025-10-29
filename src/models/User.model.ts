@@ -211,6 +211,15 @@ userSchema.pre(/^find/, function (this: mongoose.Query<any, IUser>, next) {
 userSchema.pre("save", async function (next) {
   if (!this.isModified("password")) return next();
 
+  if (this.password !== this.passwordConfirm) {
+    return next(
+      new AppError(
+        "Password and passworkd confirm must be the same",
+        StatusCodes.BAD_REQUEST
+      )
+    );
+  }
+
   this.password = await bcrypt.hash(this.password, 12);
   this.passwordConfirm = undefined;
 

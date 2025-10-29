@@ -7,7 +7,7 @@ import { StatusCodes } from "http-status-codes";
 import { AppError } from "../util/AppError.util";
 import { logUserActivity } from "../util/logUserActivity.util";
 import { appResponder } from "../util/appResponder.util";
-import { handleFileUploads } from "../external-apis/ftpServer";
+import { handleFileUploads } from "../services/ftpServer";
 
 const CRUDMealCombo: CRUD = new CRUD(MealComboModel);
 

@@ -99,7 +99,7 @@ const RestaurantItemSchema = new Schema<IRestaurantItem>(
   }
 );
 
-// --- Pre-save hook to enforce unique name (case-insensitive) ---
+
 RestaurantItemSchema.pre("save", async function (next) {
   const doc = this as IRestaurantItem & mongoose.Document;
 
@@ -130,7 +130,7 @@ RestaurantItemSchema.pre("findOneAndUpdate", async function (next) {
 
   const existing = await RestaurantItemModel.findOne({
     name: new RegExp(`^${update.name}$`, "i"),
-    _id: { $ne: this.getQuery()._id }, // exclude the doc being updated
+    _id: { $ne: this.getQuery()._id }, 
   });
 
   if (existing) {

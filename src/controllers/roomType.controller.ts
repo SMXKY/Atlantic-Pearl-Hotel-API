@@ -3,7 +3,7 @@ import { NextFunction, Request, Response } from "express";
 import { catchAsync } from "../util/catchAsync";
 import { CRUD } from "../util/Crud.util";
 import { RoomTypeModel } from "../models/RoomType.model";
-import { handleFileUploads } from "../external-apis/ftpServer";
+import { handleFileUploads } from "../services/ftpServer";
 import { AppError } from "../util/AppError.util";
 import { StatusCodes } from "http-status-codes";
 import { RoomMedia } from "../models/RoomImages.model";

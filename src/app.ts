@@ -50,6 +50,8 @@ import { restaurantOrderRouter } from "./routes/restaurantOrder.route";
 import { notificationRouter } from "./routes/notification.route";
 import { mealComboRouter } from "./routes/mealCombo.route";
 import { restaurantConfigRouter } from "./routes/restaurantConfig.route";
+import { stationRouter } from "./routes/stations.route";
+import { iptvRouter } from "./routes/iptv.route";
 
 export const app = express();
 
@@ -107,7 +109,15 @@ app.get("/", (req: Request, res: Response) => {
   res.send("Hello from the Atlantic Pearl Hotel and Resort API...");
 });
 
-app.use(express.json());
+app.use(
+  express.json({
+    strict: false,
+    verify: (req, res, buf) => {
+      if (!buf.length) return;
+    },
+  })
+);
+
 // Whitelist middleware
 const allowedIps = [
   "123.45.67.89",
@@ -176,6 +186,8 @@ app.use("/api/v1/restaurant-orders", restaurantOrderRouter);
 app.use("/api/v1/notifications", notificationRouter);
 app.use("/api/v1/meal-combos", mealComboRouter);
 app.use("/api/v1/restaurant-config", restaurantConfigRouter);
+app.use("/api/v1/stations", stationRouter);
+app.use("/iptv2", iptvRouter);
 
 const swaggerSpec = swaggerJSDoc({
   definition: {
@@ -199,5 +211,17 @@ app.use((req: Request, res: Response, next: NextFunction) => {
     )
   );
 });
+
+// import * as bcrypt from "bcrypt";
+// import { generateIdentifyToken } from "./util/generateUUID.util";
+
+// const func = async () => {
+//   const token = `atlantic-pearl-api-token_${await generateIdentifyToken()}`;
+//   const tokenHash = await bcrypt.hash(token, 12);
+//   console.log("Token plain:", token);
+//   console.log("Token hash:", tokenHash);
+// };
+
+// func();
 
 app.use(globalErrorController);

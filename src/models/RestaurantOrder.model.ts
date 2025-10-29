@@ -11,12 +11,14 @@ import {
 } from "../util/sendNotification.util";
 import { NotificationType } from "./Notification.model";
 import { allPermissions } from "../types/Permissions.type";
+import { RoomModel } from "./Room.model";
 
 export interface IRestaurantOrder {
   _id?: Types.ObjectId;
   cart: Types.ObjectId;
   guest: Types.ObjectId;
   reservation: Types.ObjectId;
+  room: Types.ObjectId;
   status:
     | "pending"
     | "accepted"
@@ -63,6 +65,19 @@ const RestaurantOrderSchema = new Schema<IRestaurantOrder>(
           return exists !== null;
         },
         message: "Referenced reservation_id does not exist.",
+      },
+    },
+    room: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "rooms",
+      required: true,
+      validate: {
+        validator: async function (resId: mongoose.Schema.Types.ObjectId) {
+          if (!resId) return false;
+          const exists = await RoomModel.findById(resId);
+          return exists !== null;
+        },
+        message: "Referenced room id does not exist.",
       },
     },
     status: {

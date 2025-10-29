@@ -6,7 +6,7 @@ import { AppError } from "../util/AppError.util";
 import { StatusCodes } from "http-status-codes";
 import { ReservationModel } from "./Reservation.model";
 const { v4: uuidv4 } = require("uuid");
-import { initiatePay, InitiatePayData } from "../external-apis/fapshi.api";
+import { initiatePay, InitiatePayData } from "../services/fapshi.api";
 import * as mongoose from "mongoose";
 import { RoomModel } from "./Room.model";
 import { AdminConfigurationModel } from "./AdminConfiguration.model";
@@ -26,7 +26,7 @@ export interface IInvoiceLine {
 }
 
 // Invoice interface
-interface IInvoice extends Document {
+export interface IInvoice extends Document {
   _id: Types.ObjectId;
   reservation: Types.ObjectId;
   issuedAt: Date;
