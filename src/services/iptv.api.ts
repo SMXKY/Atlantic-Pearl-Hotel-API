@@ -98,6 +98,7 @@ const checkIn = async (resvId: string) => {
                 TransactionDate: formattedDate,
                 TransactionTime: formattedTime,
                 RoomNumber: room.number,
+                OrderNumber: reservation.id,
                 GuestID: reservation.guest?._id,
                 GuestName: reservation.guestName,
                 GuestMaster: "Y",
@@ -206,6 +207,7 @@ const checkOut = async (resvId: string) => {
                 TransactionTime: formattedTime,
                 RoomNumber: room.number,
                 Identify: identify,
+                OrderNumber: reservation.id,
               };
             })
           )
@@ -413,6 +415,7 @@ const roomMove = async (resvId: string, preUpdateSnapshotId: string) => {
       WifiName: reservation.wifi.name,
       WifiPassword: reservation.wifi.password,
       Identify: identifies[i],
+      OrderNumber: reservation.id,
     }));
 
     const results = [];
@@ -488,6 +491,7 @@ const getFolio = catchAsync(
       RoomNumber,
       GuestID,
       Identify,
+      OrderNumber,
     } = req.query;
 
     const requiredFields = {
@@ -496,6 +500,7 @@ const getFolio = catchAsync(
       RoomNumber,
       GuestID,
       Identify,
+      OrderNumber,
     };
 
     const Authorization = req.headers.authorization;
@@ -561,10 +566,7 @@ const getFolio = catchAsync(
       );
     }
 
-    const reservation = await ReservationModel.findOne({
-      guest: GuestID,
-      status: "checked in",
-    });
+    const reservation = await ReservationModel.findById(OrderNumber);
 
     console.log(reservation);
 
@@ -614,6 +616,7 @@ const getFolio = catchAsync(
       TransactionDate: formattedDate,
       TransactionTime: formattedTime,
       RoomNumber: room.number,
+      OrderNumber: reservation._id,
       GuestID: guest._id,
       Transactions: transactionsNormalized,
       Identify,
@@ -633,6 +636,7 @@ const postFolio = catchAsync(
       GrossAmt,
       Remark,
       Trancode,
+      OrderNumber,
     } = req.query;
 
     const requiredFields = {
@@ -643,6 +647,7 @@ const postFolio = catchAsync(
       Identify,
       GrossAmt,
       Trancode,
+      OrderNumber,
     };
 
     const Authorization = req.headers.authorization;
@@ -701,10 +706,7 @@ const postFolio = catchAsync(
       );
     }
 
-    const reservation = await ReservationModel.findOne({
-      guest: GuestID,
-      status: "checked in",
-    });
+    const reservation = await ReservationModel.findById(OrderNumber);
 
     if (!reservation) {
       return next(
@@ -770,14 +772,21 @@ const postFolio = catchAsync(
 
 const syncRoom = catchAsync(
   async (req: Request, res: Response, next: NextFunction) => {
-    const { Station, TransactionDate, TransactionTime, RoomNumber, Identify } =
-      req.query;
+    const {
+      Station,
+      TransactionDate,
+      TransactionTime,
+      RoomNumber,
+      Identify,
+      OrderNumber,
+    } = req.query;
 
     const requiredFields = {
       TransactionDate,
       TransactionTime,
       RoomNumber,
       Identify,
+      OrderNumber,
     };
 
     const Authorization =
@@ -827,10 +836,7 @@ const syncRoom = catchAsync(
       );
     }
 
-    const reservation = await ReservationModel.findOne({
-      status: "checked in",
-      "items.rooms.room": room._id,
-    })
+    const reservation = await ReservationModel.findById(OrderNumber)
       .populate("guest")
       .populate("items.roomType")
       .populate("items.rate")
@@ -850,6 +856,7 @@ const syncRoom = catchAsync(
         const r = roomEntry.room as IRoom;
         return {
           RoomNumber: r.number,
+          OrderNumber: reservation._id,
           RoomStatus: r.status,
           Guests: [
             {
