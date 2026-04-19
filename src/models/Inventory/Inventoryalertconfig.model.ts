@@ -1,114 +1,157 @@
 import * as mongoose from "mongoose";
 import { Document, Types } from "mongoose";
+import { InventoryItemModel } from "./Inventoryitem.model";
+import { InventoryLocationModel } from "./Inventorylocation.model";
 
-// Single-document collection. There will only ever be one record.
-// The service layer uses upsert with a fixed key to enforce this.
-// The hotel manager sets how long each type of inventory record
-// is kept before being eligible for archival or deletion.
+// Alert channels supported. SMS and WhatsApp are defined here
+// for forward compatibility but the service layer only activates
+// them when the hotel has an active subscription for those channels.
+export type AlertChannel = "in_app" | "email" | "sms" | "whatsapp";
 
-export interface IInventoryRetentionConfig extends Document {
-  // Sentinel field -- always "singleton". Enforces one document via unique index.
-  key: "singleton";
-  // How long to retain completed/cancelled movements in days
-  movementRetentionDays: number;
-  // How long to retain posted goods receipts in days
-  goodsReceiptRetentionDays: number;
-  // How long to retain purchase orders in days (all statuses)
-  purchaseOrderRetentionDays: number;
-  // How long to retain posted stock takes in days
-  stockTakeRetentionDays: number;
-  // How long to retain financial events in days
-  financialEventRetentionDays: number;
-  // How long to retain supplier payments in days
-  supplierPaymentRetentionDays: number;
-  // How long to retain fulfilled or cancelled requisitions in days
-  requisitionRetentionDays: number;
-  updatedBy: Types.ObjectId;
+export interface IAlertRecipient {
+  user: Types.ObjectId;
+  channels: AlertChannel[];
+}
+
+export interface IInventoryAlertConfig extends Document {
+  item: Types.ObjectId;
+  location: Types.ObjectId;
+  // Stock level at which a WARNING alert fires (approaching minimum)
+  warningThreshold: number;
+  // Stock level at which a CRITICAL alert fires and isBlocked is set
+  criticalThreshold: number;
+  recipients: IAlertRecipient[];
+  // Minimum minutes between repeated alerts for the same item and location
+  cooldownMinutes: number;
+  isActive: boolean;
+  // Timestamp of the last alert sent for this config
+  lastAlertSentAt?: Date;
+  createdBy: Types.ObjectId;
+  updatedBy?: Types.ObjectId;
   createdAt: Date;
   updatedAt: Date;
 }
 
-const inventoryRetentionConfigSchema = new mongoose.Schema(
+const alertRecipientSchema = new mongoose.Schema(
   {
-    // Fixed sentinel value that enforces only one document exists.
-    // Always set to "singleton" by the service layer on upsert.
-    key: {
-      type: String,
-      required: true,
-      default: "singleton",
-      enum: {
-        values: ["singleton"],
-        message: "key must be singleton",
+    user: {
+      type: mongoose.Types.ObjectId,
+      ref: "users",
+      required: [true, "Recipient user reference is required"],
+    },
+
+    // At least one channel must be selected per recipient
+    channels: {
+      type: [
+        {
+          type: String,
+          enum: {
+            values: ["in_app", "email", "sms", "whatsapp"],
+            message:
+              "Invalid channel. Must be one of: in_app, email, sms, whatsapp",
+          },
+        },
+      ],
+      validate: {
+        validator: function (channels: AlertChannel[]) {
+          return channels.length > 0;
+        },
+        message: "At least one alert channel must be selected per recipient",
       },
-      unique: true,
+    },
+  },
+  { _id: false }
+);
+
+const inventoryAlertConfigSchema = new mongoose.Schema(
+  {
+    item: {
+      type: mongoose.Types.ObjectId,
+      ref: "inventoryitems",
+      required: [true, "Item reference is required"],
+      validate: {
+        validator: async function (id: Types.ObjectId) {
+          const exists = await InventoryItemModel.exists({ _id: id });
+          return exists !== null;
+        },
+        message: "Item Id not found in the database",
+      },
     },
 
-    // Minimum 90 days to preserve enough history for quarterly audits.
-    // Maximum 3650 days (10 years) to prevent accidental infinite retention.
-    movementRetentionDays: {
+    location: {
+      type: mongoose.Types.ObjectId,
+      ref: "inventorylocations",
+      required: [true, "Location reference is required"],
+      validate: {
+        validator: async function (id: Types.ObjectId) {
+          const exists = await InventoryLocationModel.exists({ _id: id });
+          return exists !== null;
+        },
+        message: "Location Id not found in the database",
+      },
+    },
+
+    // When currentStock falls to or below this level a WARNING notification fires.
+    // Must be higher than criticalThreshold.
+    warningThreshold: {
       type: Number,
-      required: [true, "Movement retention period is required"],
-      min: [90, "Movement retention must be at least 90 days"],
-      max: [3650, "Movement retention cannot exceed 3650 days"],
-      default: 365,
+      required: [true, "Warning threshold is required"],
+      min: [0, "Warning threshold cannot be negative"],
     },
 
-    goodsReceiptRetentionDays: {
+    // When currentStock falls to or below this level a CRITICAL notification fires
+    // and InventoryItemLocation.isBlocked is set to true automatically.
+    // Must be lower than warningThreshold.
+    criticalThreshold: {
       type: Number,
-      required: [true, "Goods receipt retention period is required"],
-      min: [90, "Goods receipt retention must be at least 90 days"],
-      max: [3650, "Goods receipt retention cannot exceed 3650 days"],
-      default: 730,
+      required: [true, "Critical threshold is required"],
+      min: [0, "Critical threshold cannot be negative"],
     },
 
-    purchaseOrderRetentionDays: {
+    // Who gets notified and via which channels when an alert fires.
+    // In-app and email are always available. SMS and WhatsApp require subscription.
+    recipients: {
+      type: [alertRecipientSchema],
+      validate: {
+        validator: function (recipients: IAlertRecipient[]) {
+          return recipients.length > 0;
+        },
+        message:
+          "At least one recipient must be configured for an alert config",
+      },
+    },
+
+    // Minimum time between repeated alerts for the same item and location.
+    // Prevents notification spam when stock is hovering around a threshold.
+    // Default is 60 minutes.
+    cooldownMinutes: {
       type: Number,
-      required: [true, "Purchase order retention period is required"],
-      min: [90, "Purchase order retention must be at least 90 days"],
-      max: [3650, "Purchase order retention cannot exceed 3650 days"],
-      default: 730,
+      required: [true, "Cooldown period is required"],
+      min: [5, "Cooldown must be at least 5 minutes"],
+      max: [1440, "Cooldown cannot exceed 1440 minutes (24 hours)"],
+      default: 60,
     },
 
-    stockTakeRetentionDays: {
-      type: Number,
-      required: [true, "Stock take retention period is required"],
-      min: [90, "Stock take retention must be at least 90 days"],
-      max: [3650, "Stock take retention cannot exceed 3650 days"],
-      default: 730,
+    isActive: {
+      type: Boolean,
+      default: true,
     },
 
-    // Financial events have a higher minimum -- 365 days -- because
-    // they serve as the accounting audit trail and may be required
-    // for tax or regulatory purposes.
-    financialEventRetentionDays: {
-      type: Number,
-      required: [true, "Financial event retention period is required"],
-      min: [365, "Financial event retention must be at least 365 days"],
-      max: [3650, "Financial event retention cannot exceed 3650 days"],
-      default: 1825, // 5 years default
+    // Updated by the service layer each time an alert is dispatched.
+    // Used to enforce the cooldown period before firing again.
+    lastAlertSentAt: {
+      type: Date,
     },
 
-    supplierPaymentRetentionDays: {
-      type: Number,
-      required: [true, "Supplier payment retention period is required"],
-      min: [365, "Supplier payment retention must be at least 365 days"],
-      max: [3650, "Supplier payment retention cannot exceed 3650 days"],
-      default: 1825, // 5 years default
+    createdBy: {
+      type: mongoose.Types.ObjectId,
+      ref: "users",
+      required: [true, "Created by user is required"],
     },
 
-    requisitionRetentionDays: {
-      type: Number,
-      required: [true, "Requisition retention period is required"],
-      min: [90, "Requisition retention must be at least 90 days"],
-      max: [3650, "Requisition retention cannot exceed 3650 days"],
-      default: 365,
-    },
-
-    // The hotel manager who last updated this config
     updatedBy: {
       type: mongoose.Types.ObjectId,
       ref: "users",
-      required: [true, "Updated by user is required"],
     },
   },
   {
@@ -118,54 +161,53 @@ const inventoryRetentionConfigSchema = new mongoose.Schema(
   }
 );
 
-// Prevent any updates or deletes via query operators.
-// All changes must go through the document save lifecycle
-// so pre-save hooks and validation always run.
-inventoryRetentionConfigSchema.pre("findOneAndUpdate", function (next) {
-  return next(
-    new Error(
-      "Use document save to update retention config so validation hooks run."
-    )
-  );
+// One alert config per item per location
+inventoryAlertConfigSchema.index({ item: 1, location: 1 }, { unique: true });
+
+inventoryAlertConfigSchema.index({ isActive: 1 });
+
+// Virtual: whether this alert is currently in its cooldown window.
+// The service layer checks this before dispatching a new alert.
+inventoryAlertConfigSchema.virtual("isInCooldown").get(function () {
+  if (!this.lastAlertSentAt) return false;
+  const cooldownMs = this.cooldownMinutes * 60 * 1000;
+  return new Date().getTime() - this.lastAlertSentAt.getTime() < cooldownMs;
 });
 
-inventoryRetentionConfigSchema.pre("updateOne", function (next) {
-  return next(
-    new Error(
-      "Use document save to update retention config so validation hooks run."
-    )
-  );
-});
-
-// Enforce financial retention is never set below movement retention.
-// Movements are the source of truth for financial events --
-// having financial events outlive movements would create orphaned records.
-inventoryRetentionConfigSchema.pre("save", function (next) {
-  if (this.financialEventRetentionDays < this.movementRetentionDays) {
+// Enforce criticalThreshold is strictly less than warningThreshold.
+// Having them equal or reversed would cause both alerts to fire simultaneously
+// or the warning to never fire at all.
+inventoryAlertConfigSchema.pre("save", function (next) {
+  if (this.criticalThreshold >= this.warningThreshold) {
     return next(
       new Error(
-        "Financial event retention must be greater than or equal to movement retention to prevent orphaned financial records."
+        `Critical threshold (${this.criticalThreshold}) must be strictly less than warning threshold (${this.warningThreshold})`
       )
     );
   }
   next();
 });
 
-// Enforce supplier payment retention is never below goods receipt retention.
-// A payment without its GRN context loses traceability.
-inventoryRetentionConfigSchema.pre("save", function (next) {
-  if (this.supplierPaymentRetentionDays < this.goodsReceiptRetentionDays) {
+// Enforce no duplicate users in the recipients list.
+// A user appearing twice would receive double notifications.
+inventoryAlertConfigSchema.pre("save", function (next) {
+  if (!this.isModified("recipients")) return next();
+
+  const userIds = this.recipients.map((r) => r.user.toString());
+  const uniqueIds = new Set(userIds);
+
+  if (uniqueIds.size !== userIds.length) {
     return next(
       new Error(
-        "Supplier payment retention must be greater than or equal to goods receipt retention."
+        "Duplicate recipients found. Each user can only appear once in the alert config."
       )
     );
   }
+
   next();
 });
 
-export const InventoryRetentionConfigModel =
-  mongoose.model<IInventoryRetentionConfig>(
-    "inventoryretentionconfigs",
-    inventoryRetentionConfigSchema
-  );
+export const InventoryAlertConfigModel = mongoose.model<IInventoryAlertConfig>(
+  "inventoryalertconfigs",
+  inventoryAlertConfigSchema
+);

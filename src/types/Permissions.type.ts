@@ -901,4 +901,12 @@ export const allPermissions = {
     manageRetention: "can_manage_inventory_retention",
     readGlobal: "can_read_global_inventory",
   },
+
+  inventoryAlertConfigs: {
+    module: "Inventory Management",
+    submodule: "Alerts",
+    manageAlerts: "can_manage_inventory_alerts",
+    manageRetention: "can_manage_inventory_retention",
+    readGlobal: "can_read_global_inventory",
+  },
 } as const;
