@@ -52,9 +52,22 @@ import { mealComboRouter } from "./routes/Restaurant/mealCombo.route";
 import { restaurantConfigRouter } from "./routes/Restaurant/restaurantConfig.route";
 import { stationRouter } from "./routes/HR/stations.route";
 import { iptvRouter } from "./routes/IPTV/iptv.route";
-import { inventoryLocationRouter } from "routes/Inventory/Inventorylocation.route";
-import { inventoryCategoryRouter } from "routes/Inventory/Inventorycategory.route";
-import { inventorySupplierRouter } from "routes/Inventory/Inventorysupplier.route";
+import { inventoryLocationRouter } from "./routes/Inventory/Inventorylocation.route";
+import { inventoryCategoryRouter } from "./routes/Inventory/Inventorycategory.route";
+import { inventorySupplierRouter } from "./routes/Inventory/Inventorysupplier.route";
+import { inventoryItemRouter } from "./routes/Inventory/InventoryItem.route";
+import { inventoryItemLocationRouter } from "./routes/Inventory/InventoryItemLocation.route";
+import { inventoryMovementRouter } from "./routes/Inventory/InventoryMovement.route";
+import { inventoryRequisitionRouter } from "./routes/Inventory/InventoryRequisition.route";
+import { inventoryPurchaseOrderRouter } from "./routes/Inventory/InventoryPurchaseOrder.route";
+import { inventoryGoodsReceiptRouter } from "./routes/Inventory/InventoryGoodsReceipt.route";
+import { inventorySupplierPaymentRouter } from "./routes/Inventory/InventorySupplierPayment.route";
+import { inventoryBudgetRouter } from "./routes/Inventory/InventoryBudget.route";
+import { inventoryFinancialEventRouter } from "./routes/Inventory/InventoryFinancialEvent.route";
+import { inventoryStockTakeRouter } from "./routes/Inventory/InventoryStockTake.route";
+import { inventoryStockTakeScheduleRouter } from "./routes/Inventory/InventoryStockTakeSchedule.route";
+import { inventoryAlertConfigRouter } from "./routes/Inventory/Inventoryalertconfig.route";
+import { inventorySupplierRatingRouter } from "./routes/Inventory/InventorySupplierRating.route";
 
 export const app = express();
 
@@ -194,6 +207,23 @@ app.use("/iptv2", iptvRouter);
 app.use("/api/v1/inventory/locations", inventoryLocationRouter);
 app.use("/api/v1/inventory/categories", inventoryCategoryRouter);
 app.use("/api/v1/inventory/suppliers", inventorySupplierRouter);
+app.use("/api/v1/inventory/items", inventoryItemRouter);
+app.use("/api/v1/inventory/item-locations", inventoryItemLocationRouter);
+app.use("/api/v1/inventory/movements", inventoryMovementRouter);
+app.use("/api/v1/inventory/requisitions", inventoryRequisitionRouter);
+app.use("/api/v1/inventory/purchase-orders", inventoryPurchaseOrderRouter);
+app.use("/api/v1/inventory/goods-receipts", inventoryGoodsReceiptRouter);
+app.use("/api/v1/inventory/supplier-payments", inventorySupplierPaymentRouter);
+app.use("/api/v1/inventory/budgets", inventoryBudgetRouter);
+app.use("/api/v1/inventory/financial-events", inventoryFinancialEventRouter);
+app.use("/api/v1/inventory/stock-takes", inventoryStockTakeRouter);
+app.use(
+  "/api/v1/inventory/stock-take-schedules",
+  inventoryStockTakeScheduleRouter
+);
+app.use("/api/v1/inventory/alert-configs", inventoryAlertConfigRouter);
+app.use("/api/v1/inventory/retention-config", inventoryAlertConfigRouter);
+app.use("/api/v1/inventory/supplier-ratings", inventorySupplierRatingRouter);
 
 const swaggerSpec = swaggerJSDoc({
   definition: {

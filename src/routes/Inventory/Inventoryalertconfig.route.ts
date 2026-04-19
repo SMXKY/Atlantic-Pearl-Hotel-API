@@ -1,38 +1,37 @@
 import express from "express";
-
-import { bedTypeControllers } from "../../controllers/Properties/bedType.controller";
 import { authControllers } from "../../controllers/Auth/auth.controller";
 import { allPermissions } from "../../types/Permissions.type";
+import { inventoryAlertConfigControllers } from "../../controllers/Inventory/Inventoryalertconfig.controller";
 
-export const bedTypeRouter = express.Router();
+export const inventoryAlertConfigRouter = express.Router();
 
-bedTypeRouter
+inventoryAlertConfigRouter
   .route("/")
   .post(
     authControllers.protect,
-    authControllers.restrictTo(allPermissions.bedTypes.create),
-    bedTypeControllers.createBedType
+    authControllers.restrictTo(allPermissions.inventorySettings.manageAlerts),
+    inventoryAlertConfigControllers.createInventoryAlertConfig
   )
   .get(
     authControllers.protect,
-    authControllers.restrictTo(allPermissions.bedTypes.readAll),
-    bedTypeControllers.readAllBedTypes
+    authControllers.restrictTo(allPermissions.inventorySettings.manageAlerts),
+    inventoryAlertConfigControllers.readAllInventoryAlertConfigs
   );
 
-bedTypeRouter
+inventoryAlertConfigRouter
   .route("/:id")
   .get(
     authControllers.protect,
-    authControllers.restrictTo(allPermissions.bedTypes.readOne),
-    bedTypeControllers.readOneBedType
+    authControllers.restrictTo(allPermissions.inventorySettings.manageAlerts),
+    inventoryAlertConfigControllers.readOneInventoryAlertConfig
   )
   .patch(
     authControllers.protect,
-    authControllers.restrictTo(allPermissions.bedTypes.update),
-    bedTypeControllers.updateBedType
+    authControllers.restrictTo(allPermissions.inventorySettings.manageAlerts),
+    inventoryAlertConfigControllers.updateInventoryAlertConfig
   )
   .delete(
     authControllers.protect,
-    authControllers.restrictTo(allPermissions.bedTypes.delete),
-    bedTypeControllers.deleteBedType
+    authControllers.restrictTo(allPermissions.inventorySettings.manageAlerts),
+    inventoryAlertConfigControllers.deleteInventoryAlertConfig
   );
