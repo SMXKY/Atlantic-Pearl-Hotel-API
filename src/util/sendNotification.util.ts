@@ -5,15 +5,15 @@ import {
   NotificationType,
   INotification,
   SendNotificationInput,
-} from "../models/Notification.model";
+} from "../models/Notifications/Notification.model";
 import { io } from "../index";
-import { PermissionModel } from "../models/Permission.model";
-import { RolePermissionModel } from "../models/RolePermission.model";
-import { UserModel } from "../models/User.model";
+import { PermissionModel } from "../models/Authorization/Permission.model";
+import { RolePermissionModel } from "../models/Authorization/RolePermission.model";
+import { UserModel } from "../models/HR/User.model";
 import { AppError } from "./AppError.util";
 import { StatusCodes } from "http-status-codes";
-import { RoleOverideModel } from "../models/RoleOveride.model";
-import { PermissionOverideModel } from "../models/PermissionOveride";
+import { RoleOverideModel } from "../models/Authorization/RoleOveride.model";
+import { PermissionOverideModel } from "../models/Authorization/PermissionOveride";
 
 interface sendNotificationInput {
   userIds?: string[];

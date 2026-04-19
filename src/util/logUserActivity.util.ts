@@ -1,5 +1,5 @@
 import { Request } from "express";
-import { ActivityLogModel } from "../models/ActivityLog.model";
+import { ActivityLogModel } from "../models/Logs/ActivityLog.model";
 
 const normalizeIp = (ip?: string): string | undefined => {
   if (!ip) return;

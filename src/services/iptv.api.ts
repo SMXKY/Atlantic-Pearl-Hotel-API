@@ -7,17 +7,17 @@ import {
   ReservationModel,
   IReservation,
   IReservationItem,
-} from "../models/Reservation.model";
-import { IRoom, RoomModel } from "../models/Room.model";
-import { GuestModel, IGuest } from "../models/Guest.model";
+} from "../models/Reservations/Reservation.model";
+import { IRoom, RoomModel } from "../models/Properties/Room.model";
+import { GuestModel, IGuest } from "../models/HR/Guest.model";
 import { generateIdentifyToken } from "../util/generateUUID.util";
-import { IPTVLogModel } from "../models/IPTVLogs.model";
-import { ReservationSnapshotModel } from "../models/ReservationSnapShot.model";
+import { IPTVLogModel } from "../models/IPTV/IPTVLogs.model";
+import { ReservationSnapshotModel } from "../models/Reservations/ReservationSnapShot.model";
 import { catchAsync } from "../util/catchAsync";
-import { BillModel } from "../models/Bill.model";
-import { BillItemModel } from "../models/BillItem.model";
+import { BillModel } from "../models/Finance/Bill.model";
+import { BillItemModel } from "../models/Finance/BillItem.model";
 import { NextFunction, Request, Response } from "express";
-import { TransactionModel } from "../models/Transaction.model";
+import { TransactionModel } from "../models/Finance/Transaction.model";
 import * as bcrypt from "bcrypt";
 import mongoose from "mongoose";
 

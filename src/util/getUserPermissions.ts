@@ -1,8 +1,8 @@
-import { RolePermissionModel } from "../models/RolePermission.model";
-import { PermissionOverideModel } from "../models/PermissionOveride";
-import { IUser } from "../models/User.model";
-import { IPermission } from "../models/Permission.model";
-import { RoleOverideModel } from "../models/RoleOveride.model";
+import { RolePermissionModel } from "../models/Authorization/RolePermission.model";
+import { PermissionOverideModel } from "../models/Authorization/PermissionOveride";
+import { IUser } from "../models/HR/User.model";
+import { IPermission } from "../models/Authorization/Permission.model";
+import { RoleOverideModel } from "../models/Authorization/RoleOveride.model";
 
 export const getUserPermissions = async (user: IUser) => {
   const roleOveride = await RoleOverideModel.findOne({ user: user._id });

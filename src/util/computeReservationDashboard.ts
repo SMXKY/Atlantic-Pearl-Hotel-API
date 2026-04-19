@@ -1,6 +1,6 @@
 import dayjs from "dayjs";
-import { ReservationModel } from "../models/Reservation.model";
-import { ReservationStatusChangeModel } from "../models/ReservationStatusChange.model";
+import { ReservationModel } from "../models/Reservations/Reservation.model";
+import { ReservationStatusChangeModel } from "../models/Reservations/ReservationStatusChange.model";
 
 export const computeReservationDashboard = async () => {
   const todayEnd = dayjs().endOf("day").toDate();

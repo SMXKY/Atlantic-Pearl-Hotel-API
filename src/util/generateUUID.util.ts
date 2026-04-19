@@ -1,5 +1,5 @@
 import { v4 as uuidv4 } from "uuid";
-import { IPTVLogModel } from "../models/IPTVLogs.model";
+import { IPTVLogModel } from "../models/IPTV/IPTVLogs.model";
 
 export const generateIdentifyToken = async (): Promise<string> => {
   let token: string;

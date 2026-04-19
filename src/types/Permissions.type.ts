@@ -28,6 +28,8 @@ export const MODULES = {
   PARKING: "Parking",
   RESTAURANT: "Restaurant",
   CONTENT: "Content",
+  // In MODULES
+  INVENTORY_MANAGEMENT: "Inventory Management",
 } as const;
 
 /* ---------
@@ -76,6 +78,18 @@ export const SUBMODULES = {
   RESTAURANT_CONFIG: "Rules",
   MEALE_REDEMPTION: "Meal Redemptions",
   STATIONS: "Stations",
+  // In SUBMODULES
+  INVENTORY_LOCATIONS: "Locations",
+  INVENTORY_CATEGORIES: "Categories",
+  INVENTORY_ITEMS: "Items",
+  INVENTORY_SUPPLIERS: "Suppliers",
+  INVENTORY_REQUISITIONS: "Requisitions",
+  INVENTORY_PURCHASE_ORDERS: "Purchase Orders",
+  INVENTORY_STOCK_MOVEMENTS: "Stock Movements",
+  INVENTORY_STOCK_TAKES: "Stock Takes",
+  INVENTORY_FINANCIALS: "Financials",
+  INVENTORY_REPORTS: "Reports",
+  INVENTORY_SETTINGS: "Settings",
 } as const;
 
 // export const allPermissions = {
@@ -780,5 +794,111 @@ export const allPermissions = {
     create: "can_create_meal_redemption",
     readOne: "can_read_meal_redemption",
     readAll: "can_read_all_meal_redemptions",
+  },
+  // =====================
+  // INVENTORY MODULE
+  // =====================
+
+  inventoryLocations: {
+    module: "Inventory Management",
+    submodule: "Locations",
+    create: "can_create_inventory_location",
+    update: "can_update_inventory_location",
+    delete: "can_delete_inventory_location",
+    readOne: "can_read_inventory_location",
+    readAll: "can_read_all_inventory_locations",
+    assign: "can_assign_inventory_location",
+  },
+
+  inventoryCategories: {
+    module: "Inventory Management",
+    submodule: "Categories",
+    create: "can_create_inventory_category",
+    update: "can_update_inventory_category",
+    delete: "can_delete_inventory_category",
+    readOne: "can_read_inventory_category",
+    readAll: "can_read_all_inventory_categories",
+  },
+
+  inventoryItems: {
+    module: "Inventory Management",
+    submodule: "Items",
+    create: "can_create_inventory_item",
+    update: "can_update_inventory_item",
+    delete: "can_delete_inventory_item",
+    readOne: "can_read_inventory_item",
+    readAll: "can_read_all_inventory_items",
+  },
+
+  inventorySuppliers: {
+    module: "Inventory Management",
+    submodule: "Suppliers",
+    create: "can_create_inventory_supplier",
+    update: "can_update_inventory_supplier",
+    delete: "can_delete_inventory_supplier",
+    readOne: "can_read_inventory_supplier",
+    readAll: "can_read_all_inventory_suppliers",
+    rate: "can_rate_inventory_supplier",
+  },
+
+  inventoryRequisitions: {
+    module: "Inventory Management",
+    submodule: "Requisitions",
+    create: "can_create_inventory_requisition",
+    approve: "can_approve_inventory_requisition",
+    readOne: "can_read_inventory_requisition",
+    readAll: "can_read_all_inventory_requisitions",
+  },
+
+  inventoryPurchaseOrders: {
+    module: "Inventory Management",
+    submodule: "Purchase Orders",
+    create: "can_create_inventory_po",
+    approve: "can_approve_inventory_po",
+    readOne: "can_read_inventory_po",
+    readAll: "can_read_all_inventory_pos",
+  },
+
+  inventoryStockMovements: {
+    module: "Inventory Management",
+    submodule: "Stock Movements",
+    receive: "can_receive_inventory_stock",
+    issue: "can_issue_inventory_stock",
+    transfer: "can_transfer_inventory_stock",
+    logWastage: "can_log_inventory_wastage",
+    overrideBlock: "can_override_inventory_stock_block",
+  },
+
+  inventoryStockTakes: {
+    module: "Inventory Management",
+    submodule: "Stock Takes",
+    initiate: "can_initiate_inventory_stocktake",
+    conduct: "can_conduct_inventory_stocktake",
+    approve: "can_approve_inventory_stocktake",
+    readOne: "can_read_inventory_stocktake",
+    readAll: "can_read_all_inventory_stocktakes",
+  },
+
+  inventoryFinancials: {
+    module: "Inventory Management",
+    submodule: "Financials",
+    read: "can_read_inventory_financials",
+    setBudget: "can_set_inventory_budget",
+    recordPayment: "can_record_inventory_payment",
+  },
+
+  inventoryReports: {
+    module: "Inventory Management",
+    submodule: "Reports",
+    read: "can_read_inventory_reports",
+    export: "can_export_inventory_reports",
+  },
+
+  inventorySettings: {
+    module: "Inventory Management",
+    submodule: "Settings",
+    manageAlerts: "can_manage_inventory_alerts",
+    manageRetention: "can_manage_inventory_retention",
+    readGlobal: "can_read_global_inventory",
   },
 } as const;

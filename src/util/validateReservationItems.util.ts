@@ -1,6 +1,6 @@
 import mongoose from "mongoose";
-import { RoomModel } from "../models/Room.model";
-import { ReservationModel } from "../models/Reservation.model";
+import { RoomModel } from "../models/Properties/Room.model";
+import { ReservationModel } from "../models/Reservations/Reservation.model";
 
 type RoomEntry = {
   room: string; // Room ID

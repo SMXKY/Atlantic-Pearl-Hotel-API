@@ -3,10 +3,10 @@ import mongoose from "mongoose";
 import dotenv from "dotenv";
 import { StatusCodes } from "http-status-codes";
 
-import { UserModel } from "../models/User.model";
-import { RoleModel } from "../models/Role.model";
+import { UserModel } from "../models/HR/User.model";
+import { RoleModel } from "../models/Authorization/Role.model";
 import { AppError } from "../util/AppError.util";
-import { EmployeeModel } from "../models/Employee.model";
+import { EmployeeModel } from "../models/HR/Employee.model";
 
 dotenv.config();
 

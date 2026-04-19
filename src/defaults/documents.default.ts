@@ -1,10 +1,10 @@
-import { TaxModel } from "../models/Tax.model";
-import { PermissionModel } from "../models/Permission.model";
-import { RoleModel } from "../models/Role.model";
-import { RolePermissionModel } from "../models/RolePermission.model";
+import { TaxModel } from "../models/Finance/Tax.model";
+import { PermissionModel } from "../models/Authorization/Permission.model";
+import { RoleModel } from "../models/Authorization/Role.model";
+import { RolePermissionModel } from "../models/Authorization/RolePermission.model";
 import { allPermissions } from "../types/Permissions.type";
-import { AdminConfigurationModel } from "../models/AdminConfiguration.model";
-import { RestaurantConfigModel } from "../models/RestaurantConfig.model";
+import { AdminConfigurationModel } from "../models/Config/AdminConfiguration.model";
+import { RestaurantConfigModel } from "../models/Restaurant/RestaurantConfig.model";
 
 export const createDefaultDocuments = async (forceUpdate = false) => {
   const createDefaultRoles = async () => {

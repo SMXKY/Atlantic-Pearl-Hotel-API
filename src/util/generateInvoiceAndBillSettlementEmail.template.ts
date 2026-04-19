@@ -1,7 +1,7 @@
 // generateInvoiceHtml.ts
 import dayjs from "dayjs";
-import { IInvoiceLine } from "../models/Invoice.model";
-import { IBillItem } from "models/BillItem.model";
+import { IInvoiceLine } from "../models/Finance/Invoice.model";
+import { IBillItem } from "models/Finance/BillItem.model";
 
 export interface Room {
   room: string;

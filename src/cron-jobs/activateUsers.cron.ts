@@ -1,5 +1,5 @@
 import cron from "node-cron";
-import { UserModel } from "../models/User.model";
+import { UserModel } from "../models/HR/User.model";
 
 export const activateUsersCronJob = () => {
   cron.schedule("*/2 * * * *", async () => {

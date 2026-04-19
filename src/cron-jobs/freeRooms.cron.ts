@@ -1,11 +1,11 @@
 import { expirePay } from "../services/fapshi.api";
-import { InvoiceModel } from "../models/Invoice.model";
-import { RoomModel } from "../models/Room.model";
-import { ReservationModel } from "../models/Reservation.model";
+import { InvoiceModel } from "../models/Finance/Invoice.model";
+import { RoomModel } from "../models/Properties/Room.model";
+import { ReservationModel } from "../models/Reservations/Reservation.model";
 import cron from "node-cron";
 import { AppError } from "../util/AppError.util";
 import { StatusCodes } from "http-status-codes";
-import { AdminConfigurationModel } from "../models/AdminConfiguration.model";
+import { AdminConfigurationModel } from "../models/Config/AdminConfiguration.model";
 import { sendEmail } from "../util/sendEmail.util";
 import { promises as fs } from "fs";
 

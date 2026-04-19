@@ -1,6 +1,9 @@
-import { ReservationModel, IReservation } from "../models/Reservation.model";
-import { GuestModel, IGuest } from "../models/Guest.model";
-import { UserModel, IUser } from "../models/User.model";
+import {
+  ReservationModel,
+  IReservation,
+} from "../models/Reservations/Reservation.model";
+import { GuestModel, IGuest } from "../models/HR/Guest.model";
+import { UserModel, IUser } from "../models/HR/User.model";
 
 export async function getGuestDetailsFromReservation(
   reservationId: string

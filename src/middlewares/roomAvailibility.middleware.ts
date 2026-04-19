@@ -1,8 +1,8 @@
 import { Request, Response, NextFunction } from "express";
 import { AppError } from "../util/AppError.util";
 import { StatusCodes } from "http-status-codes";
-import { ReservationModel } from "../models/Reservation.model";
-import { RoomModel } from "../models/Room.model";
+import { ReservationModel } from "../models/Reservations/Reservation.model";
+import { RoomModel } from "../models/Properties/Room.model";
 import { catchAsync } from "../util/catchAsync";
 import mongoose from "mongoose";
 

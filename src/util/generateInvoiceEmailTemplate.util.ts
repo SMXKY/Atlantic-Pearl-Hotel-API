@@ -1,12 +1,12 @@
-import { IInvoice, InvoiceModel } from "../models/Invoice.model";
+import { IInvoice, InvoiceModel } from "../models/Finance/Invoice.model";
 import {
   IReservation,
   IReservationItem,
   ReservationModel,
-} from "../models/Reservation.model";
-import { RoomTypeModel } from "../models/RoomType.model";
-import { RateModel } from "../models/Rate.model";
-import { IUser } from "../models/User.model";
+} from "../models/Reservations/Reservation.model";
+import { RoomTypeModel } from "../models/Properties/RoomType.model";
+import { RateModel } from "../models/Reservations/Rate.model";
+import { IUser } from "../models/HR/User.model";
 import { format } from "date-fns";
 
 export async function generateInvoiceEmailTemplateData(invoiceId: string) {
@@ -121,10 +121,10 @@ export async function generateInvoiceEmailTemplateData(invoiceId: string) {
 
 import fs from "fs";
 import path from "path";
-import { AdminConfigurationModel } from "../models/AdminConfiguration.model";
+import { AdminConfigurationModel } from "../models/Config/AdminConfiguration.model";
 import { AppError } from "./AppError.util";
 import { StatusCodes } from "http-status-codes";
-import { IGuest } from "models/Guest.model";
+import { IGuest } from "models/HR/Guest.model";
 
 export function renderInvoiceHTMLFromTemplate(data: any): string {
   const templatePath = path.join(

@@ -5,7 +5,7 @@ import { AppError } from "./AppError.util";
 import { Query } from "./Query.util";
 import { Request, Response } from "express";
 import { logUserActivity } from "./logUserActivity.util";
-import { UserModel } from "../models/User.model";
+import { UserModel } from "../models/HR/User.model";
 
 // try/catch blocks are handled within controllers
 export class CRUD {
@@ -78,34 +78,6 @@ export class CRUD {
       );
     }
 
-    if (log) {
-      if (!res.locals.user?._id) {
-        throw new AppError(
-          "Authentication error: user identity missing from session.",
-          StatusCodes.UNAUTHORIZED
-        );
-      }
-
-      const user = await UserModel.findById(res.locals.user._id);
-
-      if (!user) {
-        throw new AppError(
-          "User not found in the database during activity logging. The account may have been deleted—check activity logs for details.",
-          StatusCodes.INTERNAL_SERVER_ERROR
-        );
-      }
-
-      await logUserActivity(
-        req,
-        res.locals.user._id,
-        `${user.name} read document in ${this.model.collection.collectionName} with id: ${data._id}`,
-        this.model.collection.collectionName,
-        data._id,
-        JSON.stringify(data.toObject()),
-        JSON.stringify(data.toObject())
-      );
-    }
-
     appResponder(StatusCodes.OK, data, res);
   }
 
@@ -132,33 +104,7 @@ export class CRUD {
       });
     }
     const data = await finalQuery;
-    if (log) {
-      if (!res.locals.user?._id) {
-        throw new AppError(
-          "Authentication error: user identity missing from session.",
-          StatusCodes.UNAUTHORIZED
-        );
-      }
-
-      const user = await UserModel.findById(res.locals.user._id);
-
-      if (!user) {
-        throw new AppError(
-          "User not found in the database during activity logging. The account may have been deleted—check activity logs for details.",
-          StatusCodes.INTERNAL_SERVER_ERROR
-        );
-      }
-
-      await logUserActivity(
-        req,
-        res.locals.user._id,
-        `${user.name} read all documents in ${this.model.collection.collectionName}`,
-        this.model.collection.collectionName,
-        "",
-        "",
-        ""
-      );
-    }
+ 
     appResponder(StatusCodes.OK, data, res);
   }
 
