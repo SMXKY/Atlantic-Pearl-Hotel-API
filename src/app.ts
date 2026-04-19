@@ -52,6 +52,9 @@ import { mealComboRouter } from "./routes/Restaurant/mealCombo.route";
 import { restaurantConfigRouter } from "./routes/Restaurant/restaurantConfig.route";
 import { stationRouter } from "./routes/HR/stations.route";
 import { iptvRouter } from "./routes/IPTV/iptv.route";
+import { inventoryLocationRouter } from "routes/Inventory/Inventorylocation.route";
+import { inventoryCategoryRouter } from "routes/Inventory/Inventorycategory.route";
+import { inventorySupplierRouter } from "routes/Inventory/Inventorysupplier.route";
 
 export const app = express();
 
@@ -188,6 +191,9 @@ app.use("/api/v1/meal-combos", mealComboRouter);
 app.use("/api/v1/restaurant-config", restaurantConfigRouter);
 app.use("/api/v1/stations", stationRouter);
 app.use("/iptv2", iptvRouter);
+app.use("/api/v1/inventory/locations", inventoryLocationRouter);
+app.use("/api/v1/inventory/categories", inventoryCategoryRouter);
+app.use("/api/v1/inventory/suppliers", inventorySupplierRouter);
 
 const swaggerSpec = swaggerJSDoc({
   definition: {
