@@ -5,6 +5,7 @@ import { RolePermissionModel } from "../models/Authorization/RolePermission.mode
 import { allPermissions } from "../types/Permissions.type";
 import { AdminConfigurationModel } from "../models/Config/AdminConfiguration.model";
 import { RestaurantConfigModel } from "../models/Restaurant/RestaurantConfig.model";
+import seedInventoryModule from "./InventorySeeds.default";
 
 export const createDefaultDocuments = async (forceUpdate = false) => {
   const createDefaultRoles = async () => {
@@ -283,6 +284,7 @@ export const createDefaultDocuments = async (forceUpdate = false) => {
     await createDefaultTaxes();
     await createDefaultAdminConfigurations();
     await createDefaultRestaurantConfig();
+    await seedInventoryModule();
 
     console.log("✅ Default documents creation completed!");
 
