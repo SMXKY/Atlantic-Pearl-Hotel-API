@@ -54,3 +54,11 @@ inventoryGoodsReceiptRouter.get(
   authControllers.restrictTo(allPermissions.inventoryStockMovements.receive),
   InventoryGoodsReceiptControllers.downloadGoodsReceiptPdf
 );
+
+//Get suggestions
+inventoryGoodsReceiptRouter.get(
+  "/:id/transfer-suggestions",
+  authControllers.protect,
+  authControllers.restrictTo(allPermissions.inventoryStockMovements.receive),
+  InventoryGoodsReceiptControllers.getTransferSuggestions
+);
