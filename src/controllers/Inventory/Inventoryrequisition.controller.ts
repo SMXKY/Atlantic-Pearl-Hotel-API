@@ -11,6 +11,9 @@ import { InventoryItemLocationModel } from "../../models/Inventory/Inventoryitem
 import { InventoryMovementModel } from "../../models/Inventory/Inventorymovement.model";
 import mongoose from "mongoose";
 import { allPermissions } from "../../types/Permissions.type";
+import { fireInventoryAlert } from "../../util/inventoryAlert.util";
+import { NotificationType } from "models/Notifications/Notification.model";
+import { sendNotification } from "../../util/sendNotification.util";
 
 const CRUDInventroyRequisition: CRUD = new CRUD(InventoryRequisitionModel);
 
@@ -249,6 +252,45 @@ const approveRequisition = catchAsync(
 
       await session.commitTransaction();
 
+      // Notify the requester of the outcome
+      await sendNotification({
+        userIds: [requisition.requestedBy.toString()],
+        title: isPartial
+          ? `⚠️ Requisition Partially Fulfilled: ${requisition.requisitionNumber}`
+          : `✅ Requisition Approved: ${requisition.requisitionNumber}`,
+        message: isPartial
+          ? `Your requisition ${requisition.requisitionNumber} has been partially fulfilled. Some items were unavailable. Check the requisition for details.`
+          : `Your requisition ${requisition.requisitionNumber} has been fully approved and stock has been issued to your department.`,
+        type: isPartial
+          ? NotificationType.INVENTORY_WARNING
+          : NotificationType.SUCCESS,
+        entityRef: {
+          model: "InventoryRequisition",
+          id: String(requisition._id),
+        },
+        redirectUrl: `/inventory/requisitions/${requisition._id}`,
+      });
+
+      // Check alert thresholds for each issued item
+      for (const lineItem of requisition.items) {
+        if (!lineItem.quantityIssued || lineItem.quantityIssued === 0) continue;
+        const updatedIL = await InventoryItemLocationModel.findOne({
+          item: (lineItem.item as any)._id ?? lineItem.item,
+          location: requisition.location,
+        })
+          .select("currentStock")
+          .lean();
+        if (updatedIL) {
+          await fireInventoryAlert(
+            ((lineItem.item as any)._id ?? lineItem.item).toString(),
+            (requisition.location as any)._id?.toString() ??
+              requisition.location.toString(),
+            updatedIL.currentStock,
+            String(res.locals.user._id)
+          );
+        }
+      }
+
       const departmentName =
         (requisition.department as any)?.name ?? "the department";
       const locationName =
@@ -326,6 +368,18 @@ const rejectRequisition = catchAsync(
 
     // reviewedAt is stamped by the model pre-save hook
     await requisition.save();
+
+    // Notify the requester of the rejection
+    await sendNotification({
+      userIds: [requisition.requestedBy.toString()],
+      title: `❌ Requisition Rejected: ${requisition.requisitionNumber}`,
+      message: `Your requisition ${
+        requisition.requisitionNumber
+      } has been rejected. Reason: ${reason.trim()}.`,
+      type: NotificationType.ERROR,
+      entityRef: { model: "InventoryRequisition", id: String(requisition._id) },
+      redirectUrl: `/inventory/requisitions/${requisition._id}`,
+    });
 
     logUserActivity(
       req,

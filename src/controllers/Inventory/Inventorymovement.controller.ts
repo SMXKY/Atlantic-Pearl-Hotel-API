@@ -11,6 +11,7 @@ import { InventoryLocationModel } from "../../models/Inventory/Inventorylocation
 import { InventoryItemLocationModel } from "../../models/Inventory/Inventoryitemlocation.model";
 import { logUserActivity } from "../../util/logUserActivity.util";
 import mongoose from "mongoose";
+import { fireInventoryAlert } from "../../util/inventoryAlert.util";
 
 const CRUDInventroyMovement: CRUD = new CRUD(InventoryMovementModel);
 
@@ -312,6 +313,14 @@ const logWastage = catchAsync(
       const locationName =
         (itemLocation.location as any)?.name ?? "Unknown Location";
 
+      // Check if stock dropped below alert threshold after wastage
+      await fireInventoryAlert(
+        item,
+        location,
+        itemLocation.currentStock,
+        String(res.locals.user._id)
+      );
+
       logUserActivity(
         req,
         String(res.locals.user._id),
@@ -541,6 +550,14 @@ const transferStock = catchAsync(
         (sourceItemLocation.location as any)?.name ?? "Source Location";
       const toName =
         (destItemLocation.location as any)?.name ?? "Destination Location";
+
+      // Check if source location dropped below alert threshold after transfer
+      await fireInventoryAlert(
+        item,
+        fromLocation,
+        sourceItemLocation.currentStock,
+        String(res.locals.user._id)
+      );
 
       logUserActivity(
         req,

@@ -14,8 +14,10 @@ export enum NotificationType {
   // Generic/meta
   SYSTEM = "system",
   MESSAGE = "message",
+  SUCCESS = "success",
   ALERT = "alert",
   INFO = "info",
+  ERROR = "error",
 
   // Catch-all
   OTHER = "other",

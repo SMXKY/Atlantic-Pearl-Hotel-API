@@ -11,7 +11,10 @@ import { StatusCodes } from "http-status-codes";
 import { InventoryItemModel } from "../../models/Inventory/Inventoryitem.model";
 import { InventoryItemLocationModel } from "../../models/Inventory/Inventoryitemlocation.model";
 import { InventoryMovementModel } from "../../models/Inventory/Inventorymovement.model";
+import { fireInventoryAlert } from "util/inventoryAlert.util";
 import mongoose from "mongoose";
+import { sendNotification } from "../../util/sendNotification.util";
+import { NotificationType } from "models/Notifications/Notification.model";
 
 const CRUDInventroyStockTake: CRUD = new CRUD(InventoryStockTakeModel);
 
@@ -144,6 +147,34 @@ const startStockTake = catchAsync(
 
     // startedAt is stamped by the model pre-save hook
     await stockTake.save();
+
+    // Notify the store manager that their stock take is ready for counting
+    // This is relevant when the stock take was auto-created by the scheduler
+    if (stockTake.isScheduled) {
+      const { EmployeeModel } = await import("../../models/HR/Employee.model");
+      const storeManagers = await EmployeeModel.find({
+        defaultInventoryLocation: stockTake.location,
+      })
+        .select("user")
+        .lean();
+
+      const storeManagerIds = storeManagers.map((e) => e.user.toString());
+
+      if (storeManagerIds.length > 0) {
+        await sendNotification({
+          userIds: storeManagerIds,
+          title: `📋 Stock Take Started: ${stockTake.stockTakeNumber}`,
+          message: `Stock take ${stockTake.stockTakeNumber} at "${
+            (stockTake.location as any)?.name
+          }" has been started. ${
+            stockTake.items.length
+          } item(s) are ready for counting.`,
+          type: NotificationType.INFO,
+          entityRef: { model: "InventoryStockTake", id: String(stockTake._id) },
+          redirectUrl: `/inventory/stock-takes/${stockTake._id}`,
+        });
+      }
+    }
 
     logUserActivity(
       req,
@@ -514,6 +545,18 @@ const postStockTake = catchAsync(
       }
 
       await session.commitTransaction();
+
+      // Check alert thresholds for items that had negative variance (shrinkage)
+      for (const lineItem of itemsWithVariance) {
+        if (lineItem.variance >= 0) continue;
+        await fireInventoryAlert(
+          lineItem.item.toString(),
+          (stockTake.location as any)._id?.toString() ??
+            stockTake.location.toString(),
+          lineItem.physicalQuantity,
+          String(res.locals.user._id)
+        );
+      }
 
       const locationName = (stockTake.location as any)?.name ?? "the location";
 

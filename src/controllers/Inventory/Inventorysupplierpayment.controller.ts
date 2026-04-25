@@ -10,6 +10,7 @@ import { StatusCodes } from "http-status-codes";
 import { InventoryFinancialEventModel } from "../../models/Inventory/Inventoryfinancialevent.model";
 import { InventoryGoodsReceiptModel } from "../../models/Inventory/Inventorygoodsreceipt.model";
 import { InventoryBudgetModel } from "../../models/Inventory/Inventorybudget.model";
+import { fireBudgetAlert } from "../../util/inventoryAlert.util";
 import mongoose from "mongoose";
 
 const CRUDInventroySupplierPayment: CRUD = new CRUD(
@@ -162,6 +163,19 @@ const confirmSupplierPayment = catchAsync(
               { $inc: { actualSpendInCFA: splitAmount } },
               { session }
             );
+          }
+
+          // Fire budget alerts for affected categories
+          if (grnFull) {
+            const paymentMonth = payment.paymentDate.getMonth() + 1;
+            const paymentYear = payment.paymentDate.getFullYear();
+            for (const categoryId of categoryIds) {
+              await fireBudgetAlert(
+                String(categoryId),
+                paymentMonth,
+                paymentYear
+              );
+            }
           }
         }
       }

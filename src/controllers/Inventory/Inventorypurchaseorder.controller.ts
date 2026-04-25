@@ -9,7 +9,12 @@ import { StatusCodes } from "http-status-codes";
 import { logUserActivity } from "../../util/logUserActivity.util";
 import { InventoryFinancialEventModel } from "../../models/Inventory/Inventoryfinancialevent.model";
 import { generatePurchaseOrderPdf } from "../../util/po.util";
+import { fireInventoryAlert } from "../../util/inventoryAlert.util";
+import { sendNotification } from "../../util/sendNotification.util";
+import { getIdsFromPermissions } from "../../util/sendNotification.util";
+import { allPermissions } from "../../types/Permissions.type";
 import mongoose from "mongoose";
+import { NotificationType } from "../../models/Notifications/Notification.model";
 
 const CRUDInventroyPurchaseOrder: CRUD = new CRUD(InventoryPurchaseOrderModel);
 
@@ -80,6 +85,25 @@ const submitPurchaseOrder = catchAsync(
     po.status = "pending";
     po.updatedBy = res.locals.user._id;
     await po.save();
+
+    // Notify hotel managers that a PO is awaiting their approval
+    const approverIds = await getIdsFromPermissions(
+      allPermissions.inventoryPurchaseOrders.approve
+    );
+    if (approverIds.length > 0) {
+      await sendNotification({
+        userIds: approverIds,
+        title: `📋 Purchase Order Awaiting Approval: ${po.poNumber}`,
+        message: `Purchase order ${po.poNumber} from ${
+          (po.supplier as any)?.name ?? "supplier"
+        } for ${
+          (po.location as any)?.name ?? "location"
+        } has been submitted for your approval. Total value: ${po.totalAmountInCFA.toLocaleString()} CFA.`,
+        type: NotificationType.INFO,
+        entityRef: { model: "InventoryPurchaseOrder", id: String(po._id) },
+        redirectUrl: `/inventory/purchase-orders/${po._id}`,
+      });
+    }
 
     logUserActivity(
       req,
@@ -162,6 +186,20 @@ const approvePurchaseOrder = catchAsync(
 
       await session.commitTransaction();
 
+      // Notify PO creator that their PO was approved
+      const creatorId =
+        (po.createdBy as any)?._id?.toString() ?? po.createdBy?.toString();
+      if (creatorId) {
+        await sendNotification({
+          userIds: [creatorId],
+          title: `✅ Purchase Order Approved: ${po.poNumber}`,
+          message: `Your purchase order ${po.poNumber} has been approved. You can now mark it as sent to the supplier.`,
+          type: NotificationType.SUCCESS,
+          entityRef: { model: "InventoryPurchaseOrder", id: String(po._id) },
+          redirectUrl: `/inventory/purchase-orders/${po._id}`,
+        });
+      }
+
       logUserActivity(
         req,
         String(res.locals.user._id),
@@ -229,6 +267,22 @@ const rejectPurchaseOrder = catchAsync(
 
     // rejectedAt is stamped by the model pre-save hook
     await po.save();
+
+    // Notify PO creator of the rejection
+    const creatorId =
+      (po.createdBy as any)?._id?.toString() ?? po.createdBy?.toString();
+    if (creatorId) {
+      await sendNotification({
+        userIds: [creatorId],
+        title: `❌ Purchase Order Rejected: ${po.poNumber}`,
+        message: `Your purchase order ${
+          po.poNumber
+        } has been rejected. Reason: ${reason.trim()}. Please revise and resubmit.`,
+        type: NotificationType.ERROR,
+        entityRef: { model: "InventoryPurchaseOrder", id: String(po._id) },
+        redirectUrl: `/inventory/purchase-orders/${po._id}`,
+      });
+    }
 
     logUserActivity(
       req,

@@ -13,6 +13,7 @@ import { InventorySupplierModel } from "../../models/Inventory/Inventorysupplier
 import { InventoryFinancialEventModel } from "../../models/Inventory/Inventoryfinancialevent.model";
 import { appResponder } from "../../util/appResponder.util";
 import { logUserActivity } from "../../util/logUserActivity.util";
+import { fireInventoryAlert } from "../../util/inventoryAlert.util";
 
 import PdfPrinter from "pdfmake/src/printer";
 import vfsFonts from "pdfmake/build/vfs_fonts";
@@ -214,6 +215,25 @@ const postGoodsReceipt = catchAsync(
       await grn.save({ session });
 
       await session.commitTransaction();
+
+      // After receipt, check if any item is still below threshold despite the delivery
+      for (const lineItem of grn.items) {
+        if (lineItem.isDamaged) continue;
+        const updatedIL = await InventoryItemLocationModel.findOne({
+          item: lineItem.item,
+          location: grn.location,
+        })
+          .select("currentStock")
+          .lean();
+        if (updatedIL) {
+          await fireInventoryAlert(
+            lineItem.item.toString(),
+            grn.location.toString(),
+            updatedIL.currentStock,
+            String(res.locals.user._id)
+          );
+        }
+      }
 
       logUserActivity(
         req,
