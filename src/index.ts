@@ -6,6 +6,9 @@ import { Server } from "socket.io";
 import { app } from "./app";
 import { createDefaultDocuments } from "./defaults/documents.default";
 import { activateUsersCronJob } from "./cron-jobs/activateUsers.cron";
+import { stockTakeSchedulerJob } from "./cron-jobs/stockTakeScheduler.cron";
+import { overduePoCheckerJob } from "./cron-jobs/overduePoChecker.cron";
+
 import {
   freeRoomsCronJob,
   freeRoomsOnReserationStatus,
@@ -39,6 +42,8 @@ activateUsersCronJob();
 freeRoomsCronJob();
 setupSuperAdmin();
 freeRoomsOnReserationStatus();
+stockTakeSchedulerJob();
+overduePoCheckerJob();
 
 const port: number = Number(process.env.PORT) || 3000;
 const server = app.listen(port, "0.0.0.0", () => {

@@ -7,11 +7,15 @@ export enum NotificationType {
   RESERVATION = "reservation",
   PAYMENT = "payment",
   RESTAURANT = "restaurant",
+  INVENTORY_CRITICAL = "inventory_critical",
+  INVENTORY_WARNING = "inventory_warning",
+  INVENTORY_CRON_ERROR = "inventory_cron_error",
 
   // Generic/meta
   SYSTEM = "system",
   MESSAGE = "message",
   ALERT = "alert",
+  INFO = "info",
 
   // Catch-all
   OTHER = "other",
