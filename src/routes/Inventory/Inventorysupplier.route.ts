@@ -2,7 +2,9 @@ import express from "express";
 import { authControllers } from "../../controllers/Auth/auth.controller";
 import { allPermissions } from "../../types/Permissions.type";
 import { inventorySupplierControllers } from "../../controllers/Inventory/Inventorysupplier.controller";
-
+import trackCreatedBy, {
+  trackUpdateddBy,
+} from "../../middlewares/trackCreatedBy.middleware";
 export const inventorySupplierRouter = express.Router();
 
 inventorySupplierRouter
@@ -10,6 +12,7 @@ inventorySupplierRouter
   .post(
     authControllers.protect,
     authControllers.restrictTo(allPermissions.inventorySuppliers.create),
+    trackCreatedBy,
     inventorySupplierControllers.createInventorySupplier
   )
   .get(
@@ -28,6 +31,7 @@ inventorySupplierRouter
   .patch(
     authControllers.protect,
     authControllers.restrictTo(allPermissions.inventorySuppliers.update),
+    trackUpdateddBy,
     inventorySupplierControllers.updateInventorySupplier
   )
   .delete(
@@ -40,6 +44,7 @@ inventorySupplierRouter.patch(
   "/:id/blacklist",
   authControllers.protect,
   authControllers.restrictTo(allPermissions.inventorySuppliers.update),
+  trackUpdateddBy,
   inventorySupplierControllers.blacklistSupplier
 );
 

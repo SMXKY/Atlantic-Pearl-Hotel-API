@@ -11,7 +11,6 @@ export class Query {
     let obj = { ...this.queryObj };
 
     const excludedFields = ["fields", "sort", "page", "limit"];
-
     excludedFields.forEach((key) => delete obj[key]);
 
     let queryStr = JSON.stringify(obj);
@@ -21,8 +20,20 @@ export class Query {
     );
 
     const mongoFilter = JSON.parse(queryStr);
-    this.mongooseQuery = this.mongooseQuery.find(mongoFilter);
 
+    for (const field of Object.values(mongoFilter)) {
+      if (typeof field === "object" && field !== null) {
+        const f = field as Record<string, any>;
+        if (typeof f["$in"] === "string") {
+          f["$in"] = f["$in"].split(",").map((v: string) => v.trim());
+        }
+        if (typeof f["$nin"] === "string") {
+          f["$nin"] = f["$nin"].split(",").map((v: string) => v.trim());
+        }
+      }
+    }
+
+    this.mongooseQuery = this.mongooseQuery.find(mongoFilter);
     return this;
   }
 

@@ -138,7 +138,7 @@ const inventoryStockTakeSchema = new mongoose.Schema(
     // e.g. ST-2026-0001
     stockTakeNumber: {
       type: String,
-      required: [true, "Stock take number is required"],
+      // required: [true, "Stock take number is required"],
       unique: true,
       trim: true,
     },
@@ -324,6 +324,12 @@ inventoryStockTakeSchema.pre("save", function (next) {
 inventoryStockTakeSchema.pre("save", function (next) {
   if (!this.isModified("items")) return next();
 
+  // Only validate after counts have been submitted.
+  // During scheduled/in_progress, physicalQuantity is 0 and variance is 0 by design —
+  // validating here would always fail since expectedQuantity is non-zero.
+  const postSubmissionStatuses = ["pending_approval", "approved", "posted"];
+  if (!postSubmissionStatuses.includes(this.status)) return next();
+
   for (const item of this.items) {
     const expectedVariance = parseFloat(
       (item.physicalQuantity - item.expectedQuantity).toFixed(4)
@@ -354,11 +360,17 @@ inventoryStockTakeSchema.pre("save", function (next) {
 
   next();
 });
+// Enforce varianceNotes when a line item has a non-zero variance.
 
 // Enforce varianceNotes when a line item has a non-zero variance.
 // Every unexplained variance is a potential theft or waste issue.
 inventoryStockTakeSchema.pre("save", function (next) {
   if (!this.isModified("items")) return next();
+
+  // Only enforce notes after counts have been submitted.
+  // During in_progress all variances are 0 — this check is meaningless until submit.
+  const postSubmissionStatuses = ["pending_approval", "approved", "posted"];
+  if (!postSubmissionStatuses.includes(this.status)) return next();
 
   for (const item of this.items) {
     if (
@@ -409,6 +421,28 @@ inventoryStockTakeSchema.pre("save", function (next) {
     );
   }
   next();
+});
+
+async function populateStockTake(doc: any) {
+  await doc.populate("location");
+  await doc.populate("scopeCategory");
+  await doc.populate("initiatedBy", "name email");
+  await doc.populate("reviewedBy", "name email");
+  await doc.populate("postedBy", "name email");
+  await doc.populate("items.item");
+  await doc.populate("items.countedBy", "name email");
+}
+
+inventoryStockTakeSchema.post("findOne", async function (doc) {
+  if (!doc) return;
+  if ((this as any).getOptions()?.session) return; // skip if inside a transaction
+  await populateStockTake(doc);
+});
+
+inventoryStockTakeSchema.post("find", async function (docs) {
+  if (!docs?.length) return;
+  if ((this as any).getOptions()?.session) return;
+  await Promise.all(docs.map(populateStockTake));
 });
 
 export const InventoryStockTakeModel = mongoose.model<IInventoryStockTake>(

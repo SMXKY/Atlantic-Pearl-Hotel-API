@@ -1,8 +1,6 @@
 declare module "pdfmake/src/printer" {
-  export default class PdfPrinter {
-    constructor(fontDescriptors: any);
-    createPdfKitDocument(docDefinition: any, options?: any): any;
-  }
+  const PdfPrinter: any;
+  export default PdfPrinter;
 }
 
 declare module "pdfmake/build/vfs_fonts" {

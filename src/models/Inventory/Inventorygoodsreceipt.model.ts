@@ -56,7 +56,7 @@ const goodsReceiptItemSchema = new mongoose.Schema(
     // Pulled from the PO line item at creation time
     quantityExpected: {
       type: Number,
-      required: [true, "Expected quantity is required"],
+      // required: [true, "Expected quantity is required"],
       min: [0.001, "Expected quantity must be greater than zero"],
     },
 
@@ -110,7 +110,7 @@ const inventoryGoodsReceiptSchema = new mongoose.Schema(
     // e.g. GRN-2026-0001
     grnNumber: {
       type: String,
-      required: [true, "GRN number is required"],
+      // required: [true, "GRN number is required"],
       unique: true,
       trim: true,
     },
@@ -172,7 +172,7 @@ const inventoryGoodsReceiptSchema = new mongoose.Schema(
     // This is the actual financial obligation created by this receipt.
     totalAmountInCFA: {
       type: Number,
-      required: [true, "Total amount is required"],
+      default: 0,
       min: [0, "Total amount cannot be negative"],
     },
 
@@ -236,9 +236,9 @@ inventoryGoodsReceiptSchema.index({ hasQualityIssues: 1 });
 
 // Auto-generate GRN number before first save.
 // Format: GRN-{YEAR}-{ZERO_PADDED_SEQUENCE}
+// Auto-generate GRN number
 inventoryGoodsReceiptSchema.pre("save", async function (next) {
   if (!this.isNew) return next();
-
   try {
     const year = new Date().getFullYear();
     const count = await InventoryGoodsReceiptModel.countDocuments({
@@ -247,17 +247,14 @@ inventoryGoodsReceiptSchema.pre("save", async function (next) {
         $lt: new Date(`${year + 1}-01-01`),
       },
     });
-
-    const sequence = String(count + 1).padStart(4, "0");
-    this.grnNumber = `GRN-${year}-${sequence}`;
+    this.grnNumber = `GRN-${year}-${String(count + 1).padStart(4, "0")}`;
     next();
   } catch (err: any) {
     next(err);
   }
 });
 
-// Recompute totalAmountInCFA from non-damaged line items.
-// Damaged items are flagged but not counted as a financial obligation.
+// Recompute totals and quality flag from line items
 inventoryGoodsReceiptSchema.pre("save", function (next) {
   if (!this.isModified("items")) return next();
 
@@ -265,13 +262,11 @@ inventoryGoodsReceiptSchema.pre("save", function (next) {
     .filter((item) => !item.isDamaged)
     .reduce((sum, item) => sum + item.totalCostInCFA, 0);
 
-  // Sync hasQualityIssues flag from line items
   this.hasQualityIssues = this.items.some((item) => item.isDamaged);
-
   next();
 });
 
-// Validate each line item totalCostInCFA matches quantity * unitCost.
+// Validate totalCostInCFA matches quantity * unitCost
 inventoryGoodsReceiptSchema.pre("save", function (next) {
   if (!this.isModified("items")) return next();
 
@@ -280,7 +275,6 @@ inventoryGoodsReceiptSchema.pre("save", function (next) {
       (item.quantityReceived * item.unitCostInCFA).toFixed(2)
     );
     const actual = parseFloat(item.totalCostInCFA.toFixed(2));
-
     if (Math.abs(expected - actual) > 0.01) {
       return next(
         new Error(
@@ -289,42 +283,42 @@ inventoryGoodsReceiptSchema.pre("save", function (next) {
       );
     }
   }
-
   next();
 });
 
-// Validate that all items on this GRN exist on the referenced PO.
-// Prevents receiving items that were never ordered.
+// Validate items against PO, set quantityExpected, and determine late delivery
+// Single hook — replaces both the old validation hook and the quantityExpected hook
 inventoryGoodsReceiptSchema.pre("save", async function (next) {
   if (!this.isNew && !this.isModified("items")) return next();
 
   try {
     const po = await InventoryPurchaseOrderModel.findById(this.purchaseOrder);
-
     if (!po) return next(new Error("Referenced purchase order not found"));
 
-    const poItemIds = po.items.map((i) => i.item.toString());
+    const poItemMap = new Map(
+      po.items.map((i) => [i.item._id.toString(), i.quantityOrdered])
+    );
 
     for (const grnItem of this.items) {
-      if (!poItemIds.includes(grnItem.item.toString())) {
+      const poQuantity = poItemMap.get(grnItem.item.toString());
+      if (poQuantity === undefined) {
         return next(
           new Error(
             `Item ${grnItem.item} was not on the referenced purchase order and cannot be received`
           )
         );
       }
+      grnItem.quantityExpected = poQuantity;
     }
 
-    // Determine if this is a late delivery
     this.isLateDelivery = this.deliveryDate > po.expectedDeliveryDate;
-
     next();
   } catch (err: any) {
     next(err);
   }
 });
 
-// Stamp postedAt when status transitions to posted.
+// Stamp postedAt on status transition
 inventoryGoodsReceiptSchema.pre("save", function (next) {
   if (this.isModified("status") && this.status === "posted" && !this.postedAt) {
     this.postedAt = new Date();
@@ -332,8 +326,7 @@ inventoryGoodsReceiptSchema.pre("save", function (next) {
   next();
 });
 
-// Prevent edits once a GRN has been posted.
-// Posted receipts are part of the financial record and are immutable.
+// Prevent edits to posted receipts
 inventoryGoodsReceiptSchema.pre("save", function (next) {
   if (!this.isNew && this.isModified("items") && this.status === "posted") {
     return next(
@@ -345,6 +338,39 @@ inventoryGoodsReceiptSchema.pre("save", function (next) {
   next();
 });
 
+// Post hooks — skip population inside transactions
+inventoryGoodsReceiptSchema.post("find", async function (docs) {
+  const session = (this as any).options?.session;
+  if (session) return;
+
+  await (this.model as any).populate(docs, [
+    { path: "purchaseOrder", select: "poNumber status expectedDeliveryDate" },
+    { path: "supplier", select: "name code" },
+    { path: "location", select: "name code" },
+    { path: "receivedBy", select: "name email" },
+    {
+      path: "items.item",
+      select: "name sku unitOfMeasure category trackExpiry",
+    },
+  ]);
+});
+
+inventoryGoodsReceiptSchema.post("findOne", async function (doc) {
+  if (!doc) return;
+  const session = (this as any).options?.session;
+  if (session) return;
+
+  await (this.model as any).populate(doc, [
+    { path: "purchaseOrder", select: "poNumber status expectedDeliveryDate" },
+    { path: "supplier", select: "name code" },
+    { path: "location", select: "name code" },
+    { path: "receivedBy", select: "name email" },
+    {
+      path: "items.item",
+      select: "name sku unitOfMeasure category trackExpiry",
+    },
+  ]);
+});
 export const InventoryGoodsReceiptModel =
   mongoose.model<IInventoryGoodsReceipt>(
     "inventorygoodsreceipts",

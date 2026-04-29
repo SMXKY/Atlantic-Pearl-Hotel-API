@@ -19,13 +19,23 @@ const createInventoryItem = catchAsync(
 
 const readOneInventoryItem = catchAsync(
   async (req: Request, res: Response, next: NextFunction) => {
-    await CRUDInventoryItem.readOne(req.params.id, res, [], req);
+    await CRUDInventoryItem.readOne(
+      req.params.id,
+      res,
+      ["category", "suppliers", "createdBy", "updatedBy"],
+      req
+    );
   }
 );
 
 const readAllInventoryItems = catchAsync(
   async (req: Request, res: Response, next: NextFunction) => {
-    await CRUDInventoryItem.readAll(res, req, 1, 100, []);
+    await CRUDInventoryItem.readAll(res, req, 1, 100, [
+      "category",
+      "suppliers",
+      "createdBy",
+      "updatedBy",
+    ]);
   }
 );
 

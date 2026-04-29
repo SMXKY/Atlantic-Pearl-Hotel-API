@@ -2,7 +2,7 @@ import { NextFunction, Request, Response } from "express";
 
 import { catchAsync } from "../../util/catchAsync";
 import { CRUD } from "../../util/Crud.util";
-import { InventoryMovementModel } from "models/Inventory/Inventorymovement.model";
+import { InventoryMovementModel } from "../../models/Inventory/Inventorymovement.model";
 import { AppError } from "../../util/AppError.util";
 import { StatusCodes } from "http-status-codes";
 import { appResponder } from "../../util/appResponder.util";
@@ -23,13 +23,22 @@ const createInventroyMovement = catchAsync(
 
 const readOneInventroyMovement = catchAsync(
   async (req: Request, res: Response, next: NextFunction) => {
-    await CRUDInventroyMovement.readOne(req.params.id, res, [], req);
+    await CRUDInventroyMovement.readOne(
+      req.params.id,
+      res,
+      ["item", "location", "counterpartLocation"],
+      req
+    );
   }
 );
 
 const readAllInventroyMovements = catchAsync(
   async (req: Request, res: Response, next: NextFunction) => {
-    await CRUDInventroyMovement.readAll(res, req, 1, 100, []);
+    await CRUDInventroyMovement.readAll(res, req, 1, 100, [
+      "item",
+      "location",
+      "counterpartLocation",
+    ]);
   }
 );
 
@@ -540,7 +549,7 @@ const transferStock = catchAsync(
             stockAfter: destItemLocation.currentStock,
           },
         ],
-        { session }
+        { session, ordered: true }
       );
 
       await session.commitTransaction();
@@ -609,7 +618,7 @@ const transferStock = catchAsync(
   }
 );
 
-export const inventroyMovementControllers = {
+export const inventoryMovementControllers = {
   createInventroyMovement,
   readOneInventroyMovement,
   readAllInventroyMovements,

@@ -2,7 +2,7 @@ import { NextFunction, Request, Response } from "express";
 
 import { catchAsync } from "../../util/catchAsync";
 import { CRUD } from "../../util/Crud.util";
-import { InventoryBudgetModel } from "models/Inventory/Inventorybudget.model";
+import { InventoryBudgetModel } from "../../models/Inventory/Inventorybudget.model";
 
 const CRUDInventroyBudget: CRUD = new CRUD(InventoryBudgetModel);
 
@@ -14,13 +14,22 @@ const createInventroyBudget = catchAsync(
 
 const readOneInventroyBudget = catchAsync(
   async (req: Request, res: Response, next: NextFunction) => {
-    await CRUDInventroyBudget.readOne(req.params.id, res, [], req);
+    await CRUDInventroyBudget.readOne(
+      req.params.id,
+      res,
+      ["category", "updatedBy", "setBy"],
+      req
+    );
   }
 );
 
 const readAllInventroyBudgets = catchAsync(
   async (req: Request, res: Response, next: NextFunction) => {
-    await CRUDInventroyBudget.readAll(res, req, 1, 100, []);
+    await CRUDInventroyBudget.readAll(res, req, 1, 100, [
+      "category",
+      "updatedBy",
+      "setBy",
+    ]);
   }
 );
 

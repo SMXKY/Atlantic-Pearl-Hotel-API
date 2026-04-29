@@ -93,7 +93,7 @@ const inventoryRequisitionSchema = new mongoose.Schema(
     // e.g. REQ-2026-0001
     requisitionNumber: {
       type: String,
-      required: [true, "Requisition number is required"],
+      // required: [true, "Requisition number is required"],
       unique: true,
       trim: true,
     },
@@ -260,6 +260,31 @@ inventoryRequisitionSchema.pre("save", async function (next) {
     next(err);
   }
 });
+
+const POPULATE_OPTIONS = [
+  { path: "location" },
+  { path: "requestedBy", select: "-password" },
+  { path: "department" },
+  { path: "reviewedBy", select: "-password" },
+  { path: "items.item" },
+];
+
+async function applyPopulate(doc: any) {
+  if (!doc) return;
+  // Skip population if the document was fetched inside a transaction
+  if (doc.$session && doc.$session()) return;
+  await doc.populate(POPULATE_OPTIONS);
+}
+
+async function applyPopulateMany(docs: any[]) {
+  if (!docs?.length) return;
+  if (docs[0].$session && docs[0].$session()) return;
+  await Promise.all(docs.map((doc) => doc.populate(POPULATE_OPTIONS)));
+}
+
+inventoryRequisitionSchema.post("findOne", applyPopulate);
+inventoryRequisitionSchema.post("findOneAndUpdate", applyPopulate);
+inventoryRequisitionSchema.post("find", applyPopulateMany);
 
 export const InventoryRequisitionModel = mongoose.model<IInventoryRequisition>(
   "inventoryrequisitions",

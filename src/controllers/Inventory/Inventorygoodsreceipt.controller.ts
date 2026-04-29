@@ -3,7 +3,7 @@ import mongoose from "mongoose";
 
 import { catchAsync } from "../../util/catchAsync";
 import { CRUD } from "../../util/Crud.util";
-import { InventoryGoodsReceiptModel } from "models/Inventory/Inventorygoodsreceipt.model";
+import { InventoryGoodsReceiptModel } from "../../models/Inventory/Inventorygoodsreceipt.model";
 import { AppError } from "../../util/AppError.util";
 import { StatusCodes } from "http-status-codes";
 import { InventoryPurchaseOrderModel } from "../../models/Inventory/Inventorypurchaseorder.model";
@@ -14,9 +14,19 @@ import { InventoryFinancialEventModel } from "../../models/Inventory/Inventoryfi
 import { appResponder } from "../../util/appResponder.util";
 import { logUserActivity } from "../../util/logUserActivity.util";
 import { fireInventoryAlert } from "../../util/inventoryAlert.util";
+import { runWithTransactionRetry } from "../../util/runWithRetry.util";
 
-import PdfPrinter from "pdfmake/src/printer";
-import vfsFonts from "pdfmake/build/vfs_fonts";
+import path from "path";
+const fonts = {
+  Roboto: {
+    normal: path.join(__dirname, "../../fonts/Roboto-Regular.ttf"),
+    bold: path.join(__dirname, "../../fonts/Roboto-Medium.ttf"),
+    italics: path.join(__dirname, "../../fonts/Roboto-Italic.ttf"),
+    bolditalics: path.join(__dirname, "../../fonts/Roboto-MediumItalic.ttf"),
+  },
+};
+
+const PdfPrinter = require("pdfmake");
 
 const CRUDInventoryGoodsReceipt: CRUD = new CRUD(InventoryGoodsReceiptModel);
 
@@ -28,7 +38,7 @@ const createInventoryGoodsReceipt = catchAsync(
 
 const readOneInventoryGoodsReceipt = catchAsync(
   async (req: Request, res: Response, next: NextFunction) => {
-    await CRUDInventoryGoodsReceipt.readOne(req.params.id, res, [], req);
+    await CRUDInventoryGoodsReceipt.readOne(req.params.id, res, ["item"], req);
   }
 );
 
@@ -53,6 +63,7 @@ const deleteInventoryGoodsReceipt = catchAsync(
 const postGoodsReceipt = catchAsync(
   async (req: Request, res: Response, next: NextFunction) => {
     const { id } = req.params;
+    console.log("postGoodsReceipt called", id);
 
     const grn = await InventoryGoodsReceiptModel.findById(id);
 
@@ -82,24 +93,45 @@ const postGoodsReceipt = catchAsync(
       );
     }
 
-    const session = await mongoose.startSession();
-    session.startTransaction();
+    const alreadyPostedGRNs = await InventoryGoodsReceiptModel.find({
+      purchaseOrder: po._id,
+      status: "posted",
+    }).lean();
 
-    try {
+    const receivedTotals: Record<string, number> = {};
+    for (const postedGRN of alreadyPostedGRNs) {
+      for (const item of postedGRN.items) {
+        if (!item.isDamaged) {
+          const key = item.item.toString();
+          receivedTotals[key] =
+            (receivedTotals[key] ?? 0) + item.quantityReceived;
+        }
+      }
+    }
+    for (const item of grn.items) {
+      if (!item.isDamaged) {
+        const key = item.item.toString();
+        receivedTotals[key] =
+          (receivedTotals[key] ?? 0) + item.quantityReceived;
+      }
+    }
+
+    // 👇 just pass your writes as a callback — the utility handles session + retries
+    await runWithTransactionRetry(async (session) => {
       for (const lineItem of grn.items) {
         if (lineItem.isDamaged) continue;
 
-        let itemLocation = await InventoryItemLocationModel.findOne({
-          item: lineItem.item,
+        console.log("1. Finding itemLocation for", lineItem.item._id);
+        const itemLocation = await InventoryItemLocationModel.findOne({
+          item: lineItem.item._id,
           location: grn.location,
         }).session(session);
+        console.log("2. itemLocation found:", !!itemLocation);
 
         if (!itemLocation) {
-          return next(
-            new AppError(
-              `Item ${lineItem.item} has not been set up at location ${grn.location}. Create an InventoryItemLocation record first.`,
-              StatusCodes.BAD_REQUEST
-            )
+          throw new AppError(
+            `Item ${lineItem.item} has not been set up at location ${grn.location}. Create an InventoryItemLocation record first.`,
+            StatusCodes.BAD_REQUEST
           );
         }
 
@@ -114,8 +146,12 @@ const postGoodsReceipt = catchAsync(
 
         itemLocation.currentStock += lineItem.quantityReceived;
         itemLocation.updatedBy = res.locals.user._id;
-        await itemLocation.save({ session });
 
+        console.log("3. Saving itemLocation...");
+        await itemLocation.save({ session });
+        console.log("4. itemLocation saved");
+
+        console.log("5. Creating movement...");
         await InventoryMovementModel.create(
           [
             {
@@ -135,61 +171,41 @@ const postGoodsReceipt = catchAsync(
           ],
           { session }
         );
+        console.log("6. Movement created");
       }
 
-      const allGRNsForPO = await InventoryGoodsReceiptModel.find({
-        purchaseOrder: po._id,
-        status: "posted",
-      }).session(session);
-
-      const receivedTotals: Record<string, number> = {};
-      for (const postedGRN of [...allGRNsForPO]) {
-        for (const item of postedGRN.items) {
-          if (!item.isDamaged) {
-            const key = item.item.toString();
-            receivedTotals[key] =
-              (receivedTotals[key] ?? 0) + item.quantityReceived;
-          }
-        }
-      }
-
-      for (const item of grn.items) {
-        if (!item.isDamaged) {
-          const key = item.item.toString();
-          receivedTotals[key] =
-            (receivedTotals[key] ?? 0) + item.quantityReceived;
-        }
-      }
-
+      console.log("7. Saving PO...");
       const fullyReceived = po.items.every(
         (poItem) =>
           (receivedTotals[poItem.item.toString()] ?? 0) >=
           poItem.quantityOrdered
       );
-
       po.status = fullyReceived ? "received" : "partial";
       await po.save({ session });
+      console.log("8. PO saved");
 
+      console.log("9. Finding supplier...");
       const supplier = await InventorySupplierModel.findById(
         grn.supplier
       ).session(session);
+      console.log("10. Supplier found:", !!supplier);
 
       if (supplier) {
         supplier.totalDeliveries += 1;
-
         if (grn.isLateDelivery) {
           supplier.lateDeliveries += 1;
         } else {
           supplier.onTimeDeliveries += 1;
         }
-
         if (grn.hasQualityIssues) {
           supplier.qualityIssues += 1;
         }
-
+        console.log("11. Saving supplier...");
         await supplier.save({ session });
+        console.log("12. Supplier saved");
       }
 
+      console.log("13. Creating financial event...");
       await InventoryFinancialEventModel.create(
         [
           {
@@ -210,58 +226,54 @@ const postGoodsReceipt = catchAsync(
         ],
         { session }
       );
+      console.log("14. Financial event created");
 
+      console.log("15. Saving GRN...");
       grn.status = "posted";
       await grn.save({ session });
+      console.log("16. GRN saved");
+    });
 
-      await session.commitTransaction();
-
-      // After receipt, check if any item is still below threshold despite the delivery
-      for (const lineItem of grn.items) {
-        if (lineItem.isDamaged) continue;
-        const updatedIL = await InventoryItemLocationModel.findOne({
-          item: lineItem.item,
-          location: grn.location,
-        })
-          .select("currentStock")
-          .lean();
-        if (updatedIL) {
-          await fireInventoryAlert(
-            lineItem.item.toString(),
-            grn.location.toString(),
-            updatedIL.currentStock,
-            String(res.locals.user._id)
-          );
-        }
+    // Post-commit side effects — same as before
+    for (const lineItem of grn.items) {
+      if (lineItem.isDamaged) continue;
+      const updatedIL = await InventoryItemLocationModel.findOne({
+        item: lineItem.item,
+        location: grn.location,
+      })
+        .select("currentStock")
+        .lean();
+      if (updatedIL) {
+        await fireInventoryAlert(
+          lineItem.item.toString(),
+          grn.location.toString(),
+          updatedIL.currentStock,
+          String(res.locals.user._id)
+        );
       }
-
-      logUserActivity(
-        req,
-        String(res.locals.user._id),
-        `${res.locals.user.name} posted goods receipt ${grn.grnNumber}`,
-        "inventorygoodsreceipts",
-        String(grn._id),
-        JSON.stringify({ status: "draft" }),
-        JSON.stringify({
-          status: "posted",
-          totalAmountInCFA: grn.totalAmountInCFA,
-        })
-      );
-
-      appResponder(
-        StatusCodes.OK,
-        {
-          message: `Goods receipt ${grn.grnNumber} posted successfully. Stock levels updated.`,
-          data: { grn },
-        },
-        res
-      );
-    } catch (err: any) {
-      await session.abortTransaction();
-      throw err;
-    } finally {
-      session.endSession();
     }
+
+    logUserActivity(
+      req,
+      String(res.locals.user._id),
+      `${res.locals.user.name} posted goods receipt ${grn.grnNumber}`,
+      "inventorygoodsreceipts",
+      String(grn._id),
+      JSON.stringify({ status: "draft" }),
+      JSON.stringify({
+        status: "posted",
+        totalAmountInCFA: grn.totalAmountInCFA,
+      })
+    );
+
+    appResponder(
+      StatusCodes.OK,
+      {
+        message: `Goods receipt ${grn.grnNumber} posted successfully. Stock levels updated.`,
+        data: { grn },
+      },
+      res
+    );
   }
 );
 
@@ -337,18 +349,6 @@ const WHITE = "#FFFFFF";
 const DANGER = "#DC2626";
 const SUCCESS = "#16A34A";
 const WARNING_BG = "#FEF3C7";
-
-const fonts = {
-  Roboto: {
-    normal: Buffer.from(vfsFonts.pdfMake.vfs["Roboto-Regular.ttf"], "base64"),
-    bold: Buffer.from(vfsFonts.pdfMake.vfs["Roboto-Medium.ttf"], "base64"),
-    italics: Buffer.from(vfsFonts.pdfMake.vfs["Roboto-Italic.ttf"], "base64"),
-    bolditalics: Buffer.from(
-      vfsFonts.pdfMake.vfs["Roboto-MediumItalic.ttf"],
-      "base64"
-    ),
-  },
-};
 
 export interface GRNPdfItem {
   name: string;

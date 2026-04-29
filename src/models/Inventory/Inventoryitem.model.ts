@@ -74,7 +74,7 @@ const inventoryItemSchema = new mongoose.Schema(
     // select: false keeps it off general responses unless explicitly requested
     sku: {
       type: String,
-      required: [true, "SKU is required"],
+      // required: [true, "SKU is required"],
       trim: true,
       uppercase: true,
       unique: true,
@@ -202,6 +202,7 @@ inventoryItemSchema.pre("save", function (next) {
 // e.g. HK-0001, FB-0023
 // The sequence is the total count of items in that category + 1.
 inventoryItemSchema.pre("save", async function (next) {
+  console.log("Here");
   if (!this.isNew || this.sku) return next();
 
   try {
@@ -217,6 +218,29 @@ inventoryItemSchema.pre("save", async function (next) {
 
     const sequence = String(count + 1).padStart(4, "0");
     this.sku = `${category.code}-${sequence}`;
+
+    next();
+  } catch (err: any) {
+    console.log(err);
+    next(err);
+  }
+});
+
+inventoryItemSchema.pre("save", async function (next) {
+  if (!this.isNew || this.sku) return next();
+
+  try {
+    const category = await InventoryCategoryModel.findById(this.category);
+    if (!category)
+      return next(new Error("Category not found, cannot generate SKU"));
+
+    const count = await InventoryItemModel.countDocuments({
+      category: this.category,
+    });
+    const sequence = String(count + 1).padStart(4, "0");
+    this.sku = `${category.code}-${sequence}`;
+
+    if (!this.sku) return next(new Error("SKU generation failed"));
 
     next();
   } catch (err: any) {

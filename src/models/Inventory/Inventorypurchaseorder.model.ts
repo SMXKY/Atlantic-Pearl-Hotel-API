@@ -74,8 +74,8 @@ const poItemSchema = new mongoose.Schema(
     // Computed: quantityOrdered * unitCostInCFA
     totalCostInCFA: {
       type: Number,
-      required: [true, "Total cost is required"],
-      min: [0, "Total cost cannot be negative"],
+      default: 0,
+      min: [0, "Total amount cannot be negative"],
     },
 
     notes: {
@@ -93,7 +93,7 @@ const inventoryPurchaseOrderSchema = new mongoose.Schema(
     // e.g. PO-2026-0001
     poNumber: {
       type: String,
-      required: [true, "PO number is required"],
+      // required: [true, "PO number is required"],
       unique: true,
       trim: true,
     },
@@ -163,7 +163,7 @@ const inventoryPurchaseOrderSchema = new mongoose.Schema(
     // Recomputed in pre-save hook whenever items change.
     totalAmountInCFA: {
       type: Number,
-      required: [true, "Total amount is required"],
+      default: 0,
       min: [0, "Total amount cannot be negative"],
     },
 
@@ -241,9 +241,8 @@ inventoryPurchaseOrderSchema.index({ isOverdue: 1, status: 1 });
 inventoryPurchaseOrderSchema.index({ expectedDeliveryDate: 1, status: 1 });
 
 // Auto-generate PO number before first save.
-// Format: PO-{YEAR}-{ZERO_PADDED_SEQUENCE}
 inventoryPurchaseOrderSchema.pre("save", async function (next) {
-  if (!this.isNew) return next();
+  if (!this.isNew || this.poNumber) return next();
 
   try {
     const year = new Date().getFullYear();
@@ -254,45 +253,23 @@ inventoryPurchaseOrderSchema.pre("save", async function (next) {
       },
     });
 
-    const sequence = String(count + 1).padStart(4, "0");
-    this.poNumber = `PO-${year}-${sequence}`;
+    this.poNumber = `PO-${year}-${String(count + 1).padStart(4, "0")}`;
     next();
   } catch (err: any) {
     next(err);
   }
 });
 
-// Recompute totalAmountInCFA from line items whenever items change.
-// Prevents mismatches between line item totals and the PO total.
+// Compute each line's totalCostInCFA then sum into totalAmountInCFA.
 inventoryPurchaseOrderSchema.pre("save", function (next) {
   if (!this.isModified("items")) return next();
 
-  this.totalAmountInCFA = this.items.reduce(
-    (sum, item) => sum + item.totalCostInCFA,
-    0
-  );
-
-  next();
-});
-
-// Validate each line item's totalCostInCFA matches quantity * unitCost.
-inventoryPurchaseOrderSchema.pre("save", function (next) {
-  if (!this.isModified("items")) return next();
-
-  for (const item of this.items) {
-    const expected = parseFloat(
+  this.totalAmountInCFA = this.items.reduce((sum, item) => {
+    item.totalCostInCFA = parseFloat(
       (item.quantityOrdered * item.unitCostInCFA).toFixed(2)
     );
-    const actual = parseFloat(item.totalCostInCFA.toFixed(2));
-
-    if (Math.abs(expected - actual) > 0.01) {
-      return next(
-        new Error(
-          `Line item totalCostInCFA (${actual}) does not match quantityOrdered * unitCostInCFA (${expected})`
-        )
-      );
-    }
-  }
+    return sum + item.totalCostInCFA;
+  }, 0);
 
   next();
 });
@@ -313,43 +290,32 @@ inventoryPurchaseOrderSchema.pre("save", function (next) {
   next();
 });
 
-// Stamp approval or rejection timestamps when status changes.
+// Stamp approval/rejection/sent timestamps when status changes.
 inventoryPurchaseOrderSchema.pre("save", function (next) {
   if (!this.isModified("status")) return next();
 
-  if (this.status === "approved" && !this.approvedAt) {
+  if (this.status === "approved" && !this.approvedAt)
     this.approvedAt = new Date();
-  }
-
-  if (this.status === "rejected" && !this.rejectedAt) {
+  if (this.status === "rejected" && !this.rejectedAt)
     this.rejectedAt = new Date();
-  }
-
-  if (this.status === "sent" && !this.sentAt) {
-    this.sentAt = new Date();
-  }
+  if (this.status === "sent" && !this.sentAt) this.sentAt = new Date();
 
   next();
 });
 
-// Update isOverdue flag whenever expectedDeliveryDate or status changes.
-// A PO is overdue when it is in sent or partial state and today
-// is past the expected delivery date.
+// Update isOverdue flag.
 inventoryPurchaseOrderSchema.pre("save", function (next) {
-  if (!this.isModified("expectedDeliveryDate") && !this.isModified("status")) {
+  if (!this.isModified("expectedDeliveryDate") && !this.isModified("status"))
     return next();
-  }
 
-  const overdueStatuses = ["sent", "partial"];
-  const isPastDue = new Date() > this.expectedDeliveryDate;
-
-  this.isOverdue = overdueStatuses.includes(this.status) && isPastDue;
+  this.isOverdue =
+    ["sent", "partial"].includes(this.status) &&
+    new Date() > this.expectedDeliveryDate;
 
   next();
 });
 
-// Prevent edits to a PO once it has been approved.
-// Any changes must go through cancellation and a new PO.
+// Prevent line item edits after submission.
 inventoryPurchaseOrderSchema.pre("save", function (next) {
   if (!this.isNew && this.isModified("items") && this.status !== "draft") {
     return next(
@@ -359,6 +325,30 @@ inventoryPurchaseOrderSchema.pre("save", function (next) {
     );
   }
   next();
+});
+
+// Populate item references after save so the response includes full item details.
+inventoryPurchaseOrderSchema.post("find", async function (docs) {
+  const session = (this as any).options?.session;
+  if (session) return;
+  for (const doc of docs) {
+    await doc.populate([
+      { path: "items.item", select: "name unitOfMeasure" },
+      { path: "supplier", select: "name code" },
+      { path: "location", select: "name" },
+    ]);
+  }
+});
+
+inventoryPurchaseOrderSchema.post("findOne", async function (doc) {
+  if (!doc) return;
+  const session = (this as any).options?.session;
+  if (session) return;
+  await doc.populate([
+    { path: "items.item", select: "name unitOfMeasure" },
+    { path: "supplier", select: "name code" },
+    { path: "location", select: "name" },
+  ]);
 });
 
 export const InventoryPurchaseOrderModel =

@@ -11,10 +11,10 @@ import { StatusCodes } from "http-status-codes";
 import { InventoryItemModel } from "../../models/Inventory/Inventoryitem.model";
 import { InventoryItemLocationModel } from "../../models/Inventory/Inventoryitemlocation.model";
 import { InventoryMovementModel } from "../../models/Inventory/Inventorymovement.model";
-import { fireInventoryAlert } from "util/inventoryAlert.util";
+import { fireInventoryAlert } from "../../util/inventoryAlert.util";
 import mongoose from "mongoose";
 import { sendNotification } from "../../util/sendNotification.util";
-import { NotificationType } from "models/Notifications/Notification.model";
+import { NotificationType } from "../../models/Notifications/Notification.model";
 
 const CRUDInventroyStockTake: CRUD = new CRUD(InventoryStockTakeModel);
 
@@ -271,7 +271,7 @@ const submitStockTake = catchAsync(
 
     // Apply counts to each line item and compute variances
     for (const lineItem of stockTake.items) {
-      const itemId = lineItem.item.toString();
+      const itemId = lineItem.item._id.toString();
       const countEntry = countsMap[itemId];
 
       if (!countEntry) {

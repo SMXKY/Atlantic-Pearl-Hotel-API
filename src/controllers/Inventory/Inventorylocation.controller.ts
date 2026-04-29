@@ -21,13 +21,22 @@ const createInventoryLocation = catchAsync(
 
 const readOneInventoryLocation = catchAsync(
   async (req: Request, res: Response, next: NextFunction) => {
-    await CRUDInventoryLocation.readOne(req.params.id, res, [], req);
+    await CRUDInventoryLocation.readOne(
+      req.params.id,
+      res,
+      ["departments", "createdBy", "updatedBy"],
+      req
+    );
   }
 );
 
 const readAllInventoryLocations = catchAsync(
   async (req: Request, res: Response, next: NextFunction) => {
-    await CRUDInventoryLocation.readAll(res, req, 1, 100, []);
+    await CRUDInventoryLocation.readAll(res, req, 1, 100, [
+      "departments",
+      "createdBy",
+      "updatedBy",
+    ]);
   }
 );
 

@@ -1,7 +1,7 @@
-import express from "express";
+import express, { NextFunction, Request, Response } from "express";
 import { authControllers } from "../../controllers/Auth/auth.controller";
 import { allPermissions } from "../../types/Permissions.type";
-import { inventoryRequisitionControllers } from "../../controllers/Inventory/InventoryRequisition.controller";
+import { inventroyRequisitionControllers } from "../../controllers/Inventory/Inventoryrequisition.controller";
 
 export const inventoryRequisitionRouter = express.Router();
 
@@ -10,12 +10,16 @@ inventoryRequisitionRouter
   .post(
     authControllers.protect,
     authControllers.restrictTo(allPermissions.inventoryRequisitions.create),
-    inventoryRequisitionControllers.createInventoryRequisition
+    (req: Request, res: Response, next: NextFunction) => {
+      req.body.requestedBy = res.locals.user._id;
+      next();
+    },
+    inventroyRequisitionControllers.createInventroyRequisition
   )
   .get(
     authControllers.protect,
     authControllers.restrictTo(allPermissions.inventoryRequisitions.readAll),
-    inventoryRequisitionControllers.readAllInventoryRequisitions
+    inventroyRequisitionControllers.readAllInventroyRequisitions
   );
 
 inventoryRequisitionRouter
@@ -23,7 +27,7 @@ inventoryRequisitionRouter
   .get(
     authControllers.protect,
     authControllers.restrictTo(allPermissions.inventoryRequisitions.readOne),
-    inventoryRequisitionControllers.readOneInventoryRequisition
+    inventroyRequisitionControllers.readOneInventroyRequisition
   );
 
 // Approve, partially fulfill, or reject a requisition
@@ -31,19 +35,27 @@ inventoryRequisitionRouter.patch(
   "/:id/approve",
   authControllers.protect,
   authControllers.restrictTo(allPermissions.inventoryRequisitions.approve),
-  inventoryRequisitionControllers.approveRequisition
+  (req: Request, res: Response, next: NextFunction) => {
+    req.body.reviewedBy = res.locals.user._id;
+    next();
+  },
+  inventroyRequisitionControllers.approveRequisition
 );
 
 inventoryRequisitionRouter.patch(
   "/:id/reject",
   authControllers.protect,
   authControllers.restrictTo(allPermissions.inventoryRequisitions.approve),
-  inventoryRequisitionControllers.rejectRequisition
+  (req: Request, res: Response, next: NextFunction) => {
+    req.body.reviewedBy = res.locals.user._id;
+    next();
+  },
+  inventroyRequisitionControllers.rejectRequisition
 );
 
 inventoryRequisitionRouter.patch(
   "/:id/cancel",
   authControllers.protect,
   authControllers.restrictTo(allPermissions.inventoryRequisitions.create),
-  inventoryRequisitionControllers.cancelRequisition
+  inventroyRequisitionControllers.cancelRequisition
 );

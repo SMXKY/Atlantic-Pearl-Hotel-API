@@ -2,7 +2,7 @@ import { NextFunction, Request, Response } from "express";
 
 import { catchAsync } from "../../util/catchAsync";
 import { CRUD } from "../../util/Crud.util";
-import { InventoryRequisitionModel } from "models/Inventory/Inventoryrequisition.model";
+import { InventoryRequisitionModel } from "../../models/Inventory/Inventoryrequisition.model";
 import { logUserActivity } from "../../util/logUserActivity.util";
 import { appResponder } from "../../util/appResponder.util";
 import { StatusCodes } from "http-status-codes";
@@ -12,7 +12,7 @@ import { InventoryMovementModel } from "../../models/Inventory/Inventorymovement
 import mongoose from "mongoose";
 import { allPermissions } from "../../types/Permissions.type";
 import { fireInventoryAlert } from "../../util/inventoryAlert.util";
-import { NotificationType } from "models/Notifications/Notification.model";
+import { NotificationType } from "../../models/Notifications/Notification.model";
 import { sendNotification } from "../../util/sendNotification.util";
 
 const CRUDInventroyRequisition: CRUD = new CRUD(InventoryRequisitionModel);

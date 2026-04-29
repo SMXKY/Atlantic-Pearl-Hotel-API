@@ -1,6 +1,7 @@
 import express from "express";
 import { authControllers } from "../../controllers/Auth/auth.controller";
 import { allPermissions } from "../../types/Permissions.type";
+import { Request, Response, NextFunction } from "express";
 import { inventroySupplierPaymentControllers } from "../../controllers/Inventory/Inventorysupplierpayment.controller";
 
 export const inventorySupplierPaymentRouter = express.Router();
@@ -12,6 +13,10 @@ inventorySupplierPaymentRouter
     authControllers.restrictTo(
       allPermissions.inventoryFinancials.recordPayment
     ),
+    (req: Request, res: Response, next: NextFunction) => {
+      req.body.recordedBy = res.locals.user._id;
+      next();
+    },
     inventroySupplierPaymentControllers.createInventroySupplierPayment
   )
   .get(

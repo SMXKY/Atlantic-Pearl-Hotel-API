@@ -2,7 +2,9 @@ import express from "express";
 import { authControllers } from "../../controllers/Auth/auth.controller";
 import { allPermissions } from "../../types/Permissions.type";
 import { inventroyPurchaseOrderControllers } from "../../controllers/Inventory/Inventorypurchaseorder.controller";
-
+import trackCreatedBy, {
+  trackUpdateddBy,
+} from "../../middlewares/trackCreatedBy.middleware";
 export const inventoryPurchaseOrderRouter = express.Router();
 
 inventoryPurchaseOrderRouter
@@ -10,6 +12,7 @@ inventoryPurchaseOrderRouter
   .post(
     authControllers.protect,
     authControllers.restrictTo(allPermissions.inventoryPurchaseOrders.create),
+    trackCreatedBy,
     inventroyPurchaseOrderControllers.createInventroyPurchaseOrder
   )
   .get(
@@ -28,6 +31,7 @@ inventoryPurchaseOrderRouter
   .patch(
     authControllers.protect,
     authControllers.restrictTo(allPermissions.inventoryPurchaseOrders.create),
+    trackUpdateddBy,
     inventroyPurchaseOrderControllers.updateInventroyPurchaseOrder
   );
 

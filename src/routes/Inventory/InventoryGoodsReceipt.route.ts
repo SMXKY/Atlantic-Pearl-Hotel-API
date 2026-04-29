@@ -1,4 +1,4 @@
-import express from "express";
+import express, { NextFunction, Request, Response } from "express";
 import { authControllers } from "../../controllers/Auth/auth.controller";
 import { allPermissions } from "../../types/Permissions.type";
 import { InventoryGoodsReceiptControllers } from "../../controllers/Inventory/Inventorygoodsreceipt.controller";
@@ -10,6 +10,10 @@ inventoryGoodsReceiptRouter
   .post(
     authControllers.protect,
     authControllers.restrictTo(allPermissions.inventoryStockMovements.receive),
+    (req: Request, res: Response, next: NextFunction) => {
+      req.body.receivedBy = res.locals.user._id;
+      next();
+    },
     InventoryGoodsReceiptControllers.createInventoryGoodsReceipt
   )
   .get(

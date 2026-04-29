@@ -41,7 +41,7 @@ const inventorySupplierPaymentSchema = new mongoose.Schema(
     // e.g. PAY-2026-0001
     paymentNumber: {
       type: String,
-      required: [true, "Payment number is required"],
+      // required: [true, "Payment number is required"],
       unique: true,
       trim: true,
     },

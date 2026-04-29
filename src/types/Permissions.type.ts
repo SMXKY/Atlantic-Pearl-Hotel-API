@@ -892,7 +892,7 @@ export const allPermissions = {
     submodule: "Reports",
     read: "can_read_inventory_reports",
     export: "can_export_inventory_reports",
-  },
+  },  
 
   inventorySettings: {
     module: "Inventory Management",

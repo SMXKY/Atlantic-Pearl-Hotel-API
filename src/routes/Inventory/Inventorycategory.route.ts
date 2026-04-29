@@ -2,6 +2,9 @@ import express from "express";
 import { authControllers } from "../../controllers/Auth/auth.controller";
 import { allPermissions } from "../../types/Permissions.type";
 import { InventoryCategoryControllers } from "../../controllers/Inventory/Inventorycategory.controller";
+import trackCreatedBy, {
+  trackUpdateddBy,
+} from "../../middlewares/trackCreatedBy.middleware";
 
 export const inventoryCategoryRouter = express.Router();
 
@@ -10,6 +13,7 @@ inventoryCategoryRouter
   .post(
     authControllers.protect,
     authControllers.restrictTo(allPermissions.inventoryCategories.create),
+    trackCreatedBy,
     InventoryCategoryControllers.createInventoryCategory
   )
   .get(
@@ -27,6 +31,7 @@ inventoryCategoryRouter
   )
   .patch(
     authControllers.protect,
+    trackUpdateddBy,
     authControllers.restrictTo(allPermissions.inventoryCategories.update),
     InventoryCategoryControllers.updateInventoryCategory
   )

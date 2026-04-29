@@ -16,13 +16,18 @@ const createInventroyRetentionConfig = catchAsync(
 
 const readOneInventroyRetentionConfig = catchAsync(
   async (req: Request, res: Response, next: NextFunction) => {
-    await CRUDInventroyRetentionConfig.readOne(req.params.id, res, [], req);
+    await CRUDInventroyRetentionConfig.readOne(
+      req.params.id,
+      res,
+      ["updatedBy"],
+      req
+    );
   }
 );
 
 const readAllInventroyRetentionConfigs = catchAsync(
   async (req: Request, res: Response, next: NextFunction) => {
-    await CRUDInventroyRetentionConfig.readAll(res, req, 1, 100, []);
+    await CRUDInventroyRetentionConfig.readAll(res, req, 1, 100, ["updatedBy"]);
   }
 );
 

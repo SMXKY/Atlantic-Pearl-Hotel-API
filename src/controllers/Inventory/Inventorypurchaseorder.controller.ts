@@ -2,7 +2,7 @@ import { NextFunction, Request, Response } from "express";
 
 import { catchAsync } from "../../util/catchAsync";
 import { CRUD } from "../../util/Crud.util";
-import { InventoryPurchaseOrderModel } from "models/Inventory/Inventorypurchaseorder.model";
+import { InventoryPurchaseOrderModel } from "../../models/Inventory/Inventorypurchaseorder.model";
 import { AppError } from "../../util/AppError.util";
 import { appResponder } from "../../util/appResponder.util";
 import { StatusCodes } from "http-status-codes";
@@ -26,13 +26,24 @@ const createInventroyPurchaseOrder = catchAsync(
 
 const readOneInventroyPurchaseOrder = catchAsync(
   async (req: Request, res: Response, next: NextFunction) => {
-    await CRUDInventroyPurchaseOrder.readOne(req.params.id, res, [], req);
+    await CRUDInventroyPurchaseOrder.readOne(
+      req.params.id,
+      res,
+      ["supplier", "createdBy", "updatedBy", "location", "items"],
+      req
+    );
   }
 );
 
 const readAllInventroyPurchaseOrders = catchAsync(
   async (req: Request, res: Response, next: NextFunction) => {
-    await CRUDInventroyPurchaseOrder.readAll(res, req, 1, 100, []);
+    await CRUDInventroyPurchaseOrder.readAll(res, req, 1, 100, [
+      "supplier",
+      "createdBy",
+      "updatedBy",
+      "location",
+      "items",
+    ]);
   }
 );
 

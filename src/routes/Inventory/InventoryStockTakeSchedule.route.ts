@@ -2,7 +2,9 @@ import express from "express";
 import { authControllers } from "../../controllers/Auth/auth.controller";
 import { allPermissions } from "../../types/Permissions.type";
 import { inventroyStockTakeScheduleControllers } from "../../controllers/Inventory/Inventorystocktakeschedule.controller";
-
+import trackCreatedBy, {
+  trackUpdateddBy,
+} from "../../middlewares/trackCreatedBy.middleware";
 export const inventoryStockTakeScheduleRouter = express.Router();
 
 inventoryStockTakeScheduleRouter
@@ -10,6 +12,7 @@ inventoryStockTakeScheduleRouter
   .post(
     authControllers.protect,
     authControllers.restrictTo(allPermissions.inventoryStockTakes.initiate),
+    trackCreatedBy,
     inventroyStockTakeScheduleControllers.createInventroyStockTakeSchedule
   )
   .get(
@@ -28,6 +31,7 @@ inventoryStockTakeScheduleRouter
   .patch(
     authControllers.protect,
     authControllers.restrictTo(allPermissions.inventoryStockTakes.initiate),
+    trackUpdateddBy,
     inventroyStockTakeScheduleControllers.updateInventroyStockTakeSchedule
   )
   .delete(

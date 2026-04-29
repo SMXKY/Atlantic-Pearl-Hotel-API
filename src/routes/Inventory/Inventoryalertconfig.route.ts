@@ -2,6 +2,9 @@ import express from "express";
 import { authControllers } from "../../controllers/Auth/auth.controller";
 import { allPermissions } from "../../types/Permissions.type";
 import { inventoryAlertConfigControllers } from "../../controllers/Inventory/Inventoryalertconfig.controller";
+import trackCreatedBy, {
+  trackUpdateddBy,
+} from "../../middlewares/trackCreatedBy.middleware";
 
 export const inventoryAlertConfigRouter = express.Router();
 
@@ -10,6 +13,7 @@ inventoryAlertConfigRouter
   .post(
     authControllers.protect,
     authControllers.restrictTo(allPermissions.inventorySettings.manageAlerts),
+    trackCreatedBy,
     inventoryAlertConfigControllers.createInventoryAlertConfig
   )
   .get(
@@ -28,6 +32,7 @@ inventoryAlertConfigRouter
   .patch(
     authControllers.protect,
     authControllers.restrictTo(allPermissions.inventorySettings.manageAlerts),
+    trackUpdateddBy,
     inventoryAlertConfigControllers.updateInventoryAlertConfig
   )
   .delete(

@@ -5,7 +5,7 @@ import {
   getIdsFromPermissions,
 } from "../util/sendNotification.util";
 import { allPermissions } from "../types/Permissions.type";
-import { NotificationType } from "models/Notifications/Notification.model";
+import { NotificationType } from "../models/Notifications/Notification.model";
 
 // ─── overduePoCheckerJob ──────────────────────────────────────────────────────
 // Runs every day at 07:00.

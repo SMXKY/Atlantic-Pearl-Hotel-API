@@ -1,6 +1,14 @@
-import PdfPrinter from "pdfmake/src/printer";
-// @ts-ignore
-import vfsFonts from "pdfmake/build/vfs_fonts";
+import path from "path";
+const fonts = {
+  Roboto: {
+    normal: path.join(__dirname, "../fonts/Roboto-Regular.ttf"),
+    bold: path.join(__dirname, "../fonts/Roboto-Medium.ttf"),
+    italics: path.join(__dirname, "../fonts/Roboto-Italic.ttf"),
+    bolditalics: path.join(__dirname, "../fonts/Roboto-MediumItalic.ttf"),
+  },
+};
+
+const PdfPrinter = require("pdfmake");
 
 const PRIMARY = "#1E3A8A";
 const ACCENT = "#F59E0B";
@@ -12,18 +20,6 @@ const TEXT = "#334155";
 const WHITE = "#FFFFFF";
 const SUCCESS = "#16A34A";
 const WARNING_BG = "#FEF3C7";
-
-const fonts = {
-  Roboto: {
-    normal: Buffer.from(vfsFonts.pdfMake.vfs["Roboto-Regular.ttf"], "base64"),
-    bold: Buffer.from(vfsFonts.pdfMake.vfs["Roboto-Medium.ttf"], "base64"),
-    italics: Buffer.from(vfsFonts.pdfMake.vfs["Roboto-Italic.ttf"], "base64"),
-    bolditalics: Buffer.from(
-      vfsFonts.pdfMake.vfs["Roboto-MediumItalic.ttf"],
-      "base64"
-    ),
-  },
-};
 
 export interface POPdfItem {
   name: string;

@@ -2,7 +2,7 @@ import { NextFunction, Request, Response } from "express";
 
 import { catchAsync } from "../../util/catchAsync";
 import { CRUD } from "../../util/Crud.util";
-import { InventorySupplierPaymentModel } from "models/Inventory/Inventorysupplierpayment.model";
+import { InventorySupplierPaymentModel } from "../../models/Inventory/Inventorysupplierpayment.model";
 import { logUserActivity } from "../../util/logUserActivity.util";
 import { AppError } from "../../util/AppError.util";
 import { appResponder } from "../../util/appResponder.util";
@@ -25,13 +25,21 @@ const createInventroySupplierPayment = catchAsync(
 
 const readOneInventroySupplierPayment = catchAsync(
   async (req: Request, res: Response, next: NextFunction) => {
-    await CRUDInventroySupplierPayment.readOne(req.params.id, res, [], req);
+    await CRUDInventroySupplierPayment.readOne(
+      req.params.id,
+      res,
+      ["goodsReceipt", "supplier"],
+      req
+    );
   }
 );
 
 const readAllInventroySupplierPayments = catchAsync(
   async (req: Request, res: Response, next: NextFunction) => {
-    await CRUDInventroySupplierPayment.readAll(res, req, 1, 100, []);
+    await CRUDInventroySupplierPayment.readAll(res, req, 1, 100, [
+      "goodsReceipt",
+      "supplier",
+    ]);
   }
 );
 

@@ -1,7 +1,7 @@
 import express from "express";
 import { authControllers } from "../../controllers/Auth/auth.controller";
 import { allPermissions } from "../../types/Permissions.type";
-import { inventoryMovementControllers } from "../../controllers/Inventory/InventoryMovement.controller";
+import { inventoryMovementControllers } from "../../controllers/Inventory/Inventorymovement.controller";
 
 export const inventoryMovementRouter = express.Router();
 
@@ -12,14 +12,14 @@ inventoryMovementRouter.get(
   "/",
   authControllers.protect,
   authControllers.restrictTo(allPermissions.inventoryStockMovements.receive),
-  inventoryMovementControllers.readAllInventoryMovements
+  inventoryMovementControllers.readAllInventroyMovements
 );
 
 inventoryMovementRouter.get(
   "/:id",
   authControllers.protect,
   authControllers.restrictTo(allPermissions.inventoryStockMovements.receive),
-  inventoryMovementControllers.readOneInventoryMovement
+  inventoryMovementControllers.readOneInventroyMovement
 );
 
 // Audit trail for a specific item at a specific location

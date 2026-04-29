@@ -1,6 +1,6 @@
 import cron from "node-cron";
-import { InventoryStockTakeScheduleModel } from "models/Inventory/Inventorystocktakeschedule.model";
-import { InventoryStockTakeModel } from "models/Inventory/Inventorystocktake.model";
+import { InventoryStockTakeScheduleModel } from "../models/Inventory/Inventorystocktakeschedule.model";
+import { InventoryStockTakeModel } from "../models/Inventory/Inventorystocktake.model";
 import {
   sendNotification,
   getIdsFromPermissions,

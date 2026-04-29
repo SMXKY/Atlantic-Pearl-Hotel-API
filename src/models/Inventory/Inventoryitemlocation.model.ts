@@ -202,7 +202,7 @@ const inventoryItemLocationSchema = new mongoose.Schema(
     costBatches: {
       type: [costBatchSchema],
       default: [],
-      select: false,
+      // select: false,
     },
 
     createdBy: {
@@ -235,6 +235,7 @@ inventoryItemLocationSchema.index({ location: 1, isBlocked: 1 });
 // Virtual: current FIFO stock valuation for this item at this location.
 // Sum of (remainingQuantity * unitCostInCFA) across all cost batches.
 inventoryItemLocationSchema.virtual("stockValueInCFA").get(function () {
+  if (!this.costBatches) return 0;
   return this.costBatches.reduce(
     (total, batch) => total + calculateBatchValue(batch as ICostBatch),
     0

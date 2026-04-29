@@ -2,7 +2,7 @@ import { NextFunction, Request, Response } from "express";
 
 import { catchAsync } from "../../util/catchAsync";
 import { CRUD } from "../../util/Crud.util";
-import { InventoryStockTakeScheduleModel } from "models/Inventory/Inventorystocktakeschedule.model";
+import { InventoryStockTakeScheduleModel } from "../../models/Inventory/Inventorystocktakeschedule.model";
 
 const CRUDInventroyStockTakeSchedule: CRUD = new CRUD(
   InventoryStockTakeScheduleModel
@@ -16,13 +16,23 @@ const createInventroyStockTakeSchedule = catchAsync(
 
 const readOneInventroyStockTakeSchedule = catchAsync(
   async (req: Request, res: Response, next: NextFunction) => {
-    await CRUDInventroyStockTakeSchedule.readOne(req.params.id, res, [], req);
+    await CRUDInventroyStockTakeSchedule.readOne(
+      req.params.id,
+      res,
+      ["location", "scopeCategory", "createdBy", "updatedBy"],
+      req
+    );
   }
 );
 
 const readAllInventroyStockTakeSchedules = catchAsync(
   async (req: Request, res: Response, next: NextFunction) => {
-    await CRUDInventroyStockTakeSchedule.readAll(res, req, 1, 100, []);
+    await CRUDInventroyStockTakeSchedule.readAll(res, req, 1, 100, [
+      "location",
+      "scopeCategory",
+      "createdBy",
+      "updatedBy",
+    ]);
   }
 );
 

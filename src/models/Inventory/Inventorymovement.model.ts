@@ -308,19 +308,21 @@ inventoryMovementSchema.pre("save", function (next) {
 // This is the only place currentStock changes. The session is passed via
 // options so this participates in the caller's transaction.
 inventoryMovementSchema.post("save", async function (doc) {
+  const session = (this as any).$session();
+
   const stockDelta = ["receive", "return", "transfer_in"].includes(doc.type)
     ? doc.quantity
     : ["issue", "wastage", "transfer_out"].includes(doc.type)
     ? -doc.quantity
-    : // adjustment: stockAfter - stockBefore determines direction
-      doc.stockAfter - doc.stockBefore;
+    : doc.stockAfter - doc.stockBefore;
 
   await InventoryItemLocationModel.findOneAndUpdate(
     { item: doc.item, location: doc.location },
     {
       $inc: { currentStock: stockDelta },
       updatedBy: doc.performedBy,
-    }
+    },
+    { session }
   );
 });
 

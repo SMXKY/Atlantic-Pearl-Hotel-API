@@ -1,4 +1,4 @@
-import express from "express";
+import express, { NextFunction, Request, Response } from "express";
 import { authControllers } from "../../controllers/Auth/auth.controller";
 import { allPermissions } from "../../types/Permissions.type";
 import { inventroyStockTakeControllers } from "../../controllers/Inventory/Inventorystocktake.controller";
@@ -10,6 +10,10 @@ inventoryStockTakeRouter
   .post(
     authControllers.protect,
     authControllers.restrictTo(allPermissions.inventoryStockTakes.initiate),
+    (req: Request, res: Response, next: NextFunction) => {
+      req.body.initiatedBy = res.locals.user._id;
+      next();
+    },
     inventroyStockTakeControllers.createInventroyStockTake
   )
   .get(

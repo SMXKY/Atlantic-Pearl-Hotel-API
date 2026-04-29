@@ -2,7 +2,7 @@ import { NextFunction, Request, Response } from "express";
 
 import { catchAsync } from "../../util/catchAsync";
 import { CRUD } from "../../util/Crud.util";
-import { InventoryItemLocationModel } from "models/Inventory/Inventoryitemlocation.model";
+import { InventoryItemLocationModel } from "../../models/Inventory/Inventoryitemlocation.model";
 import { logUserActivity } from "../../util/logUserActivity.util";
 import { AppError } from "../../util/AppError.util";
 import { StatusCodes } from "http-status-codes";
@@ -18,13 +18,23 @@ const createInventroyItemLocation = catchAsync(
 
 const readOneInventroyItemLocation = catchAsync(
   async (req: Request, res: Response, next: NextFunction) => {
-    await CRUDInventroyItemLocation.readOne(req.params.id, res, [], req);
+    await CRUDInventroyItemLocation.readOne(
+      req.params.id,
+      res,
+      ["item", "location", "createdBy", "updatedBy"],
+      req
+    );
   }
 );
 
 const readAllInventroyItemLocations = catchAsync(
   async (req: Request, res: Response, next: NextFunction) => {
-    await CRUDInventroyItemLocation.readAll(res, req, 1, 100, []);
+    await CRUDInventroyItemLocation.readAll(res, req, 1, 100, [
+      "item",
+      "location",
+      "createdBy",
+      "updatedBy",
+    ]);
   }
 );
 

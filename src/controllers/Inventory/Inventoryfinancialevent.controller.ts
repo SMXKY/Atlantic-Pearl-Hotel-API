@@ -2,12 +2,12 @@ import { NextFunction, Request, Response } from "express";
 
 import { catchAsync } from "../../util/catchAsync";
 import { CRUD } from "../../util/Crud.util";
-import { InventoryFinancialEventModel } from "models/Inventory/Inventoryfinancialevent.model";
+import { InventoryFinancialEventModel } from "../../models/Inventory/Inventoryfinancialevent.model";
 import { StatusCodes } from "http-status-codes";
-import { AppError } from "util/AppError.util";
-import { InventoryGoodsReceiptModel } from "models/Inventory/Inventorygoodsreceipt.model";
-import { InventorySupplierPaymentModel } from "models/Inventory/Inventorysupplierpayment.model";
-import { appResponder } from "util/appResponder.util";
+import { AppError } from "../../util/AppError.util";
+import { InventoryGoodsReceiptModel } from "../../models/Inventory/Inventorygoodsreceipt.model";
+import { InventorySupplierPaymentModel } from "../../models/Inventory/Inventorysupplierpayment.model";
+import { appResponder } from "../../util/appResponder.util";
 
 const CRUDInventoryFinancialEnvent: CRUD = new CRUD(
   InventoryFinancialEventModel
@@ -21,13 +21,23 @@ const createInventoryFinancialEnvent = catchAsync(
 
 const readOneInventoryFinancialEnvent = catchAsync(
   async (req: Request, res: Response, next: NextFunction) => {
-    await CRUDInventoryFinancialEnvent.readOne(req.params.id, res, [], req);
+    await CRUDInventoryFinancialEnvent.readOne(
+      req.params.id,
+      res,
+      ["supplier", "category", "location", "performedBy"],
+      req
+    );
   }
 );
 
 const readAllInventoryFinancialEnvents = catchAsync(
   async (req: Request, res: Response, next: NextFunction) => {
-    await CRUDInventoryFinancialEnvent.readAll(res, req, 1, 100, []);
+    await CRUDInventoryFinancialEnvent.readAll(res, req, 1, 100, [
+      "supplier",
+      "category",
+      "location",
+      "performedBy",
+    ]);
   }
 );
 

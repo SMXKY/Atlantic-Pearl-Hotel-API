@@ -2,7 +2,7 @@ import { NextFunction, Request, Response } from "express";
 
 import { catchAsync } from "../../util/catchAsync";
 import { CRUD } from "../../util/Crud.util";
-import { InventoryAlertConfigModel } from "models/Inventory/Inventoryalertconfig.model";
+import { InventoryAlertConfigModel } from "../../models/Inventory/Inventoryalertconfig.model";
 
 const CRUDInventoryAlertConfig: CRUD = new CRUD(InventoryAlertConfigModel);
 
@@ -14,13 +14,23 @@ const createInventoryAlertConfig = catchAsync(
 
 const readOneInventoryAlertConfig = catchAsync(
   async (req: Request, res: Response, next: NextFunction) => {
-    await CRUDInventoryAlertConfig.readOne(req.params.id, res, [], req);
+    await CRUDInventoryAlertConfig.readOne(
+      req.params.id,
+      res,
+      ["item", "location", "createdBy", "updatedBy"],
+      req
+    );
   }
 );
 
 const readAllInventoryAlertConfigs = catchAsync(
   async (req: Request, res: Response, next: NextFunction) => {
-    await CRUDInventoryAlertConfig.readAll(res, req, 1, 100, []);
+    await CRUDInventoryAlertConfig.readAll(res, req, 1, 100, [
+      "item",
+      "location",
+      "createdBy",
+      "updatedBy",
+    ]);
   }
 );
 
