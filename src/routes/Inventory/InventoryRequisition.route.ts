@@ -22,6 +22,26 @@ inventoryRequisitionRouter
     inventroyRequisitionControllers.readAllInventroyRequisitions
   );
 
+// Self-service requisition — any authenticated employee
+inventoryRequisitionRouter.post(
+  "/self",
+  authControllers.protect,
+  inventroyRequisitionControllers.createSelfRequisition
+);
+
+// My requisitions history — any authenticated user
+inventoryRequisitionRouter.get(
+  "/my",
+  authControllers.protect,
+  inventroyRequisitionControllers.getMyRequisitions
+);
+
+inventoryRequisitionRouter.get(
+  "/available-locations",
+  authControllers.protect,
+  inventroyRequisitionControllers.getAvailableLocationsForEmployee
+);
+
 inventoryRequisitionRouter
   .route("/:id")
   .get(

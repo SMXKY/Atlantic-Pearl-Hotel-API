@@ -14,6 +14,8 @@ import { allPermissions } from "../../types/Permissions.type";
 import { fireInventoryAlert } from "../../util/inventoryAlert.util";
 import { NotificationType } from "../../models/Notifications/Notification.model";
 import { sendNotification } from "../../util/sendNotification.util";
+import { EmployeeModel } from "../../models/HR/Employee.model";
+import { InventoryLocationModel } from "../../models/Inventory/Inventorylocation.model";
 
 const CRUDInventroyRequisition: CRUD = new CRUD(InventoryRequisitionModel);
 
@@ -469,6 +471,198 @@ const cancelRequisition = catchAsync(
   }
 );
 
+const createSelfRequisition = catchAsync(
+  async (req: Request, res: Response, next: NextFunction) => {
+    const userId = res.locals.user._id;
+
+    const employee = await EmployeeModel.findOne({ user: userId }).lean();
+
+    if (!employee) {
+      return next(
+        new AppError(
+          "No employee record found for your account. Please contact HR.",
+          StatusCodes.NOT_FOUND
+        )
+      );
+    }
+
+    if (!employee.department) {
+      return next(
+        new AppError(
+          "You have not been assigned to a department yet. Please contact HR.",
+          StatusCodes.BAD_REQUEST
+        )
+      );
+    }
+
+    const location = await InventoryLocationModel.findById(req.body.location);
+
+    if (!location) {
+      return next(
+        new AppError(
+          "The selected location does not exist.",
+          StatusCodes.NOT_FOUND
+        )
+      );
+    }
+
+    if (!location.isActive) {
+      return next(
+        new AppError(
+          "This store location is currently inactive.",
+          StatusCodes.BAD_REQUEST
+        )
+      );
+    }
+
+    const departmentAllowed = location.departments.some(
+      (deptId) => deptId.toString() === employee.department!.toString()
+    );
+
+    if (!departmentAllowed) {
+      return next(
+        new AppError(
+          "Your department is not authorized to request from this location.",
+          StatusCodes.FORBIDDEN
+        )
+      );
+    }
+
+    const requisitionData = {
+      location: req.body.location,
+      items: req.body.items,
+      notes: req.body.notes,
+      requestedBy: userId,
+      department: employee.department,
+    };
+
+    const requisition = await InventoryRequisitionModel.create(requisitionData);
+
+    logUserActivity(
+      req,
+      String(userId),
+      `${res.locals.user.name} raised a self-service requisition ${requisition.requisitionNumber}`,
+      "inventoryrequisitions",
+      String(requisition._id),
+      "",
+      JSON.stringify(requisition)
+    );
+
+    appResponder(
+      StatusCodes.CREATED,
+      {
+        message: "Requisition submitted successfully.",
+        data: requisition,
+      },
+      res
+    );
+  }
+);
+
+const getMyRequisitions = catchAsync(
+  async (req: Request, res: Response, next: NextFunction) => {
+    const userId = res.locals.user._id;
+
+    const page = Math.max(1, parseInt(req.query.page as string) || 1);
+    const limit = Math.min(50, parseInt(req.query.limit as string) || 10);
+    const skip = (page - 1) * limit;
+
+    // Optional status filter
+    const statusFilter = req.query.status ? { status: req.query.status } : {};
+
+    const filter = {
+      requestedBy: userId,
+      ...statusFilter,
+    };
+
+    const [requisitions, total] = await Promise.all([
+      InventoryRequisitionModel.find(filter)
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limit),
+      InventoryRequisitionModel.countDocuments(filter),
+    ]);
+
+    appResponder(
+      StatusCodes.OK,
+      {
+        data: requisitions,
+        pagination: {
+          total,
+          page,
+          limit,
+          totalPages: Math.ceil(total / limit),
+        },
+      },
+      res
+    );
+  }
+);
+
+const getAvailableLocationsForEmployee = catchAsync(
+  async (req: Request, res: Response, next: NextFunction) => {
+    const userId = res.locals.user._id;
+
+    const employee = await EmployeeModel.findOne({ user: userId }).lean();
+
+    if (!employee?.department) {
+      return next(
+        new AppError(
+          "You have not been assigned to a department. Please contact HR.",
+          StatusCodes.BAD_REQUEST
+        )
+      );
+    }
+
+    // Only locations this department is linked to and that are active
+    const locations = await InventoryLocationModel.find({
+      departments: employee.department,
+      isActive: true,
+    }).lean();
+
+    if (!locations.length) {
+      return appResponder(
+        StatusCodes.OK,
+        {
+          data: [],
+          message:
+            "No store locations are currently available for your department.",
+        },
+        res
+      );
+    }
+
+    const locationIds = locations.map((l) => l._id);
+
+    // For each location, get the items that have stock there
+    // We pull from InventoryItemLocation so we only show items
+    // that actually exist at that store, not all items globally
+    const itemLocations = await InventoryItemLocationModel.find({
+      location: { $in: locationIds },
+      isBlocked: false,
+      currentStock: { $gt: 0 },
+    })
+      .populate("item")
+      .populate("location")
+      .lean();
+
+    // Group items by location for easy frontend consumption
+    const grouped = locations.map((loc) => ({
+      location: loc,
+      items: itemLocations
+        .filter((il) => il.location._id.toString() === loc._id.toString())
+        .map((il) => ({
+          itemLocationId: il._id,
+          item: il.item,
+          currentStock: il.currentStock,
+          unit: (il.item as any)?.unitOfMeasure,
+        })),
+    }));
+
+    appResponder(StatusCodes.OK, { data: grouped }, res);
+  }
+);
+
 export const inventroyRequisitionControllers = {
   createInventroyRequisition,
   readOneInventroyRequisition,
@@ -478,4 +672,7 @@ export const inventroyRequisitionControllers = {
   approveRequisition,
   rejectRequisition,
   cancelRequisition,
+  createSelfRequisition,
+  getMyRequisitions,
+  getAvailableLocationsForEmployee,
 };

@@ -8,6 +8,8 @@ import { AppError } from "../../util/AppError.util";
 import { StatusCodes } from "http-status-codes";
 import { InventoryGoodsReceiptModel } from "../../models/Inventory/Inventorygoodsreceipt.model";
 import { InventoryItemLocationModel } from "../../models/Inventory/Inventoryitemlocation.model";
+import { InventoryLocationModel } from "../../models/Inventory/Inventorylocation.model";
+import { EmployeeModel } from "../../models/HR/Employee.model";
 
 const CRUDInventoryItem: CRUD = new CRUD(InventoryItemModel);
 
