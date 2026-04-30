@@ -61,8 +61,9 @@
   "main": "index.js",
   "scripts": {
     "dev": "nodemon src/index.ts",
-    "build": "tsc && npm run copy:templates",
+    "build": "tsc && npm run copy:templates && npm run copy:fonts",
     "copy:templates": "copyfiles -u 2 src/templates/**/* dist/templates",
+    "copy:fonts": "copyfiles -u 2 src/fonts/**/* dist/fonts",
     "start": "node dist/index.js"
   }
 }
