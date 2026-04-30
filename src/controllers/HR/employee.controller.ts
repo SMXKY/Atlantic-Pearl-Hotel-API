@@ -17,13 +17,22 @@ const createEmployee = catchAsync(
 
 const readOneEmployee = catchAsync(
   async (req: Request, res: Response, next: NextFunction) => {
-    await CRUDEmployee.readOne(req.params.id, res, ["user"], req);
+    await CRUDEmployee.readOne(
+      req.params.id,
+      res,
+      ["user", "department", "position"],
+      req
+    );
   }
 );
 
 const readAllEmployees = catchAsync(
   async (req: Request, res: Response, next: NextFunction) => {
-    await CRUDEmployee.readAll(res, req, 1, 100, ["user"]);
+    await CRUDEmployee.readAll(res, req, 1, 100, [
+      "user",
+      "department",
+      "position",
+    ]);
   }
 );
 

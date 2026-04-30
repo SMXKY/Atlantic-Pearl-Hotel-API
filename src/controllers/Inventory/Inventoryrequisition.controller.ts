@@ -81,6 +81,10 @@ const approveRequisition = catchAsync(
       );
     }
 
+    const requestedById =
+      (requisition.requestedBy as any)?._id?.toString() ??
+      String(requisition.requestedBy);
+
     // Build a lookup map from the body for quick access
     const issuanceMap: Record<string, number> = {};
     for (const entry of issuanceItems) {
@@ -105,10 +109,8 @@ const approveRequisition = catchAsync(
 
     const session = await mongoose.startSession();
     session.startTransaction();
-
+    let isPartial = false;
     try {
-      let isPartial = false;
-
       for (const lineItem of requisition.items) {
         const itemId =
           (lineItem.item as any)._id?.toString() ?? lineItem.item.toString();
@@ -253,84 +255,83 @@ const approveRequisition = catchAsync(
       await requisition.save({ session });
 
       await session.commitTransaction();
-
-      // Notify the requester of the outcome
-      await sendNotification({
-        userIds: [requisition.requestedBy.toString()],
-        title: isPartial
-          ? `⚠️ Requisition Partially Fulfilled: ${requisition.requisitionNumber}`
-          : `✅ Requisition Approved: ${requisition.requisitionNumber}`,
-        message: isPartial
-          ? `Your requisition ${requisition.requisitionNumber} has been partially fulfilled. Some items were unavailable. Check the requisition for details.`
-          : `Your requisition ${requisition.requisitionNumber} has been fully approved and stock has been issued to your department.`,
-        type: isPartial
-          ? NotificationType.INVENTORY_WARNING
-          : NotificationType.SUCCESS,
-        entityRef: {
-          model: "InventoryRequisition",
-          id: String(requisition._id),
-        },
-        redirectUrl: `/inventory/requisitions/${requisition._id}`,
-      });
-
-      // Check alert thresholds for each issued item
-      for (const lineItem of requisition.items) {
-        if (!lineItem.quantityIssued || lineItem.quantityIssued === 0) continue;
-        const updatedIL = await InventoryItemLocationModel.findOne({
-          item: (lineItem.item as any)._id ?? lineItem.item,
-          location: requisition.location,
-        })
-          .select("currentStock")
-          .lean();
-        if (updatedIL) {
-          await fireInventoryAlert(
-            ((lineItem.item as any)._id ?? lineItem.item).toString(),
-            (requisition.location as any)._id?.toString() ??
-              requisition.location.toString(),
-            updatedIL.currentStock,
-            String(res.locals.user._id)
-          );
-        }
-      }
-
-      const departmentName =
-        (requisition.department as any)?.name ?? "the department";
-      const locationName =
-        (requisition.location as any)?.name ?? "the location";
-
-      logUserActivity(
-        req,
-        String(res.locals.user._id),
-        `${res.locals.user.name} ${
-          isPartial ? "partially fulfilled" : "approved"
-        } requisition ${
-          requisition.requisitionNumber
-        } for ${departmentName} at ${locationName}`,
-        "inventoryrequisitions",
-        String(requisition._id),
-        JSON.stringify({ status: "pending" }),
-        JSON.stringify({
-          status: requisition.status,
-          reviewedBy: res.locals.user._id,
-        })
-      );
-
-      appResponder(
-        StatusCodes.OK,
-        {
-          message: isPartial
-            ? `Requisition ${requisition.requisitionNumber} partially fulfilled. Some items were unavailable.`
-            : `Requisition ${requisition.requisitionNumber} approved and stock issued to ${departmentName}`,
-          data: { requisition },
-        },
-        res
-      );
     } catch (err) {
       await session.abortTransaction();
       throw err;
     } finally {
       session.endSession();
     }
+
+    // Notify the requester of the outcome
+    await sendNotification({
+      userIds: [String(requestedById)],
+      title: isPartial
+        ? `⚠️ Requisition Partially Fulfilled: ${requisition.requisitionNumber}`
+        : `✅ Requisition Approved: ${requisition.requisitionNumber}`,
+      message: isPartial
+        ? `Your requisition ${requisition.requisitionNumber} has been partially fulfilled. Some items were unavailable. Check the requisition for details.`
+        : `Your requisition ${requisition.requisitionNumber} has been fully approved and stock has been issued to your department.`,
+      type: isPartial
+        ? NotificationType.INVENTORY_WARNING
+        : NotificationType.SUCCESS,
+      entityRef: {
+        model: "InventoryRequisition",
+        id: String(requisition._id),
+      },
+      redirectUrl: `/inventory/requisitions/${requisition._id}`,
+    });
+
+    // Check alert thresholds for each issued item
+    for (const lineItem of requisition.items) {
+      if (!lineItem.quantityIssued || lineItem.quantityIssued === 0) continue;
+      const updatedIL = await InventoryItemLocationModel.findOne({
+        item: (lineItem.item as any)._id ?? lineItem.item,
+        location: requisition.location,
+      })
+        .select("currentStock")
+        .lean();
+      if (updatedIL) {
+        await fireInventoryAlert(
+          ((lineItem.item as any)._id ?? lineItem.item).toString(),
+          (requisition.location as any)._id?.toString() ??
+            requisition.location.toString(),
+          updatedIL.currentStock,
+          String(res.locals.user._id)
+        );
+      }
+    }
+
+    const departmentName =
+      (requisition.department as any)?.name ?? "the department";
+    const locationName = (requisition.location as any)?.name ?? "the location";
+
+    logUserActivity(
+      req,
+      String(res.locals.user._id),
+      `${res.locals.user.name} ${
+        isPartial ? "partially fulfilled" : "approved"
+      } requisition ${
+        requisition.requisitionNumber
+      } for ${departmentName} at ${locationName}`,
+      "inventoryrequisitions",
+      String(requisition._id),
+      JSON.stringify({ status: "pending" }),
+      JSON.stringify({
+        status: requisition.status,
+        reviewedBy: res.locals.user._id,
+      })
+    );
+
+    appResponder(
+      StatusCodes.OK,
+      {
+        message: isPartial
+          ? `Requisition ${requisition.requisitionNumber} partially fulfilled. Some items were unavailable.`
+          : `Requisition ${requisition.requisitionNumber} approved and stock issued to ${departmentName}`,
+        data: { requisition },
+      },
+      res
+    );
   }
 );
 
@@ -368,12 +369,16 @@ const rejectRequisition = catchAsync(
     requisition.rejectionReason = reason.trim();
     requisition.reviewedBy = res.locals.user._id;
 
+    const requestedById =
+      (requisition.requestedBy as any)?._id?.toString() ??
+      requisition.requestedBy.toString();
+
     // reviewedAt is stamped by the model pre-save hook
     await requisition.save();
 
     // Notify the requester of the rejection
     await sendNotification({
-      userIds: [requisition.requestedBy.toString()],
+      userIds: [String(requestedById)],
       title: `❌ Requisition Rejected: ${requisition.requisitionNumber}`,
       message: `Your requisition ${
         requisition.requisitionNumber

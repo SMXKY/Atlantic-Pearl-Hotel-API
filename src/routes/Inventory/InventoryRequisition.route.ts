@@ -11,7 +11,9 @@ inventoryRequisitionRouter
     authControllers.protect,
     authControllers.restrictTo(allPermissions.inventoryRequisitions.create),
     (req: Request, res: Response, next: NextFunction) => {
-      req.body.requestedBy = res.locals.user._id;
+      req.body.requestedBy = req.body.requestedBy
+        ? req.body.requestedBy
+        : res.locals.user._id;
       next();
     },
     inventroyRequisitionControllers.createInventroyRequisition
