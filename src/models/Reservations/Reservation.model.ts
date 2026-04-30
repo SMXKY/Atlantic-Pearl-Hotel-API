@@ -17,7 +17,7 @@ import dayjs from "dayjs";
 import { ReservationStatusChangeModel } from "./ReservationStatusChange.model";
 import { io } from "../../index";
 import { computeReservationDashboard } from "../../util/computeReservationDashboard";
-import { computeAdminDashboard } from "../../controllers/Content/content.controller";
+import { computeAdminDashboard } from "../../controllers/Content/defaultDashbord.content";
 import { allPermissions } from "../../types/Permissions.type";
 import { sendNotification } from "../../util/sendNotification.util";
 import { getIdsFromPermissions } from "../../util/sendNotification.util";

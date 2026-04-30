@@ -21,6 +21,8 @@ export interface IParkingReservation extends Document {
   checkInTime?: Date;
   checkOutTime?: Date;
   status: "reserved" | "active" | "completed" | "cancelled" | "no_show";
+  createdAt: Date;
+  updatedAt: Date;
 }
 
 const parkingReservationSchema: Schema<IParkingReservation> = new Schema(

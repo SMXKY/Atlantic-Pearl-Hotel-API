@@ -39,6 +39,7 @@ export const SUBMODULES = {
   USERS: "Users",
   AUTH: "Auth",
   DEPARTMENTS: "Departments",
+  DASHBOARDS: "Dashboards",
   EMPLOYEES: "Employees",
   GUESTS: "Guests",
   PERMISSIONS: "Permissions",
@@ -892,7 +893,7 @@ export const allPermissions = {
     submodule: "Reports",
     read: "can_read_inventory_reports",
     export: "can_export_inventory_reports",
-  },  
+  },
 
   inventorySettings: {
     module: "Inventory Management",
@@ -908,5 +909,16 @@ export const allPermissions = {
     manageAlerts: "can_manage_inventory_alerts",
     manageRetention: "can_manage_inventory_retention",
     readGlobal: "can_read_global_inventory",
+  },
+
+  dashboards: {
+    module: "Content",
+    submodule: "Dashboards",
+    viewFrontDesk: "can_view_frontdesk_dashboard",
+    viewParking: "can_view_parking_dashboard",
+    viewRestaurant: "can_view_restaurant_dashboard",
+    viewInventory: "can_view_inventory_dashboard",
+    viewHR: "can_view_hr_dashboard",
+    viewFinance: "can_view_finance_dashboard",
   },
 } as const;

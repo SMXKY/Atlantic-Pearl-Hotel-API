@@ -6,7 +6,7 @@ import { GuestModel } from "../HR/Guest.model";
 import { ReservationModel } from "../Reservations/Reservation.model";
 import { AppError } from "../../util/AppError.util";
 import { StatusCodes } from "http-status-codes";
-import { computeAdminDashboard } from "../../controllers/Content/content.controller";
+import { computeAdminDashboard } from "../../controllers/Content/defaultDashbord.content";
 import { io } from "../../index";
 
 interface ILockUntil {

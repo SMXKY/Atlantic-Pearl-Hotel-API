@@ -1,8 +1,9 @@
 import express from "express";
 
-import { contentControllers } from "../../controllers/Content/content.controller";
+import { contentControllers } from "../../controllers/Content/defaultDashbord.content";
 import { authControllers } from "../../controllers/Auth/auth.controller";
 import { allPermissions } from "../../types/Permissions.type";
+import { getDashboard } from "../../controllers/Content/dashbaord.controller";
 
 export const contentRouter = express.Router();
 
@@ -13,6 +14,8 @@ contentRouter
     authControllers.restrictTo(allPermissions.content.adminDashboard),
     contentControllers.dashboardAdmin
   );
+
+contentRouter.route("/dashboard").get(authControllers.protect, getDashboard);
 
 contentRouter
   .route("/reservation-dashboard")
