@@ -209,6 +209,11 @@ const inventoryMovementSchema = new mongoose.Schema(
       required: [true, "Stock after snapshot is required"],
       min: [0, "Stock after cannot be negative"],
     },
+
+    date: {
+      type: Date,
+      default: Date.now,
+    },
   },
   {
     timestamps: true,

@@ -26,7 +26,7 @@ const readOneInventroyMovement = catchAsync(
     await CRUDInventroyMovement.readOne(
       req.params.id,
       res,
-      ["item", "location", "counterpartLocation"],
+      ["item", "location", "counterpartLocation", "performedBy"],
       req
     );
   }
@@ -38,6 +38,7 @@ const readAllInventroyMovements = catchAsync(
       "item",
       "location",
       "counterpartLocation",
+      "performedBy",
     ]);
   }
 );
@@ -188,7 +189,28 @@ const getItemMovementHistory = catchAsync(
 
 const logWastage = catchAsync(
   async (req: Request, res: Response, next: NextFunction) => {
-    const { item, location, quantity, wastageReason, notes } = req.body;
+    const { item, location, quantity, wastageReason, notes, date } = req.body;
+
+    console.log(date);
+
+    if (date) {
+      const parsedDate = new Date(date);
+
+      if (isNaN(parsedDate.getTime())) {
+        return next(
+          new AppError("Invalid date provided", StatusCodes.BAD_REQUEST)
+        );
+      }
+
+      if (parsedDate > new Date()) {
+        return next(
+          new AppError(
+            "You may not log a wastage of inventory stock in the future",
+            StatusCodes.BAD_REQUEST
+          )
+        );
+      }
+    }
 
     if (!item || !location || !quantity || !wastageReason) {
       return next(
@@ -311,6 +333,7 @@ const logWastage = catchAsync(
             performedBy: res.locals.user._id,
             stockBefore,
             stockAfter: itemLocation.currentStock,
+            date: date || Date.now(),
           },
         ],
         { session }
@@ -368,7 +391,26 @@ const logWastage = catchAsync(
 
 const transferStock = catchAsync(
   async (req: Request, res: Response, next: NextFunction) => {
-    const { item, fromLocation, toLocation, quantity, notes } = req.body;
+    const { item, fromLocation, toLocation, quantity, notes, date } = req.body;
+
+    if (date) {
+      const parsedDate = new Date(date);
+
+      if (isNaN(parsedDate.getTime())) {
+        return next(
+          new AppError("Invalid date provided", StatusCodes.BAD_REQUEST)
+        );
+      }
+
+      if (parsedDate > new Date()) {
+        return next(
+          new AppError(
+            "You may not record a stock transfer in the future",
+            StatusCodes.BAD_REQUEST
+          )
+        );
+      }
+    }
 
     if (!item || !fromLocation || !toLocation || !quantity) {
       return next(
@@ -533,6 +575,7 @@ const transferStock = catchAsync(
             performedBy: res.locals.user._id,
             stockBefore: sourceStockBefore,
             stockAfter: sourceItemLocation.currentStock,
+            date: date || Date.now(),
           },
           {
             type: "transfer_in",
@@ -547,6 +590,7 @@ const transferStock = catchAsync(
             performedBy: res.locals.user._id,
             stockBefore: destStockBefore,
             stockAfter: destItemLocation.currentStock,
+            date: date || Date.now(),
           },
         ],
         { session, ordered: true }
