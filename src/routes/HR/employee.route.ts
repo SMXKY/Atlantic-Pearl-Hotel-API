@@ -20,6 +20,14 @@ employeeRouter
   );
 
 employeeRouter
+  .route("/search")
+  .get(
+    authControllers.protect,
+    authControllers.restrictTo(allPermissions.employees.readAll),
+    employeeControllers.searchEmployees
+  );
+
+employeeRouter
   .route("/:id")
   .get(
     authControllers.protect,

@@ -69,10 +69,137 @@ const deleteEmployee = catchAsync(
   }
 );
 
+interface SearchEmployeeQuery {
+  q?: string;
+  gender?: string;
+  employmentType?: string;
+  limit?: string;
+}
+
+export const searchEmployees = async (
+  req: Request<{}, {}, {}, SearchEmployeeQuery>,
+  res: Response
+) => {
+  try {
+    const { q, gender, employmentType, limit = "10" } = req.query;
+
+    const pipeline: any[] = [
+      {
+        $lookup: {
+          from: "users", // collection name
+          localField: "user",
+          foreignField: "_id",
+          as: "user",
+        },
+      },
+      {
+        $unwind: "$user",
+      },
+    ];
+
+    const match: any = {};
+
+    // 🔍 Search by name/email (from User)
+    if (q) {
+      match.$or = [
+        { "user.name": { $regex: q, $options: "i" } },
+        { "user.email": { $regex: q, $options: "i" } },
+      ];
+    }
+
+    // 🎯 Filter by gender (User)
+    if (gender) {
+      match["user.gender"] = gender;
+    }
+
+    // 🎯 Filter by employmentType (Employee)
+    if (employmentType) {
+      match.employmentType = employmentType;
+    }
+
+    if (Object.keys(match).length > 0) {
+      pipeline.push({ $match: match });
+    }
+
+    pipeline.push(
+      {
+        $lookup: {
+          from: "departments",
+          localField: "department",
+          foreignField: "_id",
+          as: "department",
+        },
+      },
+      {
+        $unwind: {
+          path: "$department",
+          preserveNullAndEmptyArrays: true,
+        },
+      },
+      {
+        $lookup: {
+          from: "positions",
+          localField: "position",
+          foreignField: "_id",
+          as: "position",
+        },
+      },
+      {
+        $unwind: {
+          path: "$position",
+          preserveNullAndEmptyArrays: true,
+        },
+      },
+      {
+        $project: {
+          _id: 1,
+          employmentType: 1,
+          dateHired: 1,
+          salaryInCFA: 1,
+
+          department: 1,
+          position: 1,
+
+          "user.name": 1,
+          "user.email": 1,
+          "user.phoneNumber": 1,
+          "user.gender": 1,
+          "user.profilePictureUrl": 1,
+          "user.isVerified": 1,
+        },
+      },
+      {
+        $limit: parseInt(limit),
+      }
+    );
+
+    const employees = await EmployeeModel.aggregate(pipeline);
+
+    // count (same filters, no limit)
+    const countPipeline = [
+      ...pipeline.filter((p) => !p.$limit),
+      { $count: "total" },
+    ];
+    const countResult = await EmployeeModel.aggregate(countPipeline);
+    const count = countResult[0]?.total || 0;
+
+    res.status(200).json({
+      success: true,
+      data: employees,
+      count,
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ success: false, error: "Search failed" });
+  }
+};
+
+
 export const employeeControllers = {
   createEmployee,
   readOneEmployee,
   readAllEmployees,
   updateEmployee,
   deleteEmployee,
+  searchEmployees,
 };

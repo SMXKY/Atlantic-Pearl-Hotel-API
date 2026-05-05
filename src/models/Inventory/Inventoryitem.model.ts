@@ -2,8 +2,30 @@ import * as mongoose from "mongoose";
 import { Document, Types } from "mongoose";
 import { InventoryCategoryModel } from "./Inventorycategory.model";
 import { InventorySupplierModel } from "./Inventorysupplier.model";
+import { StatusCodes } from "http-status-codes";
+import { AppError } from "../../util/AppError.util";
 
-// Embedded supplier reference on the item
+const applySupportDocTransformation = (docOrDocs: any) => {
+  const baseUrl = process.env.FTP_BASE_URL;
+  if (!baseUrl) {
+    throw new AppError(
+      "No ftp base url in config file.",
+      StatusCodes.INTERNAL_SERVER_ERROR
+    );
+  }
+
+  const transform = (doc: any) => {
+    if (doc && doc.img && !doc.img.startsWith("https://")) {
+      doc.img = baseUrl + doc.img;
+    }
+  };
+
+  if (Array.isArray(docOrDocs)) {
+    docOrDocs.forEach(transform);
+  } else {
+    transform(docOrDocs);
+  }
+};
 // An item can have multiple suppliers, one marked as preferred
 interface IItemSupplier {
   supplier: Types.ObjectId;
@@ -15,6 +37,7 @@ export interface IInventoryItem extends Document {
   name: string;
   sku: string;
   description?: string;
+  img: string;
   category: Types.ObjectId;
   unitOfMeasure: string;
   abcClassification: "A" | "B" | "C";
@@ -67,6 +90,14 @@ const inventoryItemSchema = new mongoose.Schema(
       required: [true, "Item name is required"],
       trim: true,
       unique: true,
+    },
+
+    img: {
+      type: String,
+      required: [
+        true,
+        "An image is required to create and inventory item, please upload one",
+      ],
     },
 
     // Auto-generated in the format {CATEGORY_CODE}-{SEQUENCE}
@@ -246,6 +277,22 @@ inventoryItemSchema.pre("save", async function (next) {
   } catch (err: any) {
     next(err);
   }
+});
+
+inventoryItemSchema.post("find", function (docs) {
+  applySupportDocTransformation(docs);
+});
+
+inventoryItemSchema.post("findOne", function (doc) {
+  applySupportDocTransformation(doc);
+});
+
+inventoryItemSchema.post("findOneAndUpdate", function (doc) {
+  applySupportDocTransformation(doc);
+});
+
+inventoryItemSchema.post("findOneAndDelete", function (doc) {
+  applySupportDocTransformation(doc);
 });
 
 export const InventoryItemModel = mongoose.model<IInventoryItem>(

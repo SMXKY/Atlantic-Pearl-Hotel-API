@@ -144,7 +144,7 @@ RestaurantItemSchema.pre("findOneAndUpdate", async function (next) {
   next();
 });
 
-const applySupportDocTransformation = (docOrDocs: any) => {
+export const applySupportDocTransformation = (docOrDocs: any) => {
   const baseUrl = process.env.FTP_BASE_URL;
   if (!baseUrl) {
     throw new AppError(

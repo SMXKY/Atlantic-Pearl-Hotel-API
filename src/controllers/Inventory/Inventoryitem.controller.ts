@@ -10,12 +10,44 @@ import { InventoryGoodsReceiptModel } from "../../models/Inventory/Inventorygood
 import { InventoryItemLocationModel } from "../../models/Inventory/Inventoryitemlocation.model";
 import { InventoryLocationModel } from "../../models/Inventory/Inventorylocation.model";
 import { EmployeeModel } from "../../models/HR/Employee.model";
+import { handleFileUploads } from "../../services/ftpServer";
+import { logUserActivity } from "../../util/logUserActivity.util";
 
 const CRUDInventoryItem: CRUD = new CRUD(InventoryItemModel);
 
 const createInventoryItem = catchAsync(
   async (req: Request, res: Response, next: NextFunction) => {
-    await CRUDInventoryItem.create(req.body, res, req);
+    // Parse suppliers from JSON string back to array
+    if (typeof req.body.suppliers === "string") {
+      req.body.suppliers = JSON.parse(req.body.suppliers);
+    }
+
+    req.body.img = "https://image.url";
+    req.body.createdBy = res.locals.user._id;
+
+    const inventoryItem = new InventoryItemModel(req.body);
+    await inventoryItem.validate();
+
+    const inventoryItemImageUrl = await handleFileUploads(req, 2, [
+      ".png",
+      ".jpg",
+      ".jpeg",
+    ]);
+
+    inventoryItem.img = inventoryItemImageUrl[0];
+
+    await inventoryItem.save();
+
+    logUserActivity(
+      req,
+      String(res.locals.user._id),
+      `${res.locals.user.name} created a new inventory Item`,
+      "inventoryitems",
+      String(inventoryItem._id),
+      "",
+      JSON.stringify(inventoryItem)
+    );
+    appResponder(StatusCodes.OK, { inventoryItem }, res);
   }
 );
 
@@ -57,7 +89,9 @@ const getItemStockAcrossLocations = catchAsync(
   async (req: Request, res: Response, next: NextFunction) => {
     const { id } = req.params;
 
-    const item = await InventoryItemModel.findById(id)
+    const item = await InventoryItemModel.findOne({
+      _id: id,
+    })
       .populate("category", "name code")
       .populate("suppliers.supplier", "name code")
       .lean();
@@ -223,6 +257,7 @@ const getItemStockAcrossLocations = catchAsync(
             _id: item._id,
             name: item.name,
             sku: item.sku,
+            img: item.img,
             unitOfMeasure: item.unitOfMeasure,
             abcClassification: item.abcClassification,
             category: item.category,

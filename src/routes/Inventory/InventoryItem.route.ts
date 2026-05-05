@@ -6,14 +6,20 @@ import { InventoryItemControllers } from "../../controllers/Inventory/Inventoryi
 import trackCreatedBy, {
   trackUpdateddBy,
 } from "../../middlewares/trackCreatedBy.middleware";
+import multer from "multer";
+import { handleFilesMiddleware } from "../../middlewares/handleFiles.middleware";
 
 export const inventoryItemRouter = express.Router();
+
+const upload = multer({ dest: "../upload" });
 
 inventoryItemRouter
   .route("/")
   .post(
     authControllers.protect,
     authControllers.restrictTo(allPermissions.inventoryItems.create),
+    upload.array("img", 1),
+    handleFilesMiddleware,
     trackCreatedBy,
     InventoryItemControllers.createInventoryItem
   )

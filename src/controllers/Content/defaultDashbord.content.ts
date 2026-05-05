@@ -307,6 +307,7 @@ export async function computeAdminDashboard() {
   };
 }
 
+
 export const contentControllers = {
   dashboardAdmin,
   reservationDashboard,
