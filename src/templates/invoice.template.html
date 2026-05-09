@@ -3,15 +3,15 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Invoice - Atlantic Pearl Hotel & Resort</title>
+    <title>Invoice {{invoiceNumber}} — Atlantic Pearl Hotel & Resort</title>
   </head>
   <body
     style="
       margin: 0;
       padding: 0;
-      background-color: #fdfcf8;
-      font-family: Arial, sans-serif;
-      color: #4a4a4a;
+      background-color: #f4f1eb;
+      font-family: Georgia, 'Times New Roman', serif;
+      color: #3a3228;
       line-height: 1.6;
     "
   >
@@ -21,173 +21,353 @@
       cellspacing="0"
       cellpadding="0"
       border="0"
-      style="background-color: #fdfcf8; padding: 20px 0"
+      style="background-color: #f4f1eb; padding: 32px 0"
     >
       <tr>
         <td align="center">
           <table
             role="presentation"
-            width="650"
+            width="620"
             cellspacing="0"
             cellpadding="0"
             border="0"
             style="
               background-color: #ffffff;
-              border: 1px solid #e6e6e6;
-              border-radius: 8px;
+              border-radius: 4px;
               overflow: hidden;
-              box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+              box-shadow: 0 8px 32px rgba(10, 37, 64, 0.12);
             "
           >
-            <!-- Header -->
+            <!-- ── Top gold rule ── -->
             <tr>
               <td
-                align="center"
                 style="
-                  background-color: #0a2540;
-                  color: #ffffff;
-                  padding: 32px 24px;
-                  font-family: Georgia, serif;
+                  background-color: #d4af37;
+                  height: 4px;
+                  font-size: 0;
+                  line-height: 0;
                 "
               >
-                <h1
-                  style="
-                    margin: 0;
-                    font-size: 26px;
-                    font-weight: 600;
-                    letter-spacing: 1px;
-                  "
-                >
-                  Atlantic Pearl Hotel & Resort
-                </h1>
+                &nbsp;
               </td>
             </tr>
 
-            <!-- Content -->
+            <!-- ── Header ── -->
             <tr>
-              <td style="padding: 28px; color: #4a4a4a; font-size: 15px">
-                <h2
+              <td
+                align="center"
+                style="background-color: #0a2540; padding: 40px 32px 32px"
+              >
+                <!-- Hotel name -->
+                <p
                   style="
-                    margin: 0 0 16px;
-                    font-size: 20px;
-                    color: #0a2540;
+                    margin: 0 0 4px;
+                    font-size: 11px;
+                    letter-spacing: 4px;
+                    text-transform: uppercase;
+                    color: #d4af37;
                     font-family: Georgia, serif;
                   "
                 >
-                  Invoice: <span style="color: #d4af37">{{invoiceNumber}}</span>
-                </h2>
-
-                <!-- Warning Banner -->
-                <table
-                  role="presentation"
-                  width="100%"
-                  cellspacing="0"
-                  cellpadding="0"
-                  border="0"
-                  style="margin: 20px 0"
+                  Luxury Hotel & Resort
+                </p>
+                <h1
+                  style="
+                    margin: 0 0 20px;
+                    font-size: 28px;
+                    font-weight: 400;
+                    letter-spacing: 2px;
+                    color: #ffffff;
+                    font-family: Georgia, serif;
+                  "
                 >
-                  <tr>
-                    <td
-                      style="
-                        background-color: #fef2f2;
-                        color: #b91c1c;
-                        border-left: 6px solid #dc2626;
-                        padding: 14px 18px;
-                        font-size: 14px;
-                        border-radius: 4px;
-                      "
-                    >
-                      ⚠️ <strong>Important:</strong> This reservation will
-                      automatically expire if the deposit amount is not paid
-                      within <strong>{{expirationTime}} minutes</strong> of
-                      receiving this invoice.
-                    </td>
-                  </tr>
-                </table>
+                  Atlantic Pearl
+                </h1>
 
-                <p style="margin: 16px 0; font-size: 15px">
-                  Dear
-                  <span style="color: #d4af37; font-weight: 600"
-                    >{{guestName}}</span
-                  >,
-                </p>
-                <p style="margin: 16px 0; font-size: 15px">
-                  Thank you for choosing our hotel. Please find your invoice
-                  details below.
-                </p>
-
-                <!-- Guest Info -->
-                {{guestInfo}}
-
-                <!-- Reservation Info -->
-                {{reservationInfo}}
-
-                <!-- Room Details Table -->
-                {{roomSummary}}
-
-                <!-- Invoice Info -->
-                {{invoiceSummary}}
-
-                <!-- Payment Button -->
+                <!-- Invoice badge -->
                 <table
                   role="presentation"
                   cellspacing="0"
                   cellpadding="0"
                   border="0"
                   align="center"
-                  style="margin: 24px auto"
                 >
                   <tr>
                     <td
-                      align="center"
-                      bgcolor="#0a2540"
-                      style="border-radius: 6px"
+                      style="
+                        background-color: rgba(212, 175, 55, 0.15);
+                        border: 1px solid rgba(212, 175, 55, 0.4);
+                        border-radius: 3px;
+                        padding: 10px 24px;
+                      "
                     >
-                      {{paymentButton}}
+                      <p
+                        style="
+                          margin: 0;
+                          font-size: 11px;
+                          letter-spacing: 3px;
+                          text-transform: uppercase;
+                          color: #d4af37;
+                          font-family: Arial, sans-serif;
+                        "
+                      >
+                        Invoice
+                      </p>
+                      <p
+                        style="
+                          margin: 4px 0 0;
+                          font-size: 22px;
+                          font-weight: 700;
+                          color: #d4af37;
+                          font-family: Arial, sans-serif;
+                          letter-spacing: 1px;
+                        "
+                      >
+                        {{invoiceNumber}}
+                      </p>
                     </td>
                   </tr>
                 </table>
+              </td>
+            </tr>
 
-                <p style="margin: 16px 0; font-size: 15px">
-                  Warm regards,<br />
-                  <span style="font-weight: 600; color: #0a2540"
-                    >Atlantic Pearl Hotel & Resort</span
-                  >
+            <!-- ── Expiry warning ── -->
+            <tr>
+              <td style="padding: 0">
+                <table
+                  role="presentation"
+                  width="100%"
+                  cellspacing="0"
+                  cellpadding="0"
+                  border="0"
+                >
+                  <tr>
+                    <td
+                      style="
+                        background-color: #fef8ec;
+                        border-bottom: 1px solid #f0e4b8;
+                        padding: 14px 32px;
+                        font-size: 13px;
+                        color: #92650a;
+                        font-family: Arial, sans-serif;
+                        border-left: 4px solid #d4af37;
+                      "
+                    >
+                      <strong>Action required:</strong> This reservation will
+                      expire if the deposit is not paid within
+                      <strong>{{expirationTime}} minutes</strong> of receiving
+                      this invoice.
+                    </td>
+                  </tr>
+                </table>
+              </td>
+            </tr>
+
+            <!-- ── Greeting ── -->
+            <tr>
+              <td style="padding: 32px 32px 0">
+                <p
+                  style="
+                    margin: 0 0 8px;
+                    font-size: 18px;
+                    color: #0a2540;
+                    font-family: Georgia, serif;
+                  "
+                >
+                  Dear <span style="color: #d4af37">{{guestName}}</span>,
+                </p>
+                <p
+                  style="
+                    margin: 0;
+                    font-size: 14px;
+                    color: #6b6560;
+                    font-family: Arial, sans-serif;
+                    line-height: 1.7;
+                  "
+                >
+                  Thank you for choosing Atlantic Pearl Hotel & Resort. Please
+                  find your invoice details below. We look forward to welcoming
+                  you.
                 </p>
               </td>
             </tr>
 
-            <!-- Footer -->
+            <!-- ── Divider ── -->
+            <tr>
+              <td style="padding: 24px 32px 0">
+                <table
+                  role="presentation"
+                  width="100%"
+                  cellspacing="0"
+                  cellpadding="0"
+                  border="0"
+                >
+                  <tr>
+                    <td
+                      style="
+                        border-top: 1px solid #e8e2d8;
+                        font-size: 0;
+                        line-height: 0;
+                      "
+                    >
+                      &nbsp;
+                    </td>
+                  </tr>
+                </table>
+              </td>
+            </tr>
+
+            <!-- ── Guest info ── -->
+            <tr>
+              <td style="padding: 24px 32px 0">{{guestInfo}}</td>
+            </tr>
+
+            <!-- ── Reservation info ── -->
+            <tr>
+              <td style="padding: 20px 32px 0">{{reservationInfo}}</td>
+            </tr>
+
+            <!-- ── Room summary ── -->
+            <tr>
+              <td style="padding: 20px 32px 0">{{roomSummary}}</td>
+            </tr>
+
+            <!-- ── Invoice summary ── -->
+            <tr>
+              <td style="padding: 20px 32px 0">{{invoiceSummary}}</td>
+            </tr>
+
+            <!-- ── Payment button ── -->
+            <tr>
+              <td style="padding: 8px 32px 0" align="center">
+                {{paymentButton}}
+              </td>
+            </tr>
+
+            <!-- ── Divider ── -->
+            <tr>
+              <td style="padding: 28px 32px 0">
+                <table
+                  role="presentation"
+                  width="100%"
+                  cellspacing="0"
+                  cellpadding="0"
+                  border="0"
+                >
+                  <tr>
+                    <td
+                      style="
+                        border-top: 1px solid #e8e2d8;
+                        font-size: 0;
+                        line-height: 0;
+                      "
+                    >
+                      &nbsp;
+                    </td>
+                  </tr>
+                </table>
+              </td>
+            </tr>
+
+            <!-- ── Sign-off ── -->
+            <tr>
+              <td style="padding: 20px 32px 28px">
+                <p
+                  style="
+                    margin: 0;
+                    font-size: 14px;
+                    color: #6b6560;
+                    font-family: Arial, sans-serif;
+                  "
+                >
+                  Warm regards,
+                </p>
+                <p
+                  style="
+                    margin: 6px 0 0;
+                    font-size: 15px;
+                    color: #0a2540;
+                    font-weight: 600;
+                    font-family: Georgia, serif;
+                  "
+                >
+                  Atlantic Pearl Hotel & Resort
+                </p>
+                <p
+                  style="
+                    margin: 2px 0 0;
+                    font-size: 13px;
+                    color: #9c8e7a;
+                    font-family: Arial, sans-serif;
+                  "
+                >
+                  Concierge & Reservations Team
+                </p>
+              </td>
+            </tr>
+
+            <!-- ── Bottom gold rule ── -->
+            <tr>
+              <td
+                style="
+                  background-color: #d4af37;
+                  height: 2px;
+                  font-size: 0;
+                  line-height: 0;
+                "
+              >
+                &nbsp;
+              </td>
+            </tr>
+
+            <!-- ── Footer ── -->
             <tr>
               <td
                 align="center"
-                style="
-                  background-color: #f5f5f5;
-                  color: #666;
-                  padding: 20px;
-                  font-size: 13px;
-                  border-top: 1px solid #e6e6e6;
-                "
+                style="background-color: #0a2540; padding: 24px 32px"
               >
-                <span
+                <p
                   style="
-                    display: block;
-                    color: #0a2540;
+                    margin: 0 0 6px;
+                    font-size: 13px;
                     font-weight: 600;
-                    font-size: 15px;
-                    margin-bottom: 6px;
+                    color: #d4af37;
+                    font-family: Georgia, serif;
+                    letter-spacing: 1px;
                   "
-                  >Atlantic Pearl Hotel & Resort</span
                 >
-                <p style="margin: 4px 0">
-                  {{hotelAddress}} | Phone: {{hotelPhone}}
+                  Atlantic Pearl Hotel & Resort
                 </p>
-                <p style="margin: 4px 0">
-                  Email: {{hotelEmail}} | Web: {{hotelWebsite}}
+                <p
+                  style="
+                    margin: 0 0 4px;
+                    font-size: 12px;
+                    color: #7a9ab8;
+                    font-family: Arial, sans-serif;
+                  "
+                >
+                  {{hotelAddress}} &nbsp;|&nbsp; {{hotelPhone}}
                 </p>
-                <p style="margin: 4px 0">
-                  © {{currentYear}} Atlantic Pearl Hotel & Resort. All rights
-                  reserved.
+                <p
+                  style="
+                    margin: 0 0 12px;
+                    font-size: 12px;
+                    color: #7a9ab8;
+                    font-family: Arial, sans-serif;
+                  "
+                >
+                  {{hotelEmail}} &nbsp;|&nbsp; {{hotelWebsite}}
+                </p>
+                <p
+                  style="
+                    margin: 0;
+                    font-size: 11px;
+                    color: #4a6880;
+                    font-family: Arial, sans-serif;
+                  "
+                >
+                  &copy; {{currentYear}} Atlantic Pearl Hotel & Resort. All
+                  rights reserved.
                 </p>
               </td>
             </tr>

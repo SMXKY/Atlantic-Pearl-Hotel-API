@@ -90,22 +90,50 @@ export class CRUD {
     defaultSort: string = "-createdAt",
     log: boolean = true
   ): Promise<void> {
+    const page = Math.max(1, Number(req.query.page) || defaultPage);
+    const limit = Math.max(
+      1,
+      Math.min(Number(req.query.limit) || defaultLimit, 200)
+    );
+    const skip = (page - 1) * limit;
+
+    // Build filter query (search handled inside Query class)
     const queryBuilder = new Query(req.query, this.model.find())
       .filter()
+      .search()
       .sort(defaultSort)
-      .limitFields()
-      .paginate(defaultPage, defaultLimit);
+      .limitFields();
 
-    let finalQuery = queryBuilder.getQuery();
+    const baseFilter = queryBuilder.getQuery().getFilter();
 
-    if (populate && Array.isArray(populate)) {
-      populate.forEach((field) => {
-        finalQuery = finalQuery.populate(field, { strictPopulate: false });
-      });
-    }
-    const data = await finalQuery;
- 
-    appResponder(StatusCodes.OK, data, res);
+    // Run count and data fetch in parallel
+    const [total, data] = await Promise.all([
+      this.model.countDocuments(baseFilter),
+      (() => {
+        let q = this.model
+          .find(baseFilter)
+          .sort(defaultSort)
+          .skip(skip)
+          .limit(limit);
+        if (populate && Array.isArray(populate)) {
+          populate.forEach((field) => {
+            q = q.populate(field, { strictPopulate: false } as any);
+          });
+        }
+        return q;
+      })(),
+    ]);
+
+    const totalPages = Math.ceil(total / limit);
+
+    appResponder(StatusCodes.OK, data, res, {
+      total,
+      page,
+      limit,
+      totalPages,
+      hasNextPage: page < totalPages,
+      hasPrevPage: page > 1,
+    });
   }
 
   public async update(

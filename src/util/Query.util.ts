@@ -10,7 +10,14 @@ export class Query {
   public filter() {
     let obj = { ...this.queryObj };
 
-    const excludedFields = ["fields", "sort", "page", "limit"];
+    const excludedFields = [
+      "fields",
+      "sort",
+      "page",
+      "limit",
+      "search",
+      "searchFields",
+    ];
     excludedFields.forEach((key) => delete obj[key]);
 
     let queryStr = JSON.stringify(obj);
@@ -67,5 +74,21 @@ export class Query {
 
   public getQuery() {
     return this.mongooseQuery;
+  }
+
+  public search() {
+    const searchTerm = this.queryObj["search"];
+    const searchFields = this.queryObj["searchFields"];
+
+    if (!searchTerm || !searchFields) return this;
+
+    const fields = (searchFields as string).split(",").map((f) => f.trim());
+    const searchRegex = { $regex: searchTerm as string, $options: "i" };
+
+    this.mongooseQuery = this.mongooseQuery.find({
+      $or: fields.map((field) => ({ [field]: searchRegex })),
+    });
+
+    return this;
   }
 }

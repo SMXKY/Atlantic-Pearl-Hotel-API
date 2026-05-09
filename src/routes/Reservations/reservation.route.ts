@@ -23,6 +23,13 @@ reservationRouter
   );
 
 reservationRouter
+  .route("/my-reservations")
+  .get(
+    authControllers.protect,
+    reservationControllers.getGuestReservationPortal
+  );
+
+reservationRouter
   .route("/deposit-redirect")
   .get(reservationControllers.depositPaymentRedirect);
 

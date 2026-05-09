@@ -526,231 +526,6 @@ reservationSchema.post("save", async function (this: IReservation) {
   await Promise.all(savePromises);
 });
 
-//Update room status on reservation check in update
-reservationSchema.pre("findOneAndUpdate", async function (next) {
-  const update = this.getUpdate();
-  const filter = this.getFilter();
-
-  (this as any)._updateData = update;
-  (this as any)._filterData = filter;
-
-  const currentReservation = await this.model.findOne(filter);
-
-  if (!currentReservation) {
-    return next(
-      new AppError(
-        "Cannot find reservation for the update",
-        StatusCodes.INTERNAL_SERVER_ERROR
-      )
-    );
-  }
-
-  (this as any)._reservationId = currentReservation._id;
-
-  next();
-});
-
-reservationSchema.post("findOneAndUpdate", async function (doc: IReservation) {
-  const update = (this as any)._updateData;
-  const filter = (this as any)._filterData;
-
-  if (!doc || !update) return;
-
-  if (!update.status) return;
-
-  // Try to get the new status from update object or $set operator
-  const newStatus = (update?.status || update?.$set?.status) as
-    | "checked in"
-    | "checked out"
-    | "no showed"
-    | "canceled"
-    | "confirmed"
-    | "expired"
-    | "pending"
-    | undefined;
-
-  if (!newStatus) return;
-
-  console.log(`Reservation ${doc._id} was updated to status: ${newStatus}`);
-
-  // Check if the status change was already logged
-  const alreadyLogged = await ReservationStatusChangeModel.findOne({
-    reservation: (this as any)._reservationId,
-    statusChange: newStatus,
-  });
-
-  if (alreadyLogged) {
-    const friendlyStatus =
-      {
-        "checked in": "already checked in",
-        "checked out": "already checked out",
-        "no showed": "already marked as no-showed",
-        canceled: "already canceled",
-        confirmed: "already confirmed",
-        expired: "already expired",
-        pending: "still pending",
-      }[newStatus] || `already updated to "${newStatus}"`;
-
-    throw new AppError(
-      `This reservation has ${friendlyStatus}. You cannot perform this action again.`,
-      StatusCodes.BAD_REQUEST
-    );
-  }
-
-  // Log the new status change
-  await ReservationStatusChangeModel.create({
-    reservation: (this as any)._reservationId,
-    statusChange: newStatus,
-  });
-
-  const savePromises = [];
-});
-
-reservationSchema.pre("findOneAndUpdate", async function (next) {
-  const update = this.getUpdate() as any;
-  const filter = this.getQuery();
-  const currentReservation = await this.model.findOne(filter);
-  if (update.checkInDate) {
-    for (const item of currentReservation.items) {
-      for (const roomEntry of item.rooms) {
-        roomEntry.checkIn = update.checkInDate;
-      }
-    }
-    update.items = currentReservation.items;
-  }
-
-  if (update.checkOutDate) {
-    for (const item of currentReservation.items) {
-      for (const roomEntry of item.rooms) {
-        roomEntry.checkOut = update.checkOutDate;
-      }
-    }
-    update.items = currentReservation.items;
-  }
-});
-
-//update room status on reservation
-reservationSchema.pre("findOneAndUpdate", async function (next) {
-  const update = this.getUpdate() as any; // avoid TS error due to unknown structure
-  const newStatus =
-    update?.status ?? update?.$set?.status ?? update?.$setOnInsert?.status;
-
-  if (newStatus !== "checked in") return next();
-
-  const filter = this.getQuery();
-  const currentReservation = await this.model.findOne(filter);
-
-  if (!currentReservation) {
-    throw new AppError(
-      "Reservation Id cannot be found in the database",
-      StatusCodes.NOT_FOUND
-    );
-  }
-
-  if (currentReservation.status !== "confirmed") {
-    throw new AppError(
-      "Reservation cannot be checked-in unless it's currently confirmed.",
-      StatusCodes.BAD_REQUEST
-    );
-  }
-
-  if (
-    !currentReservation.wifi ||
-    !currentReservation.wifi.name ||
-    !currentReservation.wifi.password
-  ) {
-    throw new AppError(
-      "Reservation wifi details must be included to mark it as cheked in.",
-      StatusCodes.BAD_REQUEST
-    );
-  }
-
-  const now = dayjs();
-  const checkIn = dayjs(currentReservation.checkInDate);
-  const checkOut = dayjs(currentReservation.checkOutDate);
-
-  if (!checkIn.isValid() || !checkOut.isValid()) {
-    throw new AppError(
-      "Invalid check-in or check-out date.",
-      StatusCodes.INTERNAL_SERVER_ERROR
-    );
-  }
-
-  if (now.diff(checkIn, "hour") >= 5) {
-    throw new AppError(
-      "It has been more than 5 hours since check-in time. Update the check-in date or mark as 'no showed'.",
-      StatusCodes.BAD_REQUEST
-    );
-  }
-
-  if (now.isBefore(checkIn) || !now.isBefore(checkOut)) {
-    throw new AppError(
-      "Can only check in on or after check-in date and before check-out date.",
-      StatusCodes.BAD_REQUEST
-    );
-  }
-
-  for (const item of currentReservation.items) {
-    for (const roomEntry of item.rooms) {
-      await RoomModel.findByIdAndUpdate(
-        roomEntry.room,
-        { status: "occupied" },
-        { runValidators: true }
-      );
-    }
-  }
-
-  next();
-});
-
-//update room status on resevation  check out
-reservationSchema.pre("findOneAndUpdate", async function (next) {
-  const update = this.getUpdate() as Partial<IReservation>;
-  const statusToUpdate = update.status;
-
-  if (statusToUpdate !== "checked out") return next();
-
-  const filter = this.getQuery();
-  const currentReservation = await this.model.findOne(filter);
-
-  if (!currentReservation) {
-    throw new AppError(
-      "Reservation Id cannot be found in the database",
-      StatusCodes.NOT_FOUND
-    );
-  }
-
-  if (currentReservation.status !== "checked in") {
-    throw new AppError(
-      "Reservation cannot be updated to checked-out unless it is currently checked in.",
-      StatusCodes.BAD_REQUEST
-    );
-  }
-
-  if (!currentReservation.checkInDate || !currentReservation.checkOutDate) {
-    throw new AppError(
-      "Reservation must have both check-in and check-out dates",
-      StatusCodes.INTERNAL_SERVER_ERROR
-    );
-  }
-
-  const now = dayjs();
-  const checkIn = dayjs(currentReservation.checkInDate);
-  const checkOut = dayjs(currentReservation.checkOutDate);
-
-  for (const item of currentReservation.items) {
-    for (const roomEntry of item.rooms) {
-      await RoomModel.findByIdAndUpdate(
-        roomEntry.room,
-        { status: "free" },
-        { runValidators: true }
-      );
-    }
-  }
-
-  next();
-});
-
 reservationSchema.methods.mutateForCalendar = async function () {
   const reservation = this.toObject() as IReservation;
 
@@ -825,7 +600,6 @@ async function autoPopulateReservation(docOrDocs: any) {
 
 reservationSchema.post("find", autoPopulateReservation);
 reservationSchema.post("findOne", autoPopulateReservation);
-reservationSchema.post("findOneAndUpdate", autoPopulateReservation);
 reservationSchema.post("findOneAndReplace", autoPopulateReservation);
 reservationSchema.post("findOneAndDelete", autoPopulateReservation);
 
@@ -851,62 +625,6 @@ reservationSchema.pre("save", function (next) {
 
   if (this.checkOutDate <= this.checkInDate) {
     return next(new Error("Check-out date must be after check-in date."));
-  }
-
-  next();
-});
-
-// right alongside your existing pre("save") hook:
-reservationSchema.pre("findOneAndUpdate", function (next) {
-  // extract the “update” object
-  const upd = this.getUpdate() as Partial<{
-    checkInDate: Date;
-    checkOutDate: Date;
-  }>;
-
-  // if someone isn’t touching the dates, skip it
-  if (!upd.checkInDate && !upd.checkOutDate) {
-    return next();
-  }
-
-  const now = new Date();
-  const inDate = upd.checkInDate ?? this.getQuery().checkInDate;
-  const outDate = upd.checkOutDate ?? this.getQuery().checkOutDate;
-
-  if (!inDate || !outDate) {
-    return next(
-      new AppError(
-        "Both check-in and check-out dates must be provided when updating.",
-        StatusCodes.BAD_REQUEST
-      )
-    );
-  }
-
-  if (inDate <= now) {
-    return next(
-      new AppError(
-        "Check-in date must be in the future.",
-        StatusCodes.BAD_REQUEST
-      )
-    );
-  }
-
-  if (outDate <= now) {
-    return next(
-      new AppError(
-        "Check-out date must be in the future.",
-        StatusCodes.BAD_REQUEST
-      )
-    );
-  }
-
-  if (outDate <= inDate) {
-    return next(
-      new AppError(
-        "Check-out date must be after check-in date.",
-        StatusCodes.BAD_REQUEST
-      )
-    );
   }
 
   next();
@@ -989,25 +707,6 @@ reservationSchema.post("save", async function (doc) {
     const adminDashboard = await computeAdminDashboard();
     io.emit("updateAdminDashboard", adminDashboard);
     io.emit("updateReservation", doc);
-  } catch (err) {
-    console.error("❌ Error in reservation post-save hook:", err);
-  }
-});
-
-reservationSchema.post("findOneAndUpdate", async function (doc) {
-  if (!doc) return;
-  try {
-    const updatedReservation = await await mongoose
-      .model("reservations")
-      .findById(doc._id);
-
-    io.emit("updateReservation", updatedReservation);
-    const dashboard = await computeReservationDashboard();
-    io.emit("updateDashboard", dashboard);
-    const calendarData = await buildReservationCalendar();
-    io.emit("reservationCalendar:update", calendarData);
-    const adminDashboard = await computeAdminDashboard();
-    io.emit("updateAdminDashboard", adminDashboard);
   } catch (err) {
     console.error("❌ Error in reservation post-save hook:", err);
   }
@@ -1119,30 +818,205 @@ async function notifyOnReservationStatusUpdate(reservation: IReservation) {
   }
 }
 
-// POST UPDATE HOOK
-reservationSchema.post("findOneAndUpdate", async function (doc: IReservation) {
-  if (!doc) return;
-  await notifyOnReservationStatusUpdate(doc);
-});
+// ─── SINGLE CONSOLIDATED PRE HOOK ─────────────────────────────────────────────
+reservationSchema.pre("findOneAndUpdate", async function (next) {
+  const update = this.getUpdate() as any;
+  const filter = this.getQuery();
 
-reservationSchema.post("findOneAndUpdate", async function (doc: IReservation) {
-  if (!doc || process.env.IPTV !== "true") return;
+  // Store on context for post-hook use
+  (this as any)._updateData = update;
+  (this as any)._filterData = filter;
 
-  const newStatus = doc.status;
+  // Fetch current reservation once — shared by all logic below
+  const current = await this.model.findOne(filter);
 
+  if (!current) {
+    return next(
+      new AppError(
+        "Cannot find reservation for the update",
+        StatusCodes.INTERNAL_SERVER_ERROR
+      )
+    );
+  }
+
+  (this as any)._reservationId = current._id;
+
+  const newStatus: string | undefined =
+    update?.status ?? update?.$set?.status ?? update?.$setOnInsert?.status;
+
+  // ── Status change duplicate guard (moved here from post-hook) ──────────────
+  if (newStatus) {
+    const alreadyLogged = await ReservationStatusChangeModel.findOne({
+      reservation: current._id,
+      statusChange: newStatus,
+      previousStatus: current.status, // add this field when creating too
+    });
+
+    if (alreadyLogged) {
+      const friendlyStatus: Record<string, string> = {
+        "checked in": "already checked in",
+        "checked out": "already checked out",
+        "no showed": "already marked as no-showed",
+        canceled: "already canceled",
+        confirmed: "already confirmed",
+        expired: "already expired",
+        pending: "still pending",
+      };
+
+      return next(
+        new AppError(
+          `This reservation has ${
+            friendlyStatus[newStatus] ??
+            `already been updated to "${newStatus}"`
+          }. You cannot perform this action again.`,
+          StatusCodes.BAD_REQUEST
+        )
+      );
+    }
+  }
+
+  // ── Check-in validation ────────────────────────────────────────────────────
   if (newStatus === "checked in") {
-    await iptv.checkIn(String(doc._id));
+    if (current.status !== "confirmed") {
+      return next(
+        new AppError(
+          "Reservation cannot be checked in unless it is currently confirmed.",
+          StatusCodes.BAD_REQUEST
+        )
+      );
+    }
+
+    const incomingWifi = update?.wifi ?? update?.$set?.wifi;
+    if (!incomingWifi?.name || !incomingWifi?.password) {
+      return next(
+        new AppError(
+          "Wifi credentials must be included to check in a reservation.",
+          StatusCodes.BAD_REQUEST
+        )
+      );
+    }
+
+    const now = dayjs();
+    const checkIn = dayjs(current.checkInDate);
+    const checkOut = dayjs(current.checkOutDate);
+
+    if (!checkIn.isValid() || !checkOut.isValid()) {
+      return next(
+        new AppError(
+          "Invalid check-in or check-out date on reservation.",
+          StatusCodes.INTERNAL_SERVER_ERROR
+        )
+      );
+    }
+
+    if (now.diff(checkIn, "hour") >= 5) {
+      return next(
+        new AppError(
+          "More than 5 hours have passed since check-in time. Update the check-in date or mark as no-showed.",
+          StatusCodes.BAD_REQUEST
+        )
+      );
+    }
+
+    if (now.isBefore(checkIn) || !now.isBefore(checkOut)) {
+      return next(
+        new AppError(
+          "Can only check in on or after the check-in date and before the check-out date.",
+          StatusCodes.BAD_REQUEST
+        )
+      );
+    }
+
+    // Mark all rooms as occupied
+    for (const item of current.items) {
+      for (const roomEntry of item.rooms) {
+        await RoomModel.findByIdAndUpdate(
+          roomEntry.room,
+          { status: "occupied" },
+          { runValidators: true }
+        );
+      }
+    }
   }
-});
 
-reservationSchema.post("findOneAndUpdate", async function (doc: IReservation) {
-  if (!doc || process.env.IPTV !== "true") return;
-
-  const newStatus = doc.status;
-
+  // ── Check-out validation ───────────────────────────────────────────────────
   if (newStatus === "checked out") {
-    await iptv.checkOut(String(doc._id));
+    if (current.status !== "checked in") {
+      return next(
+        new AppError(
+          "Reservation cannot be checked out unless it is currently checked in.",
+          StatusCodes.BAD_REQUEST
+        )
+      );
+    }
+
+    if (!current.checkInDate || !current.checkOutDate) {
+      return next(
+        new AppError(
+          "Reservation must have both check-in and check-out dates.",
+          StatusCodes.INTERNAL_SERVER_ERROR
+        )
+      );
+    }
+
+    // Mark all rooms as free
+    for (const item of current.items) {
+      for (const roomEntry of item.rooms) {
+        await RoomModel.findByIdAndUpdate(
+          roomEntry.room,
+          { status: "free" },
+          { runValidators: true }
+        );
+      }
+    }
   }
+
+  // ── Propagate top-level date changes into nested room entries ──────────────
+  if (update.checkInDate || update.checkOutDate) {
+    for (const item of current.items) {
+      for (const roomEntry of item.rooms) {
+        if (update.checkInDate) roomEntry.checkIn = update.checkInDate;
+        if (update.checkOutDate) roomEntry.checkOut = update.checkOutDate;
+      }
+    }
+    update.items = current.items;
+  }
+
+  // ── Date range validation ──────────────────────────────────────────────────
+  if (update.checkInDate || update.checkOutDate) {
+    const now = new Date();
+    const inDate: Date = update.checkInDate ?? current.checkInDate;
+    const outDate: Date = update.checkOutDate ?? current.checkOutDate;
+
+    if (inDate <= now) {
+      return next(
+        new AppError(
+          "Check-in date must be in the future.",
+          StatusCodes.BAD_REQUEST
+        )
+      );
+    }
+
+    if (outDate <= now) {
+      return next(
+        new AppError(
+          "Check-out date must be in the future.",
+          StatusCodes.BAD_REQUEST
+        )
+      );
+    }
+
+    if (outDate <= inDate) {
+      return next(
+        new AppError(
+          "Check-out date must be after check-in date.",
+          StatusCodes.BAD_REQUEST
+        )
+      );
+    }
+  }
+
+  next();
 });
 
 export const ReservationModel = mongoose.model<IReservation>(

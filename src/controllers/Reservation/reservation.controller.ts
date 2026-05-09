@@ -201,8 +201,10 @@ export const updateReservation = catchAsync(
           );
         }
 
+        console.log(req.body);
+
         const emailHtml = await fillTemplate(
-          __dirname + "/../templates/alreadyHaveAnAccount.template.html",
+          __dirname + "/../../templates/alreadyHaveAnAccount.template.html",
           {
             "Guest Name": userExist.name,
             "Login URL": `${frontEndUrl}/authentication/login`,
@@ -261,7 +263,7 @@ export const updateReservation = catchAsync(
         }
 
         const emailHtml = await fillTemplate(
-          __dirname + "/../templates/guestCredentials.template.html",
+          __dirname + "/../../templates/guestCredentials.template.html",
           {
             "Guest Name": newUser.name,
             "Guest Email": newUser.email,
@@ -446,7 +448,7 @@ const depositPaymentRedirect = catchAsync(
 
       const templatePath = path.join(
         __dirname,
-        "/../templates/receipt.template.html"
+        "/../../templates/receipt.template.html"
       );
       const rawHtml = fs.readFileSync(templatePath, "utf-8");
 
@@ -657,7 +659,7 @@ const cancelReservation = catchAsync(
     if (isOnline) {
       const templatePath = path.join(
         __dirname,
-        "/../templates/receipt.template.html"
+        "/../../templates/receipt.template.html"
       );
       const rawHtml = fs.readFileSync(templatePath, "utf-8");
 
@@ -831,10 +833,18 @@ const updatingGuestRooms = catchAsync(
         );
       }
 
-      const emailHtml = await renderInvoiceHTMLFromTemplate({
-        invoice,
-        reservation,
-      });
+      // ✅ Correct
+      const emailData = await generateInvoiceEmailTemplateData(
+        String(invoice._id)
+      );
+      const emailHtml = renderInvoiceHTMLFromTemplate(emailData);
+      await sendEmail(
+        guest.email,
+        "Updated Invoice for Your Reservation",
+        "",
+        emailHtml
+      );
+
       await sendEmail(
         guest.email,
         "Updated Invoice for Your Reservation",
@@ -989,6 +999,196 @@ const getCheckedInReservationsByEmail = catchAsync(
   }
 );
 
+const getGuestReservationPortal = catchAsync(
+  async (req: Request, res: Response, next: NextFunction) => {
+    const guestId = res.locals.user._id;
+
+    const user = await UserModel.findOne({
+      _id: guestId,
+    });
+
+    if (!user) {
+      return next(
+        new AppError("No such user in the database", StatusCodes.BAD_REQUEST)
+      );
+    }
+
+    const guest = await GuestModel.findOne({
+      user: user._id,
+    });
+
+    if (!guest) {
+      return next(
+        new AppError("No such guest in the database", StatusCodes.BAD_REQUEST)
+      );
+    }
+
+    if (user.userType !== "Guest") {
+      return next(
+        new AppError(
+          "You may not access guest only feature",
+          StatusCodes.BAD_REQUEST
+        )
+      );
+    }
+
+    const currentReservation = await ReservationModel.findOne({
+      guest: String(guest._id),
+      status: "checked in",
+    })
+      .populate({
+        path: "items.roomType",
+        select: "name description amenities images",
+      })
+      .populate({
+        path: "items.rooms.room",
+        select: "roomNumber floor",
+      })
+      .lean();
+
+    let currentStay = null;
+    if (currentReservation) {
+      // Get current bill
+      const currentBill = await BillModel.findOne({
+        reservationId: currentReservation._id,
+        status: { $in: ["pending", "paid"] },
+      })
+        .populate("billItems")
+        .lean();
+
+      // Get all transactions for current reservation
+      const transactions = await TransactionModel.find({
+        reservation: currentReservation._id,
+        guest: guestId,
+      })
+        .sort({ createdAt: -1 })
+        .lean();
+
+      // Calculate spending breakdown by category
+      const spendingByCategory = transactions.reduce((acc, txn) => {
+        const category = txn.transactionType;
+        acc[category] = (acc[category] || 0) + txn.amountInCFA;
+        return acc;
+      }, {} as Record<string, number>);
+
+      // Calculate total from reservation
+      const { totalBill, totalTaxes } =
+        await currentReservation.calculateTotalPriceAndTax();
+
+      currentStay = {
+        reservation: currentReservation,
+        bill: currentBill,
+        transactions,
+        spendingByCategory,
+        financials: {
+          roomTotal: totalBill,
+          tax: totalTaxes,
+          depositPaid: currentReservation.depositInCFA,
+          additionalCharges: transactions
+            .filter((t) => t.isCharge)
+            .reduce((sum, t) => sum + t.amountInCFA, 0),
+          totalSpent: transactions.reduce((sum, t) => sum + t.amountInCFA, 0),
+          balance: totalBill - currentReservation.depositInCFA,
+        },
+        wifi: currentReservation.wifi,
+      };
+    }
+
+    // 2. Get past reservations (stay history)
+    const pastReservations = await ReservationModel.find({
+      guest: guestId,
+      status: "checked out",
+    })
+      .populate({
+        path: "items.roomType",
+        select: "name description",
+      })
+      .populate({
+        path: "items.rooms.room",
+        select: "roomNumber floor",
+      })
+      .sort({ checkOutDate: -1 })
+      .lean();
+
+    // Get bills and transactions for each past reservation
+    const stayHistory = await Promise.all(
+      pastReservations.map(async (reservation) => {
+        const bill = await BillModel.findOne({
+          reservationId: reservation._id,
+        })
+          .populate("billItems")
+          .lean();
+
+        const transactions = await TransactionModel.find({
+          reservation: reservation._id,
+        }).lean();
+
+        const totalSpent = transactions.reduce(
+          (sum, t) => sum + t.amountInCFA,
+          0
+        );
+
+        return {
+          reservation,
+          bill,
+          totalSpent,
+          nights: Math.ceil(
+            (new Date(String(reservation.checkOutDate)).getTime() -
+              new Date(String(reservation.checkInDate)).getTime()) /
+              (1000 * 60 * 60 * 24)
+          ),
+        };
+      })
+    );
+
+    // 3. Get upcoming reservations
+    const upcomingReservations = await ReservationModel.find({
+      guest: String(guest._id),
+      status: { $in: ["pending", "confirmed"] },
+    })
+      .populate({
+        path: "items.roomType",
+        select: "name description",
+      })
+      .populate({
+        path: "items.rooms.room",
+        select: "roomNumber floor",
+      })
+      .sort({ checkInDate: 1 })
+      .lean();
+
+    // 4. Calculate lifetime stats
+    const lifetimeStats = {
+      totalStays: pastReservations.length,
+      totalNightsStayed: stayHistory.reduce(
+        (sum, stay) => sum + stay.nights,
+        0
+      ),
+      totalLifetimeSpending: stayHistory.reduce(
+        (sum, stay) => sum + stay.totalSpent,
+        0
+      ),
+      firstStayDate: pastReservations.length
+        ? pastReservations[pastReservations.length - 1].checkInDate
+        : null,
+      mostRecentStay: pastReservations.length
+        ? pastReservations[0].checkOutDate
+        : null,
+    };
+
+    appResponder(
+      StatusCodes.OK,
+      {
+        currentStay,
+        stayHistory,
+        upcomingReservations,
+        lifetimeStats,
+      },
+      res
+    );
+  }
+);
+
 export const reservationControllers = {
   createReservation,
   readOneReservation,
@@ -1001,4 +1201,5 @@ export const reservationControllers = {
   reservationCalendar,
   searchReservations,
   getCheckedInReservationsByEmail,
+  getGuestReservationPortal,
 };

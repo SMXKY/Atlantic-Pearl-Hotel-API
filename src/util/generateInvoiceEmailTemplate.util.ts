@@ -1,15 +1,59 @@
-import { IInvoice, InvoiceModel } from "../models/Finance/Invoice.model";
-import {
-  IReservation,
-  IReservationItem,
-  ReservationModel,
-} from "../models/Reservations/Reservation.model";
-import { RoomTypeModel } from "../models/Properties/RoomType.model";
-import { RateModel } from "../models/Reservations/Rate.model";
+import { InvoiceModel } from "../models/Finance/Invoice.model";
+import { ReservationModel } from "../models/Reservations/Reservation.model";
 import { IUser } from "../models/HR/User.model";
 import { format } from "date-fns";
+import fs from "fs";
+import path from "path";
+import { AdminConfigurationModel } from "../models/Config/AdminConfiguration.model";
+import { AppError } from "./AppError.util";
+import { StatusCodes } from "http-status-codes";
 
-export async function generateInvoiceEmailTemplateData(invoiceId: string) {
+// ─── DTO shape produced by generateInvoiceEmailTemplateData ──────────────────
+// renderInvoiceHTMLFromTemplate consumes this — never a raw Mongoose document.
+
+interface RoomSummaryDTO {
+  roomType: string;
+  rate: string;
+  quantity: number;
+  nights: number;
+}
+
+interface InvoiceEmailData {
+  guest: {
+    name: string;
+    email: string;
+    phone: string;
+    country: string;
+  };
+  invoice: {
+    number: string;
+    issuedAt: string;
+    dueDate: string;
+    netAmount: string;
+    taxAmount: string;
+    total: string;
+    status: string;
+    paymentLink?: string;
+  };
+  reservation: {
+    reference: string;
+    checkIn: string;
+    checkOut: string;
+    numberOfGuests: number;
+    bookingSource?: string;
+    paymentMethod?: string;
+    roomDetails: RoomSummaryDTO[];
+    specialRequest: string;
+    initialDeposit: string;
+  };
+  time: number;
+}
+
+// ─── Data builder ─────────────────────────────────────────────────────────────
+
+export async function generateInvoiceEmailTemplateData(
+  invoiceId: string
+): Promise<InvoiceEmailData> {
   const adminConfig = (await AdminConfigurationModel.find())[0];
 
   if (!adminConfig || !adminConfig.reservations.expireAfter.value) {
@@ -52,48 +96,50 @@ export async function generateInvoiceEmailTemplateData(invoiceId: string) {
     "dd MMM yyyy"
   );
 
-  // Properly extract guest info from populated user
-  let guestInfo;
-
+  // Guest info — prefer populated user, fall back to inline fields
+  let guest: InvoiceEmailData["guest"];
   if (reservation.guest?.user) {
     const user = reservation.guest.user as IUser;
-    guestInfo = {
-      name: user.name,
-      email: user.email,
-      phone: user.phoneNumber,
-      country: reservation.countryOfResidence || "unknown",
+    guest = {
+      name: (user as any).fullName ?? (user as any).name ?? "Guest",
+      email: user.email ?? reservation.guestEmail ?? "",
+      phone: (user as any).phoneNumber ?? reservation.guestPhoneNumber ?? "",
+      country: reservation.countryOfResidence ?? "Unknown",
     };
   } else {
-    guestInfo = {
-      name: reservation.guestName,
-      email: reservation.guestEmail,
-      phone: reservation.guestPhoneNumber,
-      country: reservation.countryOfResidence || "unknown",
+    guest = {
+      name: reservation.guestName ?? "Guest",
+      email: reservation.guestEmail ?? "",
+      phone: reservation.guestPhoneNumber ?? "",
+      country: reservation.countryOfResidence ?? "Unknown",
     };
   }
 
-  const roomSummaries = reservation.items.map((item: any) => {
-    const roomType = item.roomType?.name || "Room Type";
-    const rate = item.rate?.name || "Rate";
-    const quantity = item.rooms.length;
-    const nights = item.rooms.reduce((acc: number, r: any) => {
-      const nights = Math.round(
-        (new Date(r.checkOut).getTime() - new Date(r.checkIn).getTime()) /
-          (1000 * 60 * 60 * 24)
-      );
-      return acc + nights;
-    }, 0);
+  // Room summaries — transform populated items into plain DTO rows
+  const roomDetails: RoomSummaryDTO[] = (reservation.items ?? []).map(
+    (item: any) => {
+      const roomType = item.roomType?.name ?? "Room";
+      const rate = item.rate?.name ?? "Rate";
+      const quantity = item.rooms?.length ?? item.quantity ?? 0;
 
-    return {
-      roomType,
-      rate,
-      quantity,
-      nights,
-    };
-  });
+      // Sum nights across all room entries for this item
+      const nights = (item.rooms ?? []).reduce((acc: number, r: any) => {
+        if (!r.checkIn || !r.checkOut) return acc;
+        return (
+          acc +
+          Math.round(
+            (new Date(r.checkOut).getTime() - new Date(r.checkIn).getTime()) /
+              86400000
+          )
+        );
+      }, 0);
+
+      return { roomType, rate, quantity, nights };
+    }
+  );
 
   return {
-    guest: guestInfo,
+    guest,
     invoice: {
       number: invoice.invoiceNumber,
       issuedAt: format(new Date(invoice.issuedAt), "dd MMM yyyy"),
@@ -111,151 +157,217 @@ export async function generateInvoiceEmailTemplateData(invoiceId: string) {
       numberOfGuests: reservation.numberOfGuest,
       bookingSource: reservation.bookingSource,
       paymentMethod: reservation.paymentMethod,
-      roomDetails: roomSummaries,
-      specialRequest: reservation.specialRequest || "None",
-      initialDeposit: reservation.depositInCFA.toLocaleString() + " FCFA",
+      roomDetails,
+      specialRequest: reservation.specialRequest ?? "None",
+      initialDeposit: reservation.depositInCFA?.toLocaleString() + " FCFA",
     },
     time: adminConfig.reservations.expireAfter.value,
   };
 }
 
-import fs from "fs";
-import path from "path";
-import { AdminConfigurationModel } from "../models/Config/AdminConfiguration.model";
-import { AppError } from "./AppError.util";
-import { StatusCodes } from "http-status-codes";
-import { IGuest } from "models/HR/Guest.model";
+// ─── HTML renderer ────────────────────────────────────────────────────────────
+// Receives the DTO produced above — never a raw Mongoose document.
 
-export function renderInvoiceHTMLFromTemplate(data: any): string {
+export function renderInvoiceHTMLFromTemplate(data: InvoiceEmailData): string {
   const templatePath = path.join(
     __dirname,
     "/../templates/invoice.template.html"
   );
   const rawHtml = fs.readFileSync(templatePath, "utf-8");
 
-  const {
-    guest,
-    invoice,
-    reservation,
-    time = new Date(),
-  } = data as {
-    guest: IGuest;
-    invoice: IInvoice;
-    reservation: IReservation;
-    time: any;
-  };
+  const { guest, invoice, reservation, time } = data;
 
-  const guestInfo = `
-    <ul>
-      <li><strong>Name:</strong> ${reservation?.guestName}</li>
-      <li><strong>Email:</strong> ${reservation?.guestEmail}</li>
-      <li><strong>Phone:</strong> ${reservation?.guestPhoneNumber}</li>
-    </ul>
-  `;
-
-  const reservationInfo = `
-    <ul>
-      <li><strong>Reference:</strong> ${reservation.bookingReference}</li>
-      <li><strong>Check-In:</strong> ${reservation.checkInDate}</li>
-      <li><strong>Check-Out:</strong> ${reservation.checkOutDate}</li>
-      <li><strong>Guests:</strong> ${reservation.numberOfGuest}</li>
-      <li><strong>Booking Source:</strong> ${reservation.bookingSource}</li>
-      <li><strong>Payment Method:</strong> ${reservation.paymentMethod}</li>
-      <li><strong>Special Request:</strong> ${reservation.specialRequest}</li>
-    </ul>
-  `;
-
-  const roomDetailsHtml = reservation.items
-    .map((item: IReservationItem) => {
-      const roomTypeName =
-        typeof item.roomType === "object" && (item.roomType as any)?.name
-          ? (item.roomType as any).name
-          : String(item.roomType);
-
-      const rateName =
-        typeof item.rate === "object" && (item.rate as any)?.name
-          ? (item.rate as any).name
-          : String(item.rate);
-
-      const quantity = item.rooms?.length ?? item.quantity ?? 0;
-
-      // If you want to calculate nights for each room individually
-      const nights = item.rooms?.[0]
-        ? Math.ceil(
-            (item.rooms[0].checkOut.getTime() -
-              item.rooms[0].checkIn.getTime()) /
-              (1000 * 60 * 60 * 24) || 0
-          )
-        : 0;
-
-      return `
+  // ── Guest block ────────────────────────────────────────────────────────────
+  const guestInfoHtml = `
+    <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%"
+      style="margin:0 0 24px; border:1px solid #e8e4dc; border-radius:6px; overflow:hidden;">
       <tr>
-        <td style="padding: 8px; border: 1px solid #ccc;">${roomTypeName}</td>
-        <td style="padding: 8px; border: 1px solid #ccc;">${rateName}</td>
-        <td style="padding: 8px; border: 1px solid #ccc; text-align: center;">${quantity}</td>
-        <td style="padding: 8px; border: 1px solid #ccc; text-align: center;">${nights}</td>
+        <td style="padding:14px 18px; background:#f7f4ee; border-bottom:1px solid #e8e4dc;">
+          <span style="font-size:11px; font-weight:700; letter-spacing:1.5px; text-transform:uppercase; color:#8a7d5a;">
+            Guest Information
+          </span>
+        </td>
       </tr>
-    `;
-    })
-    .join("");
-
-  const roomSummary = `
-    <h3>Room Summary</h3>
-    <table style="width: 100%; border-collapse: collapse;">
-      <thead>
-        <tr>
-          <th style="padding: 8px; border: 1px solid #ccc; background-color: #f5f5f5;">Room Type</th>
-          <th style="padding: 8px; border: 1px solid #ccc; background-color: #f5f5f5;">Rate</th>
-          <th style="padding: 8px; border: 1px solid #ccc; background-color: #f5f5f5;">Quantity</th>
-          <th style="padding: 8px; border: 1px solid #ccc; background-color: #f5f5f5;">Nights</th>
+      ${[
+        ["Name", guest.name],
+        ["Email", guest.email],
+        ["Phone", guest.phone],
+        ["Country", guest.country],
+      ]
+        .map(
+          ([label, value], i) => `
+        <tr style="background:${i % 2 === 0 ? "#ffffff" : "#fdfcf8"}">
+          <td style="padding:10px 18px; font-size:14px; color:#6b6b6b; width:140px; border-right:1px solid #f0ece4;">
+            ${label}
+          </td>
+          <td style="padding:10px 18px; font-size:14px; color:#2c2c2c; font-weight:500;">
+            ${value || "—"}
+          </td>
         </tr>
-      </thead>
-      <tbody>
-        ${roomDetailsHtml}
-      </tbody>
+      `
+        )
+        .join("")}
     </table>
   `;
 
-  const invoiceSummary = `
-    <h3>Invoice Summary</h3>
-    <ul>
-      <li><strong>Issued At:</strong> ${invoice?.issuedAt}</li>
-      <li><strong>Due Date:</strong> ${invoice?.dueDate}</li>
-      <li><strong>Net Amount:</strong> ${invoice.netAmount}</li>
-      <li><strong>Tax:</strong> ${invoice.taxAmount}</li>
-      <li><strong>Initial Deposit:</strong> ${reservation.depositInCFA}</li>
-      <li><strong>Total:</strong> <strong style="color: #28a745;">${invoice?.grandTotal.toLocaleString()}</strong></li>
-      <li><strong>Status:</strong> ${invoice.paymentStatus}</li>
-    </ul>
+  // ── Reservation block ──────────────────────────────────────────────────────
+  const reservationInfoHtml = `
+    <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%"
+      style="margin:0 0 24px; border:1px solid #e8e4dc; border-radius:6px; overflow:hidden;">
+      <tr>
+        <td style="padding:14px 18px; background:#f7f4ee; border-bottom:1px solid #e8e4dc;">
+          <span style="font-size:11px; font-weight:700; letter-spacing:1.5px; text-transform:uppercase; color:#8a7d5a;">
+            Reservation Details
+          </span>
+        </td>
+      </tr>
+      ${[
+        ["Reference", reservation.reference],
+        ["Check-In", reservation.checkIn],
+        ["Check-Out", reservation.checkOut],
+        ["Guests", String(reservation.numberOfGuests)],
+        ["Booking Source", reservation.bookingSource ?? "—"],
+        ["Payment Method", reservation.paymentMethod ?? "—"],
+        ["Special Request", reservation.specialRequest],
+        ["Initial Deposit", reservation.initialDeposit],
+      ]
+        .map(
+          ([label, value], i) => `
+        <tr style="background:${i % 2 === 0 ? "#ffffff" : "#fdfcf8"}">
+          <td style="padding:10px 18px; font-size:14px; color:#6b6b6b; width:160px; border-right:1px solid #f0ece4;">
+            ${label}
+          </td>
+          <td style="padding:10px 18px; font-size:14px; color:#2c2c2c; font-weight:500;">
+            ${value || "—"}
+          </td>
+        </tr>
+      `
+        )
+        .join("")}
+    </table>
   `;
 
-  const paymentButton = invoice.paymentLink
-    ? ` <a
-                        href="${invoice.paymentLink}"
-                        target="_blank"
-                        style="
-                          display: inline-block;
-                          text-decoration: none;
-                          background-color: #0a2540;
-                          color: #ffffff;
-                          padding: 14px 28px;
-                          font-size: 15px;
-                          font-weight: 500;
-                          border-radius: 6px;
-                        "
-                        >Pay Now</a
-                      >`
+  // ── Room summary table ─────────────────────────────────────────────────────
+  // Uses data.reservation.roomDetails — the already-transformed DTO array.
+  // No .map() on Mongoose documents here.
+  const roomRowsHtml = (reservation.roomDetails ?? [])
+    .map(
+      (item) => `
+    <tr>
+      <td style="padding:12px 16px; font-size:14px; color:#2c2c2c; border-bottom:1px solid #f0ece4;">
+        ${item.roomType}
+      </td>
+      <td style="padding:12px 16px; font-size:14px; color:#2c2c2c; border-bottom:1px solid #f0ece4;">
+        ${item.rate}
+      </td>
+      <td style="padding:12px 16px; font-size:14px; color:#2c2c2c; text-align:center; border-bottom:1px solid #f0ece4;">
+        ${item.quantity}
+      </td>
+      <td style="padding:12px 16px; font-size:14px; color:#2c2c2c; text-align:center; border-bottom:1px solid #f0ece4;">
+        ${item.nights}
+      </td>
+    </tr>
+  `
+    )
+    .join("");
+
+  const roomSummaryHtml = `
+    <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%"
+      style="margin:0 0 24px; border:1px solid #e8e4dc; border-radius:6px; overflow:hidden;">
+      <tr>
+        <td style="padding:14px 18px; background:#f7f4ee; border-bottom:1px solid #e8e4dc;">
+          <span style="font-size:11px; font-weight:700; letter-spacing:1.5px; text-transform:uppercase; color:#8a7d5a;">
+            Room Summary
+          </span>
+        </td>
+      </tr>
+      <tr style="background:#fdfcf8;">
+        <th style="padding:10px 16px; font-size:12px; font-weight:700; color:#8a7d5a; text-align:left; text-transform:uppercase; letter-spacing:0.8px; border-bottom:1px solid #e8e4dc;">Room Type</th>
+        <th style="padding:10px 16px; font-size:12px; font-weight:700; color:#8a7d5a; text-align:left; text-transform:uppercase; letter-spacing:0.8px; border-bottom:1px solid #e8e4dc;">Rate</th>
+        <th style="padding:10px 16px; font-size:12px; font-weight:700; color:#8a7d5a; text-align:center; text-transform:uppercase; letter-spacing:0.8px; border-bottom:1px solid #e8e4dc;">Qty</th>
+        <th style="padding:10px 16px; font-size:12px; font-weight:700; color:#8a7d5a; text-align:center; text-transform:uppercase; letter-spacing:0.8px; border-bottom:1px solid #e8e4dc;">Nights</th>
+      </tr>
+      ${
+        roomRowsHtml ||
+        `
+        <tr>
+          <td colspan="4" style="padding:16px; text-align:center; color:#aaa; font-size:14px;">No room details available</td>
+        </tr>
+      `
+      }
+    </table>
+  `;
+
+  // ── Invoice summary ────────────────────────────────────────────────────────
+  const invoiceSummaryHtml = `
+    <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%"
+      style="margin:0 0 24px; border:1px solid #e8e4dc; border-radius:6px; overflow:hidden;">
+      <tr>
+        <td style="padding:14px 18px; background:#f7f4ee; border-bottom:1px solid #e8e4dc;">
+          <span style="font-size:11px; font-weight:700; letter-spacing:1.5px; text-transform:uppercase; color:#8a7d5a;">
+            Invoice Summary
+          </span>
+        </td>
+      </tr>
+      ${[
+        ["Invoice Number", invoice.number, false],
+        ["Issued At", invoice.issuedAt, false],
+        ["Due Date", invoice.dueDate, false],
+        ["Net Amount", invoice.netAmount, false],
+        ["Tax", invoice.taxAmount, false],
+        ["Initial Deposit", reservation.initialDeposit, false],
+        ["Status", invoice.status, false],
+      ]
+        .map(
+          ([label, value], i) => `
+        <tr style="background:${i % 2 === 0 ? "#ffffff" : "#fdfcf8"}">
+          <td style="padding:10px 18px; font-size:14px; color:#6b6b6b; width:160px; border-right:1px solid #f0ece4;">
+            ${label}
+          </td>
+          <td style="padding:10px 18px; font-size:14px; color:#2c2c2c; font-weight:500;">
+            ${value || "—"}
+          </td>
+        </tr>
+      `
+        )
+        .join("")}
+      <!-- Total row — highlighted -->
+      <tr style="background:#0a2540;">
+        <td style="padding:14px 18px; font-size:14px; color:#d4af37; font-weight:700; border-right:1px solid #163660;">
+          Total
+        </td>
+        <td style="padding:14px 18px; font-size:16px; color:#d4af37; font-weight:700;">
+          ${invoice.total}
+        </td>
+      </tr>
+    </table>
+  `;
+
+  // ── Payment button ─────────────────────────────────────────────────────────
+  const paymentButtonHtml = invoice.paymentLink
+    ? `<table role="presentation" cellspacing="0" cellpadding="0" border="0" align="center"
+        style="margin:28px auto;">
+        <tr>
+          <td align="center" style="border-radius:6px; background:#d4af37;">
+            <a href="${invoice.paymentLink}" target="_blank"
+              style="display:inline-block; text-decoration:none; background-color:#d4af37;
+                     color:#0a2540; padding:16px 36px; font-size:15px; font-weight:700;
+                     border-radius:6px; letter-spacing:0.5px;">
+              Pay Now — ${invoice.total}
+            </a>
+          </td>
+        </tr>
+      </table>`
     : "";
 
-  let finalHtml = rawHtml
-    .replace(/{{invoiceNumber}}/g, invoice.invoiceNumber)
-    .replace(/{{guestName}}/g, String(reservation.guestName))
-    .replace(/{{guestInfo}}/g, guestInfo)
-    .replace(/{{reservationInfo}}/g, reservationInfo)
-    .replace(/{{roomSummary}}/g, roomSummary)
-    .replace(/{{invoiceSummary}}/g, invoiceSummary)
-    .replace(/{{paymentButton}}/g, paymentButton)
-    .replace(/{{expirationTime}}/g, `${time}`);
-
-  return finalHtml;
+  // ── Inject into template ───────────────────────────────────────────────────
+  return rawHtml
+    .replace(/{{invoiceNumber}}/g, invoice.number)
+    .replace(/{{guestName}}/g, guest.name)
+    .replace(/{{expirationTime}}/g, String(time))
+    .replace(/{{guestInfo}}/g, guestInfoHtml)
+    .replace(/{{reservationInfo}}/g, reservationInfoHtml)
+    .replace(/{{roomSummary}}/g, roomSummaryHtml)
+    .replace(/{{invoiceSummary}}/g, invoiceSummaryHtml)
+    .replace(/{{paymentButton}}/g, paymentButtonHtml);
 }
