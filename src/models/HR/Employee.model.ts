@@ -12,6 +12,7 @@ const employeeSchema = new mongoose.Schema(
     nationality: {
       type: String,
       trim: true,
+      default: "Cameroonian",
     },
     residentialAddress: {
       type: String,
@@ -38,6 +39,7 @@ const employeeSchema = new mongoose.Schema(
     },
     salaryInCFA: {
       type: Number,
+      default: 0,
       validate: {
         validator: function (amount: number) {
           if (amount < 0) {
@@ -52,6 +54,7 @@ const employeeSchema = new mongoose.Schema(
     department: {
       type: mongoose.Types.ObjectId,
       ref: "departments",
+      required: [true, "Every employee must be assigned a department"],
       validate: {
         validator: async function (id: mongoose.Types.ObjectId) {
           // Check if the manager exists

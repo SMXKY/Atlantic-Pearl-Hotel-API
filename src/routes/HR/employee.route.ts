@@ -24,7 +24,7 @@ employeeRouter
   .get(
     authControllers.protect,
     authControllers.restrictTo(allPermissions.employees.readAll),
-    employeeControllers.searchEmployees
+    employeeControllers.search
   );
 
 employeeRouter
@@ -32,7 +32,7 @@ employeeRouter
   .get(
     authControllers.protect,
     authControllers.restrictTo(allPermissions.employees.readOne),
-    employeeControllers.readOneEmployee
+    employeeControllers.getEmployeeDetails
   )
   .patch(
     authControllers.protect,

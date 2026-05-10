@@ -1,4 +1,4 @@
-import express from "express";
+import express, { NextFunction, Request, Response } from "express";
 
 import { roomTypeControllers } from "../../controllers/Properties/roomType.controller";
 import { authControllers } from "../../controllers/Auth/auth.controller";
