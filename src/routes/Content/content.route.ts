@@ -4,8 +4,35 @@ import { contentControllers } from "../../controllers/Content/defaultDashbord.co
 import { authControllers } from "../../controllers/Auth/auth.controller";
 import { allPermissions } from "../../types/Permissions.type";
 import { getDashboard } from "../../controllers/Content/dashbaord.controller";
+import rateLimit from "express-rate-limit";
+import { searchController } from "../../controllers/Content/search.controller";
 
 export const contentRouter = express.Router();
+
+const searchLimiter = rateLimit({
+  windowMs: 1 * 60 * 1000,
+  max: 30,
+  message: {
+    success: false,
+    message: "Too many search requests. Please try again later.",
+  },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+contentRouter.post(
+  "/search",
+  searchLimiter,
+  authControllers.protect,
+  authControllers.restrictTo(
+    allPermissions.employees.readAll,
+    allPermissions.guest.readAll,
+    allPermissions.reservations.readAll,
+    allPermissions.rooms.readAll,
+    allPermissions.roomTypes.readAll
+  ),
+  searchController
+);
 
 contentRouter
   .route("/admin-dashboard")
