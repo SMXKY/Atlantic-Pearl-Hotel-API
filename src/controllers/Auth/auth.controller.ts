@@ -255,7 +255,9 @@ const createEmployeeAccount = catchAsync(
             employeeName: user.name,
             employeeEmail: user.email,
             employeePassword: employeePassword,
-            loginUrl: `${process.env.FRONT_END_URL}/login`,
+            loginUrl: `${
+              process.env.FRONT_END_URL || "https://www.hotelatlanticpearl.com/"
+            }/login`,
           })
         );
 
@@ -347,7 +349,7 @@ const signIn = catchAsync(
         user.email,
         "Account created successfully",
         `Please verify your Email.`,
-        `<b>Please Click on link bellow to Verify you email</b><br/><p>${`${process.env.HOME}/api/v1/verify-email/${emailVerificationToken}`}</p>`
+        `<b>Please Click on link bellow to Verify you email</b><br/><p>${`${process.env.PROD_BASE_URL}/api/v1/verify-email/${emailVerificationToken}`}</p>`
       );
     } catch (err) {
       console.log("Error sending emil verificaiton email", err);
