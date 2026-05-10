@@ -352,6 +352,34 @@ const modifyProfilePicture = catchAsync(
   }
 );
 
+// ─── User Stats Controller ─────────────────────────────────────────────────
+// Query param: ?type=guest | ?type=employee
+export const getUserStats = catchAsync(
+  async (req: Request, res: Response, next: NextFunction) => {
+    const type = req.query.type as string;
+
+    if (!type || !["guest", "employee"].includes(type)) {
+      return next(
+        new AppError(
+          "Query param 'type' must be either 'guest' or 'employee'",
+          StatusCodes.BAD_REQUEST
+        )
+      );
+    }
+
+    const userType = type === "guest" ? "Guest" : "Employee";
+
+    const [total, male, female, verified] = await Promise.all([
+      UserModel.countDocuments({ userType }),
+      UserModel.countDocuments({ userType, gender: "M" }),
+      UserModel.countDocuments({ userType, gender: "F" }),
+      UserModel.countDocuments({ userType, isVerified: true }),
+    ]);
+
+    appResponder(StatusCodes.OK, { total, male, female, verified }, res);
+  }
+);
+
 export const userControllers = {
   createUser,
   readOneUser,
@@ -364,4 +392,5 @@ export const userControllers = {
   modifyProfilePicture,
   readMe,
   updateMe,
+  getUserStats,
 };

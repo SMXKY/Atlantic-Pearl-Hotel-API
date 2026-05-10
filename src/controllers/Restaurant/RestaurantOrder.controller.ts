@@ -425,13 +425,26 @@ const updateRestaurantOrder = catchAsync(
       }
 
       // Create a bill item for the restaurant order
-      await BillItemModel.create({
-        billId: bill._id,
-        description: `${reservation.bookingReference} ordered restaurant items`,
-        category: "restaurant_orders", // enum value
-        linkedEntityId: order._id,
-        amount: totalAmount,
-      });
+      await BillItemModel.insertMany(
+        cart.cartItems.map((item: IRestaurantCartItem) => ({
+          billId: bill._id,
+          description: item.name_snapshot, // or whatever the name field is
+          category: "restaurant_orders",
+          linkedEntityId: order._id,
+          linkedCollection: "restaurant_orders",
+          amount: item.priceSnapShotInCFA * (item.quantity || 1),
+          snapshot: {
+            name: item.name_snapshot,
+            unitPrice: item.priceSnapShotInCFA,
+            quantity: item.quantity || 1,
+            details: {
+              roomNumber: order.room,
+              orderedAt: order.createdAt,
+              orderId: order._id,
+            },
+          },
+        }))
+      );
 
       const today = new Date();
       const formattedDate = `${String(today.getDate()).padStart(

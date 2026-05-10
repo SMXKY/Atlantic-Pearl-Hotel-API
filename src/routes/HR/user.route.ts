@@ -61,6 +61,18 @@ userRouter
   .patch(authControllers.protect, userControllers.updateMe);
 
 userRouter
+  .route("/stats")
+  .get(
+    authControllers.protect,
+    authControllers.restrictTo(
+      allPermissions.users.readAll,
+      allPermissions.guest.readAll,
+      allPermissions.employees.readAll
+    ),
+    userControllers.getUserStats
+  );
+
+userRouter
   .route("/:id")
   .get(
     authControllers.protect,

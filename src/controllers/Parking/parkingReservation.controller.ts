@@ -237,14 +237,30 @@ export const createParkingReservation = catchAsync(
       });
 
       // Create bill item with correct enum category
+      // Create bill item with correct enum category
       await BillItemModel.create({
         billId: bill._id,
-        description: `${(guest.user as any).name} reserved spot ${
-          spot._id
-        } from ${reservedFrom.toISOString()} to ${reservedTo.toISOString()}`,
+        description: `Parking reservation — Spot ${spot._id}`,
         category: "parking_reservations",
         linkedEntityId: parkingReservation._id,
+        linkedCollection: "parking_reservations",
         amount: totalAmount,
+        snapshot: {
+          name: `Parking — ${(parkingSection.type as any).name ?? "Standard"}`,
+          unitPrice: hourlyRate,
+          quantity: Math.ceil(durationInHours),
+          details: {
+            spotId: spot._id,
+            section: parkingSection.name ?? parkingSection._id,
+            type: (parkingSection.type as any).name,
+            hourlyRate,
+            durationInHours: Math.ceil(durationInHours),
+            from: reservedFrom,
+            to: reservedTo,
+            guestName: (guest.user as any).name,
+            roomNumber: room.number,
+          },
+        },
       });
 
       // Update spot status

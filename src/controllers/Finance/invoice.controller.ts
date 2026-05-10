@@ -438,14 +438,21 @@ const showBillAndInvoiceSettleMentData = catchAsync(
         )
       );
     }
-
     const bill = await BillModel.findOne({
       reservationId: reservation._id,
-    }).populate("billItems");
+    }).populate({
+      path: "billItems",
+      populate: {
+        path: "linkedEntityId",
+      },
+    });
 
     const invoice = await InvoiceModel.findOne({
       reservation: reservation._id,
-    });
+    })
+      .populate("lineItems.roomType", "name description")
+      .populate("lineItems.rate", "name totalPriceInCFA mealPlan")
+      .populate("lineItems.rooms.room", "number floorNumber");
 
     if (!invoice) {
       return next(

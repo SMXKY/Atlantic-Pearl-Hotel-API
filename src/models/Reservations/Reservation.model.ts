@@ -840,16 +840,20 @@ reservationSchema.pre("findOneAndUpdate", async function (next) {
   }
 
   (this as any)._reservationId = current._id;
+  (this as any)._previousStatus = current.status;
 
   const newStatus: string | undefined =
     update?.status ?? update?.$set?.status ?? update?.$setOnInsert?.status;
 
-  // ── Status change duplicate guard (moved here from post-hook) ──────────────
-  if (newStatus) {
+  // Only run status logic if the status is actually changing
+  const statusIsChanging = !!newStatus && newStatus !== current.status;
+
+  // ── Duplicate status change guard ──────────────────────────────────────────
+  if (statusIsChanging) {
     const alreadyLogged = await ReservationStatusChangeModel.findOne({
       reservation: current._id,
       statusChange: newStatus,
-      previousStatus: current.status, // add this field when creating too
+      previousStatus: current.status,
     });
 
     if (alreadyLogged) {
@@ -876,7 +880,7 @@ reservationSchema.pre("findOneAndUpdate", async function (next) {
   }
 
   // ── Check-in validation ────────────────────────────────────────────────────
-  if (newStatus === "checked in") {
+  if (statusIsChanging && newStatus === "checked in") {
     if (current.status !== "confirmed") {
       return next(
         new AppError(
@@ -940,7 +944,7 @@ reservationSchema.pre("findOneAndUpdate", async function (next) {
   }
 
   // ── Check-out validation ───────────────────────────────────────────────────
-  if (newStatus === "checked out") {
+  if (statusIsChanging && newStatus === "checked out") {
     if (current.status !== "checked in") {
       return next(
         new AppError(
@@ -984,28 +988,33 @@ reservationSchema.pre("findOneAndUpdate", async function (next) {
 
   // ── Date range validation ──────────────────────────────────────────────────
   if (update.checkInDate || update.checkOutDate) {
-    const now = new Date();
     const inDate: Date = update.checkInDate ?? current.checkInDate;
     const outDate: Date = update.checkOutDate ?? current.checkOutDate;
 
-    if (inDate <= now) {
-      return next(
-        new AppError(
-          "Check-in date must be in the future.",
-          StatusCodes.BAD_REQUEST
-        )
-      );
+    // Only enforce future dates if the reservation hasn't started yet
+    if (!["checked in", "checked out"].includes(current.status)) {
+      const now = new Date();
+
+      if (inDate <= now) {
+        return next(
+          new AppError(
+            "Check-in date must be in the future.",
+            StatusCodes.BAD_REQUEST
+          )
+        );
+      }
+
+      if (outDate <= now) {
+        return next(
+          new AppError(
+            "Check-out date must be in the future.",
+            StatusCodes.BAD_REQUEST
+          )
+        );
+      }
     }
 
-    if (outDate <= now) {
-      return next(
-        new AppError(
-          "Check-out date must be in the future.",
-          StatusCodes.BAD_REQUEST
-        )
-      );
-    }
-
+    // Always enforce checkout after checkin regardless of status
     if (outDate <= inDate) {
       return next(
         new AppError(
@@ -1017,6 +1026,63 @@ reservationSchema.pre("findOneAndUpdate", async function (next) {
   }
 
   next();
+});
+
+// ─── SINGLE CONSOLIDATED POST HOOK ────────────────────────────────────────────
+reservationSchema.post("findOneAndUpdate", async function (doc: IReservation) {
+  if (!doc) return;
+
+  const update = (this as any)._updateData;
+  const reservationId = (this as any)._reservationId;
+
+  // ── Log the status change (now safe — duplicate was blocked in pre-hook) ───
+  const newStatus: string | undefined =
+    update?.status ?? update?.$set?.status ?? update?.$setOnInsert?.status;
+
+  if (newStatus) {
+    await ReservationStatusChangeModel.create({
+      reservation: reservationId,
+      statusChange: newStatus,
+    });
+  }
+
+  // ── Socket.IO updates ──────────────────────────────────────────────────────
+  try {
+    const updatedReservation = await mongoose
+      .model("reservations")
+      .findById(doc._id);
+
+    io.emit("updateReservation", updatedReservation);
+
+    const [dashboard, calendarData, adminDashboard] = await Promise.all([
+      computeReservationDashboard(),
+      buildReservationCalendar(),
+      computeAdminDashboard(),
+    ]);
+
+    io.emit("updateDashboard", dashboard);
+    io.emit("reservationCalendar:update", calendarData);
+    io.emit("updateAdminDashboard", adminDashboard);
+  } catch (err) {
+    console.error("❌ Socket.IO emission error in post-update hook:", err);
+  }
+
+  // ── Guest + staff notifications ────────────────────────────────────────────
+  try {
+    await notifyOnReservationStatusUpdate(doc);
+  } catch (err) {
+    console.error("❌ Notification error in post-update hook:", err);
+  }
+
+  // ── IPTV integration ───────────────────────────────────────────────────────
+  if (process.env.IPTV === "true") {
+    try {
+      if (doc.status === "checked in") await iptv.checkIn(String(doc._id));
+      if (doc.status === "checked out") await iptv.checkOut(String(doc._id));
+    } catch (err) {
+      console.error("❌ IPTV error in post-update hook:", err);
+    }
+  }
 });
 
 export const ReservationModel = mongoose.model<IReservation>(

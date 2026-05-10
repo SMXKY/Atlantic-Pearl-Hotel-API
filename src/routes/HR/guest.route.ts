@@ -20,6 +20,18 @@ guestRouter
   );
 
 guestRouter
+  .route("/details/:id")
+  .get(
+    authControllers.protect,
+    authControllers.restrictTo(
+      allPermissions.users.readAll,
+      allPermissions.guest.readAll,
+      allPermissions.guest.readDetailsAsAdmin
+    ),
+    guestControllers.getGuestDetails
+  );
+
+guestRouter
   .route("/:id")
   .get(
     authControllers.protect,

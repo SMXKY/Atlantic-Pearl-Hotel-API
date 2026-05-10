@@ -103,10 +103,20 @@ export const updateReservation = catchAsync(
   async (req: Request, res: Response, next: NextFunction) => {
     const reservationId = req.params.id;
 
-    // Prevent modification of reservation items through this endpoint
+    const reservation = await ReservationModel.findById(reservationId);
+
+    if (!reservation) {
+      return next(
+        new AppError(
+          "No such reservation in the database",
+          StatusCodes.NOT_FOUND
+        )
+      );
+    }
+
     delete req.body.items;
 
-    // -------------------- Check-out logic --------------------
+    // ── Check-out logic ──────────────────────────────────────────────────
     if (req.body.status === "checked out") {
       const invoice = await InvoiceModel.findOne({
         reservation: reservationId,
@@ -119,7 +129,6 @@ export const updateReservation = catchAsync(
           )
         );
       }
-
       if (["unpaid", "partial"].includes(invoice.paymentStatus)) {
         return next(
           new AppError(
@@ -128,7 +137,6 @@ export const updateReservation = catchAsync(
           )
         );
       }
-
       const bill = await BillModel.findOne({ reservationId }).lean();
       if (bill?.status === "pending") {
         return next(
@@ -140,8 +148,11 @@ export const updateReservation = catchAsync(
       }
     }
 
-    // -------------------- Check-in logic --------------------
-    if (req.body.status === "checked in") {
+    // ── Check-in logic ───────────────────────────────────────────────────
+    if (
+      req.body.status === "checked in" &&
+      reservation.status !== "checked in"
+    ) {
       const frontEndUrl =
         process.env.NODE_ENV === "production"
           ? process.env.FRONT_END_URL_PROD
@@ -156,20 +167,10 @@ export const updateReservation = catchAsync(
         );
       }
 
-      if (!req.body.wifi || !req.body.wifi.name || !req.body.wifi.password) {
+      if (!req.body.wifi?.name || !req.body.wifi?.password) {
         return next(
           new AppError(
-            "Guest may not be checked in without thier wifi credentials",
-            StatusCodes.INTERNAL_SERVER_ERROR
-          )
-        );
-      }
-
-      const reservation = await ReservationModel.findById(reservationId);
-      if (!reservation) {
-        return next(
-          new AppError(
-            "No such reservation Id in the database",
+            "Guest may not be checked in without wifi credentials",
             StatusCodes.BAD_REQUEST
           )
         );
@@ -186,22 +187,19 @@ export const updateReservation = catchAsync(
         if (!guest) {
           return next(
             new AppError(
-              "Corresponding Guest account does not exist",
+              "Corresponding guest account does not exist",
               StatusCodes.INTERNAL_SERVER_ERROR
             )
           );
         }
-
         if (employee) {
           return next(
             new AppError(
-              "Account is already in use as an employee. Please use a different email for reservation",
+              "Account is already in use as an employee. Please use a different email",
               StatusCodes.BAD_REQUEST
             )
           );
         }
-
-        console.log(req.body);
 
         const emailHtml = await fillTemplate(
           __dirname + "/../../templates/alreadyHaveAnAccount.template.html",
@@ -211,7 +209,6 @@ export const updateReservation = catchAsync(
             "Password Reset URL": `${frontEndUrl}/authentication/password-reset`,
           }
         );
-
         await sendEmail(
           userExist.email,
           "ALREADY HAVE AN ACCOUNT",
@@ -220,7 +217,6 @@ export const updateReservation = catchAsync(
         );
         req.body.guest = guest._id;
       } else {
-        // Create new guest user
         const randomGeneratedPassword = generatePassword.generate({
           length: 8,
           numbers: true,
@@ -239,7 +235,7 @@ export const updateReservation = catchAsync(
           );
         }
 
-        const newUserData = {
+        const newUser = await UserModel.create({
           name: reservation.guestName,
           email: reservation.guestEmail,
           phoneNumber: reservation.guestPhoneNumber,
@@ -247,9 +243,8 @@ export const updateReservation = catchAsync(
           passwordConfirm: randomGeneratedPassword,
           role: role._id,
           userType: "Guest",
-        };
+        });
 
-        const newUser = await UserModel.create(newUserData);
         let guest;
         try {
           guest = await GuestModel.create({
@@ -271,21 +266,16 @@ export const updateReservation = catchAsync(
             "Temporary Password": randomGeneratedPassword,
           }
         );
-
         await sendEmail(
           newUser.email,
           "YOUR ATLANTIC PEARL HOTEL LOGIN CREDENTIALS - CHANGE PASSWORD ASAP",
           "",
           emailHtml
         );
-
         req.body.guest = guest._id;
       }
     }
 
-    //Send update to IPTV:
-
-    // -------------------- Update reservation --------------------
     await CRUDReservation.update(reservationId, res, req);
   }
 );
@@ -1189,6 +1179,98 @@ const getGuestReservationPortal = catchAsync(
   }
 );
 
+export const getReservationKPIs = catchAsync(
+  async (req: Request, res: Response, next: NextFunction) => {
+    const now = new Date();
+
+    // ── Period boundaries ──────────────────────────────────────────────────
+    const thirtyDaysAgo = new Date(now);
+    thirtyDaysAgo.setDate(now.getDate() - 30);
+
+    const sixtyDaysAgo = new Date(now);
+    sixtyDaysAgo.setDate(now.getDate() - 60);
+
+    const sevenDaysAgo = new Date(now);
+    sevenDaysAgo.setDate(now.getDate() - 7);
+
+    const fourteenDaysAgo = new Date(now);
+    fourteenDaysAgo.setDate(now.getDate() - 14);
+
+    // ── Parallel queries ───────────────────────────────────────────────────
+    const [
+      // Checked in — current and previous 30-day window
+      checkedInCurrent,
+      checkedInPrevious,
+
+      // Checked out — current and previous 7-day window
+      checkedOutCurrent,
+      checkedOutPrevious,
+
+      // Total reservations — current and previous 30-day window
+      totalCurrent,
+      totalPrevious,
+
+      // For check-in rate: all time totals
+      allTimeCheckedIn,
+      allTimeTotal,
+    ] = await Promise.all([
+      ReservationModel.countDocuments({
+        status: "checked in",
+        createdAt: { $gte: thirtyDaysAgo },
+      }),
+      ReservationModel.countDocuments({
+        status: "checked in",
+        createdAt: { $gte: sixtyDaysAgo, $lt: thirtyDaysAgo },
+      }),
+
+      ReservationModel.countDocuments({
+        status: "checked out",
+        createdAt: { $gte: sevenDaysAgo },
+      }),
+      ReservationModel.countDocuments({
+        status: "checked out",
+        createdAt: { $gte: fourteenDaysAgo, $lt: sevenDaysAgo },
+      }),
+
+      ReservationModel.countDocuments({
+        createdAt: { $gte: thirtyDaysAgo },
+      }),
+      ReservationModel.countDocuments({
+        createdAt: { $gte: sixtyDaysAgo, $lt: thirtyDaysAgo },
+      }),
+
+      ReservationModel.countDocuments({ status: "checked in" }),
+      ReservationModel.countDocuments(),
+    ]);
+
+    // ── Percentage change helper ───────────────────────────────────────────
+    const pctChange = (current: number, previous: number): number => {
+      if (previous === 0) return current > 0 ? 100 : 0;
+      return Math.round(((current - previous) / previous) * 100);
+    };
+
+    // ── Check-in rate: checked in as % of all reservations ────────────────
+    const percentCheckedInLogs =
+      allTimeTotal === 0
+        ? 0
+        : Math.round((allTimeCheckedIn / allTimeTotal) * 100);
+
+    appResponder(
+      StatusCodes.OK,
+      {
+        checkedInCount: checkedInCurrent,
+        checkedInPercentage: pctChange(checkedInCurrent, checkedInPrevious),
+        checkedOutCount: checkedOutCurrent,
+        checkedOutPercentage: pctChange(checkedOutCurrent, checkedOutPrevious),
+        totalReservationsCount: totalCurrent,
+        totalReservationsPercentage: pctChange(totalCurrent, totalPrevious),
+        percentCheckedInLogs,
+      },
+      res
+    );
+  }
+);
+
 export const reservationControllers = {
   createReservation,
   readOneReservation,
@@ -1202,4 +1284,5 @@ export const reservationControllers = {
   searchReservations,
   getCheckedInReservationsByEmail,
   getGuestReservationPortal,
+  getReservationKPIs,
 };

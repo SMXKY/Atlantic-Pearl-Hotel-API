@@ -50,7 +50,7 @@ const roomSchema = new mongoose.Schema(
       uppercase: true,
       required: [true, "Room number is required."],
       minlength: 1,
-      maxlength: 5,
+      maxlength: 10,
     },
     floorNumber: {
       type: Number,
@@ -113,7 +113,7 @@ const roomSchema = new mongoose.Schema(
     },
     building: {
       type: mongoose.Types.ObjectId,
-      ref: "discounts",
+      ref: "buildings",
       validate: {
         validator: async function (id: mongoose.Types.ObjectId) {
           const exists = await BuildingModel.exists({ _id: id });

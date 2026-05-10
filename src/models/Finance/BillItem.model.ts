@@ -17,6 +17,12 @@ export interface IBillItem extends Document {
   category: AllowedCategory;
   linkedEntityId?: mongoose.Types.ObjectId;
   createdAt: Date;
+  snapshot: {
+    name: string;
+    unitPrice: number;
+    quantity: number;
+    details?: Record<string, any>; // category-specific extras
+  };
 }
 
 const billItemSchema = new Schema<IBillItem>(
@@ -48,6 +54,12 @@ const billItemSchema = new Schema<IBillItem>(
     linkedEntityId: {
       type: Schema.Types.ObjectId,
       // required: true,
+    },
+    snapshot: {
+      name: { type: String, required: true },
+      unitPrice: { type: Number, required: true },
+      quantity: { type: Number, required: true, default: 1 },
+      details: { type: Schema.Types.Mixed }, // flexible per category
     },
   },
   {

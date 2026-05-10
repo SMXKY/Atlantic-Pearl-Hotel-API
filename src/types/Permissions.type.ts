@@ -398,6 +398,7 @@ export const allPermissions = {
   guest: {
     module: "User Management",
     submodule: "Guests",
+    readDetailsAsAdmin: "read_detalis_as_admin",
 
     readOne: "can_read_guest",
     readAll: "can_read_all_guests",
