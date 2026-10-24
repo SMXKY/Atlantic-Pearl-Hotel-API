@@ -56,16 +56,38 @@
     "copyfiles": "^2.4.1",
     "nodemon": "^3.1.10",
     "ts-node": "^10.9.2",
-    "typescript": "^5.8.3"
+    "typescript": "^5.8.3",
+    "vitest": "^2.1.9"
   },
   "name": "atlantic-pearl-api",
   "version": "1.0.0",
-  "main": "index.js",
+  "description": "REST and real-time backend for hotel and resort operations: reservations, billing, restaurant, parking, inventory, and HR.",
+  "keywords": [
+    "hotel-management",
+    "reservations",
+    "express",
+    "typescript",
+    "mongodb",
+    "socket.io",
+    "rbac"
+  ],
+  "author": "SMXKY",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/SMXKY/Atlantic-Pearl-Hotel-API.git"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "main": "dist/index.js",
   "scripts": {
     "dev": "nodemon src/index.ts",
     "build": "tsc && npm run copy:templates && npm run copy:fonts",
     "copy:templates": "copyfiles -u 2 src/templates/**/* dist/templates",
     "copy:fonts": "copyfiles -u 2 src/fonts/**/* dist/fonts",
-    "start": "node dist/index.js"
+    "start": "node dist/index.js",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest"
   }
 }
