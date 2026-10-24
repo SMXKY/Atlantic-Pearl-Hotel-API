@@ -6,7 +6,7 @@ import { AppError } from "../../util/AppError.util";
 import { appResponder } from "../../util/appResponder.util";
 import { logUserActivity } from "../../util/logUserActivity.util";
 import { InventorySupplierModel } from "../../models/Inventory/Inventorysupplier.model";
-import { InventorySupplierRatingModel } from "../../models/Inventory/Inventorysuplierrating.model";
+import { InventorySupplierRatingModel } from "../../models/Inventory/Inventorysupplierrating.model";
 import { CRUD } from "../../util/Crud.util";
 
 const CRUDInventorySupplier = new CRUD(InventorySupplierModel);

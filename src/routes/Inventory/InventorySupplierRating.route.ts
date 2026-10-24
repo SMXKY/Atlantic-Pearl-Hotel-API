@@ -1,7 +1,7 @@
 import express from "express";
 import { authControllers } from "../../controllers/Auth/auth.controller";
 import { allPermissions } from "../../types/Permissions.type";
-import { inventroySupplierRatingControllers } from "../../controllers/Inventory/Inventorysuplierrating.controller";
+import { inventroySupplierRatingControllers } from "../../controllers/Inventory/Inventorysupplierrating.controller";
 import { Request, Response, NextFunction } from "express";
 
 export const inventorySupplierRatingRouter = express.Router();

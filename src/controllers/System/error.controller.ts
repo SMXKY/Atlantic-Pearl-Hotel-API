@@ -55,7 +55,7 @@ export const globalErrorController = (
 
   if (process.env.NODE_ENV === "production") {
     productionResponse(err, res);
-  } else if (process.env.NODE_ENV === "development") {
+  } else {
     developmentResponse(err, res);
   }
 };

@@ -1,6 +1,6 @@
 import * as mongoose from "mongoose";
 import { UserModel } from "../HR/User.model";
-import { io } from "../../index";
+import { io } from "../../socket";
 
 const activityLogSchema = new mongoose.Schema(
   {

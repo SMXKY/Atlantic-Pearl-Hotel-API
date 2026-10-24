@@ -6,7 +6,7 @@ import {
   INotification,
   SendNotificationInput,
 } from "../models/Notifications/Notification.model";
-import { io } from "../index";
+import { io } from "../socket";
 import { PermissionModel } from "../models/Authorization/Permission.model";
 import { RolePermissionModel } from "../models/Authorization/RolePermission.model";
 import { UserModel } from "../models/HR/User.model";

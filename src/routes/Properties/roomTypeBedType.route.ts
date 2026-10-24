@@ -1,6 +1,6 @@
 import express from "express";
 
-import { roomTypeBedTypeControllers } from "../../controllers/Properties/roomTypeBedType.contoller";
+import { roomTypeBedTypeControllers } from "../../controllers/Properties/roomTypeBedType.controller";
 import { authControllers } from "../../controllers/Auth/auth.controller";
 import { allPermissions } from "../../types/Permissions.type";
 

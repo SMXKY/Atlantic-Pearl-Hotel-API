@@ -1,6 +1,6 @@
 import express from "express";
 
-import { roleOverideControllers } from "../../controllers/Auth/roleOverides.controler";
+import { roleOverideControllers } from "../../controllers/Auth/roleOverides.controller";
 import { authControllers } from "../../controllers/Auth/auth.controller";
 import { allPermissions } from "../../types/Permissions.type";
 

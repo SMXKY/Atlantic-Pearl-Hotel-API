@@ -2,7 +2,7 @@ import mongoose, { Schema, model, Types } from "mongoose";
 import { RestaurantCartModel } from "./RestaurantCart.model";
 import { GuestModel } from "../HR/Guest.model";
 import { ReservationModel } from "../Reservations/Reservation.model";
-import { io } from "../../index";
+import { io } from "../../socket";
 import { StatusCodes } from "http-status-codes";
 import { AppError } from "../../util/AppError.util";
 import {

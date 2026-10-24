@@ -2,7 +2,7 @@ import { NextFunction, Request, Response } from "express";
 
 import { catchAsync } from "../../util/catchAsync";
 import { CRUD } from "../../util/Crud.util";
-import { InventorySupplierRatingModel } from "../../models/Inventory/Inventorysuplierrating.model";
+import { InventorySupplierRatingModel } from "../../models/Inventory/Inventorysupplierrating.model";
 
 const CRUDInventroySupplierRating: CRUD = new CRUD(
   InventorySupplierRatingModel

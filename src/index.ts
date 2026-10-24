@@ -1,9 +1,8 @@
 import * as dotEnv from "dotenv";
 import * as mongoose from "mongoose";
-import http from "http";
-import { Server } from "socket.io";
 
 import { app } from "./app";
+import { io } from "./socket";
 import { createDefaultDocuments } from "./defaults/documents.default";
 import { activateUsersCronJob } from "./cron-jobs/activateUsers.cron";
 import { stockTakeSchedulerJob } from "./cron-jobs/stockTakeScheduler.cron";
@@ -50,53 +49,7 @@ const server = app.listen(port, "0.0.0.0", () => {
   console.log(`App is up and running on port: ${port}`);
 });
 
-export const io = new Server(server, {
-  cors: { origin: "*" },
-});
-
-const allowedIps = [
-  "123.45.67.89",
-  "98.76.54.32",
-  "127.0.0.1",
-  "31.97.113.198",
-];
-
-io.use((socket, next) => {
-  const clientIp =
-    socket.handshake.headers["x-forwarded-for"]
-      ?.toString()
-      .split(",")[0]
-      .trim() || socket.handshake.address;
-
-  if (!clientIp || !allowedIps.includes(clientIp)) {
-    console.log(`Socket connection rejected from IP: ${clientIp}`);
-    return next(new Error("Access denied: IP not allowed"));
-  }
-
-  next();
-});
-
-io.on("connection", (socket) => {
-  console.log(`Client connected: ${socket.id} (${socket.handshake.address})`);
-
-  // Example: client sends their userId in handshake auth
-  const userId = socket.handshake.auth.userId;
-
-  if (userId) {
-    socket.join(userId.toString()); // private room for this user
-    console.log(`User ${userId} joined their private room`);
-  }
-
-  // Keep your existing joinRoom logic
-  socket.on("joinRoom", (roomId) => {
-    socket.join(roomId);
-    console.log(`Client ${socket.id} joined room ${roomId}`);
-  });
-
-  socket.on("disconnect", () => {
-    console.log(`Client disconnected: ${socket.id}`);
-  });
-});
+io.attach(server);
 
 process.on("unhandledRejection", (err) => {
   console.log("Unhandled Rejection Error...❌❌");

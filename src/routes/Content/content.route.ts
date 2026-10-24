@@ -1,9 +1,9 @@
 import express from "express";
 
-import { contentControllers } from "../../controllers/Content/defaultDashbord.content";
+import { contentControllers } from "../../controllers/Content/defaultDashboard.content";
 import { authControllers } from "../../controllers/Auth/auth.controller";
 import { allPermissions } from "../../types/Permissions.type";
-import { getDashboard } from "../../controllers/Content/dashbaord.controller";
+import { getDashboard } from "../../controllers/Content/dashboard.controller";
 import rateLimit from "express-rate-limit";
 import { searchController } from "../../controllers/Content/search.controller";
 

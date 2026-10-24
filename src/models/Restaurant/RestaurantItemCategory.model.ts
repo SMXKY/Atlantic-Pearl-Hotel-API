@@ -1,5 +1,5 @@
 import mongoose, { Schema, model, Types } from "mongoose";
-import { io } from "../../index";
+import { io } from "../../socket";
 
 export interface IRestaurantItemCategory {
   _id?: Types.ObjectId;

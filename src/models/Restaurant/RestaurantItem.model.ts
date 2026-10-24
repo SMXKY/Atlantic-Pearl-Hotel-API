@@ -2,7 +2,7 @@ import mongoose, { Schema, model, Types } from "mongoose";
 import { RestaurantItemCategoryModel } from "./RestaurantItemCategory.model";
 import { AppError } from "../../util/AppError.util";
 import { StatusCodes } from "http-status-codes";
-import { io } from "../../index";
+import { io } from "../../socket";
 
 export interface IRestaurantItem {
   _id?: Types.ObjectId;

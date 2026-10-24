@@ -9,7 +9,7 @@ import { sendNotification } from "../../util/sendNotification.util";
 import { NotificationType } from "../Notifications/Notification.model";
 import { getIdsFromPermissions } from "../../util/sendNotification.util";
 import { RoomModel } from "../Properties/Room.model";
-import { io } from "../../index";
+import { io } from "../../socket";
 
 export interface IParkingReservation extends Document {
   guest: mongoose.Types.ObjectId;

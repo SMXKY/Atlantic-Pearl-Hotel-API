@@ -83,7 +83,9 @@ export class Query {
     if (!searchTerm || !searchFields) return this;
 
     const fields = (searchFields as string).split(",").map((f) => f.trim());
-    const searchRegex = { $regex: searchTerm as string, $options: "i" };
+    // Escape regex metacharacters so user input is matched literally
+    const escaped = (searchTerm as string).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    const searchRegex = { $regex: escaped, $options: "i" };
 
     this.mongooseQuery = this.mongooseQuery.find({
       $or: fields.map((field) => ({ [field]: searchRegex })),

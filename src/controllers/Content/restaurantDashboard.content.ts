@@ -2,7 +2,7 @@ import dayjs from "dayjs";
 import { RestaurantOrderModel } from "../../models/Restaurant/RestaurantOrder.model";
 import { RestaurantItemModel } from "../../models/Restaurant/RestaurantItem.model";
 import { MealComboModel } from "../../models/Restaurant/MealCombo.model";
-import { MealRedemptionModel } from "../../models/Restaurant/MealRedemption.modelt";
+import { MealRedemptionModel } from "../../models/Restaurant/MealRedemption.model";
 import { RestaurantConfigModel } from "../../models/Restaurant/RestaurantConfig.model";
 
 export async function computeRestaurantDashboard() {

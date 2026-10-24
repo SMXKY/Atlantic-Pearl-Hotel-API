@@ -1,6 +1,6 @@
 import { Schema, model, Types } from "mongoose";
 import validator from "validator";
-import { io } from "../../index";
+import { io } from "../../socket";
 
 export enum NotificationType {
   // Domain-specific

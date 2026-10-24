@@ -2,7 +2,7 @@ import mongoose, { Schema, Document, Types } from "mongoose";
 import { RestaurantItemModel } from "../Restaurant/RestaurantItem.model";
 import { AppError } from "../../util/AppError.util";
 import { StatusCodes } from "http-status-codes";
-import { io } from "../../index";
+import { io } from "../../socket";
 import { IRestaurantItem } from "../Restaurant/RestaurantItem.model";
 
 export interface IMealCombo extends Document {

@@ -20,7 +20,7 @@ import {
   renderInvoiceEmail,
 } from "../../util/generateInvoiceAndBillSettlementEmail.template";
 import { sendEmail } from "../../util/sendEmail.util";
-import { RecieptModel } from "../../models/Finance/Reciept.model";
+import { ReceiptModel } from "../../models/Finance/Receipt.model";
 import path from "path";
 import fs from "fs";
 import { logUserActivity } from "../../util/logUserActivity.util";
@@ -312,7 +312,7 @@ const settleBillAndInvoiceRedirect = catchAsync(
         guest: guestId,
       });
 
-      const reciept = await RecieptModel.create({
+      const reciept = await ReceiptModel.create({
         transaction: transaction._id,
         amountInCFA: data.amount,
         issued: true,

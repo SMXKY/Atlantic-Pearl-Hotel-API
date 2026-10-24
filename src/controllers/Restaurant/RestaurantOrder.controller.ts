@@ -27,7 +27,7 @@ import {
   IRestaurantConfig,
   RestaurantConfigModel,
 } from "../../models/Restaurant/RestaurantConfig.model";
-import { MealRedemptionModel } from "../../models/Restaurant/MealRedemption.modelt";
+import { MealRedemptionModel } from "../../models/Restaurant/MealRedemption.model";
 import { RoomModel } from "../../models/Properties/Room.model";
 import { RateModel } from "../../models/Reservations/Rate.model";
 import mongoose from "mongoose";

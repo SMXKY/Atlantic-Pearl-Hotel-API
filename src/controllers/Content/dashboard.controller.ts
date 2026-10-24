@@ -4,13 +4,13 @@ import { appResponder } from "../../util/appResponder.util";
 import { StatusCodes } from "http-status-codes";
 import { allPermissions } from "../../types/Permissions.type";
 
-import { computeDefaultDashboard } from "./userDasboards.util";
-import { computeAdminDashboard } from "./defaultDashbord.content";
+import { computeDefaultDashboard } from "./userDashboards.util";
+import { computeAdminDashboard } from "./defaultDashboard.content";
 import { computeParkingDashboard } from "./parkingDashboard.content";
-import { computeRestaurantDashboard } from "./restaurantDasboar.content.";
+import { computeRestaurantDashboard } from "./restaurantDashboard.content";
 import { computeInventoryDashboard } from "./inventoryDashboard.content";
 import { computeHRDashboard } from "./hrDashboard.content";
-import { computeFinanceDashboard } from "./financeDashbaord.content";
+import { computeFinanceDashboard } from "./financeDashboard.content";
 
 export const getDashboard = catchAsync(
   async (req: Request, res: Response, next: NextFunction) => {

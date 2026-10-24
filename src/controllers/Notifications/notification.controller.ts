@@ -5,7 +5,7 @@ import { CRUD } from "../../util/Crud.util";
 import { NotificationModel } from "../../models/Notifications/Notification.model";
 import { appResponder } from "../../util/appResponder.util";
 import { StatusCodes } from "http-status-codes";
-import { io } from "../../index";
+import { io } from "../../socket";
 
 const CRUDNotification: CRUD = new CRUD(NotificationModel);
 

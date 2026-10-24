@@ -1,6 +1,6 @@
 import express from "express";
 
-import { restaurantItemCategoryControllers } from "../../controllers/Restaurant/restaurantItemCategory.controler";
+import { restaurantItemCategoryControllers } from "../../controllers/Restaurant/restaurantItemCategory.controller";
 import { authControllers } from "../../controllers/Auth/auth.controller";
 import { allPermissions } from "../../types/Permissions.type";
 

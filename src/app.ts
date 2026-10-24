@@ -68,6 +68,8 @@ import { inventoryStockTakeRouter } from "./routes/Inventory/InventoryStockTake.
 import { inventoryStockTakeScheduleRouter } from "./routes/Inventory/InventoryStockTakeSchedule.route";
 import { inventoryAlertConfigRouter } from "./routes/Inventory/Inventoryalertconfig.route";
 import { inventorySupplierRatingRouter } from "./routes/Inventory/InventorySupplierRating.route";
+import { inventoryRetentionConfigRouter } from "./routes/Inventory/InventoryRetentionConfig.route";
+import { allowedIps } from "./util/allowedIps.util";
 
 export const app = express();
 
@@ -135,13 +137,6 @@ app.use(
 );
 
 // Whitelist middleware
-const allowedIps = [
-  "123.45.67.89",
-  "98.76.54.32",
-  "127.0.0.1",
-  "31.97.113.198",
-]; // Replace with your allowed IPs
-
 app.use((req: Request, res: Response, next: NextFunction) => {
   const clientIp =
     req.ip || req.connection.remoteAddress || req.headers["x-forwarded-for"];
@@ -222,7 +217,10 @@ app.use(
   inventoryStockTakeScheduleRouter
 );
 app.use("/api/v1/inventory/alert-configs", inventoryAlertConfigRouter);
-app.use("/api/v1/inventory/retention-config", inventoryAlertConfigRouter);
+app.use(
+  "/api/v1/inventory/retention-config",
+  inventoryRetentionConfigRouter
+);
 app.use("/api/v1/inventory/supplier-ratings", inventorySupplierRatingRouter);
 
 const swaggerSpec = swaggerJSDoc({

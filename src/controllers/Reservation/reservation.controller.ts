@@ -16,7 +16,7 @@ import {
   renderInvoiceHTMLFromTemplate,
 } from "../../util/generateInvoiceEmailTemplate.util";
 import * as mongoose from "mongoose";
-import { RecieptModel } from "../../models/Finance/Reciept.model";
+import { ReceiptModel } from "../../models/Finance/Receipt.model";
 import { TransactionModel } from "../../models/Finance/Transaction.model";
 import { expirePay, payout } from "../../services/fapshi.api";
 import path from "path";
@@ -25,7 +25,7 @@ import { AdminConfigurationModel } from "../../models/Config/AdminConfiguration.
 import { getGuestDetailsFromReservation } from "../../util/getGuestFromReservation.util";
 import { validateReservationItemsAvailability } from "../../util/validateReservationItems.util";
 import { BillModel } from "../../models/Finance/Bill.model";
-import { io } from "../../index";
+import { io } from "../../socket";
 import { UserModel } from "../../models/HR/User.model";
 import { EmployeeModel } from "../../models/HR/Employee.model";
 import * as generatePassword from "generate-password";
@@ -368,7 +368,7 @@ const depositPaymentRedirect = catchAsync(
         guest: guestId,
       });
 
-      const reciept = await RecieptModel.create({
+      const reciept = await ReceiptModel.create({
         transaction: transaction._id,
         amountInCFA: data.amount,
         issued: true,
@@ -638,7 +638,7 @@ const cancelReservation = catchAsync(
       reservation: reservation._id,
     });
 
-    const reciept = await RecieptModel.create({
+    const reciept = await ReceiptModel.create({
       amountInCFA: refundAmount,
       issued: true,
       method: isOnline ? "Email" : "Onsite",

@@ -12,7 +12,7 @@ import { appResponder } from "../../util/appResponder.util";
 import { StatusCodes } from "http-status-codes";
 import { AppError } from "../../util/AppError.util";
 import { TransactionModel } from "../../models/Finance/Transaction.model";
-import { RecieptModel } from "../../models/Finance/Reciept.model";
+import { ReceiptModel } from "../../models/Finance/Receipt.model";
 import { logUserActivity } from "../../util/logUserActivity.util";
 
 //manual reservation the front end has to send status:confirmed,
@@ -159,7 +159,7 @@ const payForReservation = catchAsync(
       reservation: invoice.reservation.toString(),
     });
 
-    const receipt = await RecieptModel.create({
+    const receipt = await ReceiptModel.create({
       amountInCFA: amount,
       issued: true,
       method: "Onsite",
